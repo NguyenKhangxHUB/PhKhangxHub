@@ -4327,6 +4327,66 @@ spawn(function()
     end
 end)
 
+elseif (MyLevel >= 2550 and MyLevel <= 2574) or SelectMonster == "Serpent Hunter" then
+			 Mon = "Serpent Hunter"
+			 LevelQuest = 1
+			 NameQuest = "TikiQuest3"
+			 NameMon = "Serpent Hunter"
+			 CFrameQuest = CFrame.new(-16665.19, 104.60, 1579.69)
+			 CFrameMon = CFrame.new(-16521.06, 106.09, 1488.78)
+			 elseif (MyLevel >= 2575 and MyLevel <= 2599) or SelectMonster == "Skull Slayer" then
+			 Mon = "Skull Slayer"
+			 LevelQuest = 2
+			 NameQuest = "TikiQuest3"
+			 NameMon = "Skull Slayer"
+			 CFrameQuest = CFrame.new(-16665.19, 104.60, 1579.69)
+			 CFrameMon = CFrame.new(-16855.04, 122.46, 1478.15)
+			 elseif (MyLevel >= 2600 and MyLevel <= 2624) or SelectMonster == "Reef Bandit" then		 
+			 Mon = "Reef Bandit"
+			 LevelQuest = 1
+			 NameQuest = "SubmergedQuest1"
+			 NameMon = "Reef Bandit"            
+			 CFrameQuest = CFrame.new(10780.739, -2088.410, 9260.411)
+			 CFrameMon = CFrame.new(10899.859, -2145.235, 9279.294) 
+			 elseif (MyLevel >= 2625 and MyLevel <= 2649) or SelectMonster == "Coral Pirate" then			 
+			 Mon = "Coral Pirate"
+			 LevelQuest = 2
+			 NameQuest = "SubmergedQuest1"
+			 NameMon = "Coral Pirate"            
+			 CFrameQuest = CFrame.new(10780.739, -2088.410, 9260.411)	
+			 CFrameMon = CFrame.new(10824.544, -2087.295, 9357.231)
+    	     elseif (MyLevel >= 2650 and MyLevel <= 2674) or SelectMonster == "Sea Chanter" then
+			 Mon = "Sea Chanter"
+			 LevelQuest = 1
+			 NameQuest = "SubmergedQuest2"
+			 NameMon = "Sea Chanter"            
+			 CFrameQuest = CFrame.new(10883.599, -2086.885, 10034.020)
+			 CFrameMon = CFrame.new(10786.387, -2087.373, 10105.262)
+			 elseif (MyLevel >= 2675) or SelectMonster == "Ocean Prophet" then
+			 Mon = "Ocean Prophet"
+			 LevelQuest = 2
+			 NameQuest = "SubmergedQuest2"
+			 NameMon = "Ocean Prophet"            
+			 CFrameQuest = CFrame.new(10883.599, -2086.885, 10034.020)
+			 CFrameMon = CFrame.new(11003.326, -2007.026, 10225.063)
+			 end
+			 end
+			 end
+elseif MyLevel >= 2700 and MyLevel <= 27245 then
+        Mon = "High Disciple"
+        LevelQuest = 1
+        NameQuest = "SubmergedQuest3"
+        NameMon = "High Disciple"
+        CFrameQuest = CFrame.new(9638, -1993, 9615)
+        CFrameMon = CFrame.new(9818.4014, -1962.3967, 9810.8350)
+
+    elseif MyLevel >= 2725 then
+        Mon = "Grand Devotee"
+        LevelQuest = 2
+        NameQuest = "SubmergedQuest3"
+        NameMon = "Grand Devotee"
+        CFrameQuest = CFrame.new(9638, -1993, 9615)
+        CFrameMon = CFrame.new(9653.3193, -1928.2221, 9914.8955)
 -- Farm Bones
 spawn(function()
     while task.wait(1) do
@@ -4444,6 +4504,125 @@ spawn(function()
                               (_G.AcceptQuestC and questUI and not questUI.Visible)
                     else
                         _tp(CFrame.new(-2077, 252, -12373))
+                    end
+                end
+            end)
+        end
+    end
+end)
+-- Tạo Groupbox quản lý Đột Kích trong UI của bạn
+local RaidGroup = RaidTab:AddLeftGroupbox("Raid Dungeon Manager")
+
+-- 1. Bật/Tắt chế độ tự động mua chip và ấn nút bắt đầu Raid
+RaidGroup:AddToggle("AutoStartRaid", {
+    Title = "Auto Start Raid (Auto Click Button)",
+    Default = false,
+    Callback = function(Value)
+        _G.AutoStartRaid = Value
+    end
+})
+
+-- 2. Bật/Tắt chế độ tự động gom quái và farm sạch từ đảo 1 đến đảo 5
+RaidGroup:AddToggle("AutoFarmRaid", {
+    Title = "Auto Farm Raid (Island 1 -> 5)",
+    Default = false,
+    Callback = function(Value)
+        _G.AutoFarmRaid = Value
+    end
+})
+
+-- Hàm kiểm tra xem nhân vật có đang ở trong phòng Raid (Dungeon) hay không
+local function IsInRaid()
+    -- Map Raid thường chứa folder mang tên "Dungeon" hoặc các Model đặc trưng của Raid
+    return workspace:FindFirstChild("Dungeon") or workspace.Map:FindFirstChild("Raid")
+end
+
+-- VÒNG LẶP XỬ LÝ TỰ ĐỘNG BẮT ĐẦU RAID (MUA CHIP VÀ ẤN NÚT)
+spawn(function()
+    while task.wait(0.5) do
+        if _G.AutoStartRaid then
+            pcall(function()
+                -- Nếu chưa ở trong phòng Raid, tiến hành lại gần thực thể nút bấm Raid
+                if not IsInRaid() then
+                    -- Tọa độ phòng thí nghiệm/bấm nút Raid ở Sea 2 (mặc định phổ biến) hoặc Sea 3
+                    local RaidButtonCFrame = CFrame.new(-6526.2, 296.5, -438.4) 
+                    
+                    -- Kiểm tra xem trong túi đồ (Backpack) hoặc trên tay đã có Chip Đột kích chưa
+                    local hasChip = false
+                    for _, item in pairs(Player.Backpack:GetChildren()) do
+                        if item.Name:find("Physical Chip") or item.Name:find("Chip") then
+                            hasChip = true
+                            break
+                        end
+                    end
+                    for _, item in pairs(Player.Character:GetChildren()) do
+                        if item:IsA("Tool") and (item.Name:find("Physical Chip") or item.Name:find("Chip")) then
+                            hasChip = true
+                            break
+                        end
+                    end
+                    
+                    -- Nếu chưa có chip, tự động gọi lệnh Remote mua chip (Mặc định là Flame Raid để dễ farm hoặc theo loại bạn chọn)
+                    if not hasChip then
+                        -- Lệnh gọi NPC mua chip bí mật bằng điểm F (Frag)
+                        CommF_Remote:InvokeServer("RaidsNPC", "Register")
+                    else
+                        -- Nếu đã có chip, di chuyển thẳng lên trên bề mặt nút bấm Raid màu xanh lam
+                        _tp(RaidButtonCFrame)
+                        
+                        -- Khi khoảng cách đủ gần, mô phỏng hành động giẫm/ấn nút kích hoạt
+                        if (RaidButtonCFrame.Position - Player.Character.HumanoidRootPart.Position).Magnitude <= 10 then
+                            fireclickdetector(workspace.Map.CircleRoom.RaidButton.ClickDetector) -- Gọi ClickDetector của nút Raid
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- VÒNG LẶP XỬ LÝ TỰ ĐỘNG DI CHUYỂN VÀ FARM SẠCH QUÁI TỪ ĐẢO 1 ĐẾN ĐẢO 5
+spawn(function()
+    while task.wait(0.1) do
+        if _G.AutoFarmRaid then
+            pcall(function()
+                if IsInRaid() then
+                    -- Tìm kiếm tất cả quái vật xuất hiện trong phòng Raid
+                    local EnemyFound = nil
+                    
+                    -- Quét thư mục chứa quái đột kích trong Workspace
+                    for _, v in pairs(workspace.Enemies:GetChildren()) do
+                        -- Chỉ nhắm mục tiêu vào quái có máu sống và thuộc khu vực Raid
+                        if v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 and v:FindFirstChild("HumanoidRootPart") then
+                            EnemyFound = v
+                            break
+                        end
+                    end
+                    
+                    -- NẾU CÓ QUÁI: Tiến hành dịch chuyển ra sau lưng gom quái và đánh (Tận dụng logic farm M1 của bạn)
+                    if EnemyFound then
+                        -- Bay phía trên đầu hoặc sau lưng quái 5-10 khoảng cách để tránh bị quái đánh trúng
+                        _tp(EnemyFound.HumanoidRootPart.CFrame * CFrame.new(0, 8, 0))
+                        
+                        -- Tự động cầm vũ khí (Ưu tiên Trái ác quỷ/Kiếm có đòn M1 rộng như Buddha)
+                        local weapon = Player.Backpack:FindFirstChild(_G.SelectWeapon or "Melee") or Player.Character:FindFirstChild(_G.SelectWeapon or "Melee")
+                        if weapon and weapon:IsA("Tool") and not Player.Character:FindFirstChild(weapon.Name) then
+                            Humanoid:EquipTool(weapon)
+                        end
+                        
+                        -- Thực hiện spam Click chuột trái liên tục để clear quái nhanh
+                        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+                        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+                    else
+                        -- NẾU SẠCH QUÁI Ở ĐẢO HIỆN TẠI: Tự động tìm vị trí luồng đảo tiếp theo để đứng đợi mở cổng (Đảo 1 -> Đảo 5)
+                        -- Game sẽ tự động tạo các "Next Island Platform" hoặc vị trí cổng, ta tìm tâm đảo để di chuyển đến trước
+                        local NextIsland = workspace:FindFirstChild("Island Platform") or workspace:FindFirstChild("NextIsland")
+                        if NextIsland then
+                            _tp(NextIsland:GetPivot() * CFrame.new(0, 15, 0))
+                        else
+                            -- Nếu không tìm thấy tên đảo cụ thể, bay lên vị trí trung tâm cao của map Raid chờ sang màn kế tiếp
+                            _tp(CFrame.new(workspace.Dungeon.CenterPosition.Value.X, 100, workspace.Dungeon.CenterPosition.Value.Z))
+                        end
                     end
                 end
             end)
@@ -6630,6 +6809,125 @@ spawn(function()
     end
   end)
 end)
+-- Tạo Groupbox quản lý Đột Kích trong UI của bạn
+local RaidGroup = RaidTab:AddLeftGroupbox("Raid Dungeon Manager")
+
+-- 1. Bật/Tắt chế độ tự động mua chip và ấn nút bắt đầu Raid
+RaidGroup:AddToggle("AutoStartRaid", {
+    Title = "Auto Start Raid (Auto Click Button)",
+    Default = false,
+    Callback = function(Value)
+        _G.AutoStartRaid = Value
+    end
+})
+
+-- 2. Bật/Tắt chế độ tự động gom quái và farm sạch từ đảo 1 đến đảo 5
+RaidGroup:AddToggle("AutoFarmRaid", {
+    Title = "Auto Farm Raid (Island 1 -> 5)",
+    Default = false,
+    Callback = function(Value)
+        _G.AutoFarmRaid = Value
+    end
+})
+
+-- Hàm kiểm tra xem nhân vật có đang ở trong phòng Raid (Dungeon) hay không
+local function IsInRaid()
+    -- Map Raid thường chứa folder mang tên "Dungeon" hoặc các Model đặc trưng của Raid
+    return workspace:FindFirstChild("Dungeon") or workspace.Map:FindFirstChild("Raid")
+end
+
+-- VÒNG LẶP XỬ LÝ TỰ ĐỘNG BẮT ĐẦU RAID (MUA CHIP VÀ ẤN NÚT)
+spawn(function()
+    while task.wait(0.5) do
+        if _G.AutoStartRaid then
+            pcall(function()
+                -- Nếu chưa ở trong phòng Raid, tiến hành lại gần thực thể nút bấm Raid
+                if not IsInRaid() then
+                    -- Tọa độ phòng thí nghiệm/bấm nút Raid ở Sea 2 (mặc định phổ biến) hoặc Sea 3
+                    local RaidButtonCFrame = CFrame.new(-6526.2, 296.5, -438.4) 
+                    
+                    -- Kiểm tra xem trong túi đồ (Backpack) hoặc trên tay đã có Chip Đột kích chưa
+                    local hasChip = false
+                    for _, item in pairs(Player.Backpack:GetChildren()) do
+                        if item.Name:find("Physical Chip") or item.Name:find("Chip") then
+                            hasChip = true
+                            break
+                        end
+                    end
+                    for _, item in pairs(Player.Character:GetChildren()) do
+                        if item:IsA("Tool") and (item.Name:find("Physical Chip") or item.Name:find("Chip")) then
+                            hasChip = true
+                            break
+                        end
+                    end
+                    
+                    -- Nếu chưa có chip, tự động gọi lệnh Remote mua chip (Mặc định là Flame Raid để dễ farm hoặc theo loại bạn chọn)
+                    if not hasChip then
+                        -- Lệnh gọi NPC mua chip bí mật bằng điểm F (Frag)
+                        CommF_Remote:InvokeServer("RaidsNPC", "Register")
+                    else
+                        -- Nếu đã có chip, di chuyển thẳng lên trên bề mặt nút bấm Raid màu xanh lam
+                        _tp(RaidButtonCFrame)
+                        
+                        -- Khi khoảng cách đủ gần, mô phỏng hành động giẫm/ấn nút kích hoạt
+                        if (RaidButtonCFrame.Position - Player.Character.HumanoidRootPart.Position).Magnitude <= 10 then
+                            fireclickdetector(workspace.Map.CircleRoom.RaidButton.ClickDetector) -- Gọi ClickDetector của nút Raid
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- VÒNG LẶP XỬ LÝ TỰ ĐỘNG DI CHUYỂN VÀ FARM SẠCH QUÁI TỪ ĐẢO 1 ĐẾN ĐẢO 5
+spawn(function()
+    while task.wait(0.1) do
+        if _G.AutoFarmRaid then
+            pcall(function()
+                if IsInRaid() then
+                    -- Tìm kiếm tất cả quái vật xuất hiện trong phòng Raid
+                    local EnemyFound = nil
+                    
+                    -- Quét thư mục chứa quái đột kích trong Workspace
+                    for _, v in pairs(workspace.Enemies:GetChildren()) do
+                        -- Chỉ nhắm mục tiêu vào quái có máu sống và thuộc khu vực Raid
+                        if v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 and v:FindFirstChild("HumanoidRootPart") then
+                            EnemyFound = v
+                            break
+                        end
+                    end
+                    
+                    -- NẾU CÓ QUÁI: Tiến hành dịch chuyển ra sau lưng gom quái và đánh (Tận dụng logic farm M1 của bạn)
+                    if EnemyFound then
+                        -- Bay phía trên đầu hoặc sau lưng quái 5-10 khoảng cách để tránh bị quái đánh trúng
+                        _tp(EnemyFound.HumanoidRootPart.CFrame * CFrame.new(0, 8, 0))
+                        
+                        -- Tự động cầm vũ khí (Ưu tiên Trái ác quỷ/Kiếm có đòn M1 rộng như Buddha)
+                        local weapon = Player.Backpack:FindFirstChild(_G.SelectWeapon or "Melee") or Player.Character:FindFirstChild(_G.SelectWeapon or "Melee")
+                        if weapon and weapon:IsA("Tool") and not Player.Character:FindFirstChild(weapon.Name) then
+                            Humanoid:EquipTool(weapon)
+                        end
+                        
+                        -- Thực hiện spam Click chuột trái liên tục để clear quái nhanh
+                        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+                        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+                    else
+                        -- NẾU SẠCH QUÁI Ở ĐẢO HIỆN TẠI: Tự động tìm vị trí luồng đảo tiếp theo để đứng đợi mở cổng (Đảo 1 -> Đảo 5)
+                        -- Game sẽ tự động tạo các "Next Island Platform" hoặc vị trí cổng, ta tìm tâm đảo để di chuyển đến trước
+                        local NextIsland = workspace:FindFirstChild("Island Platform") or workspace:FindFirstChild("NextIsland")
+                        if NextIsland then
+                            _tp(NextIsland:GetPivot() * CFrame.new(0, 15, 0))
+                        else
+                            -- Nếu không tìm thấy tên đảo cụ thể, bay lên vị trí trung tâm cao của map Raid chờ sang màn kế tiếp
+                            _tp(CFrame.new(workspace.Dungeon.CenterPosition.Value.X, 100, workspace.Dungeon.CenterPosition.Value.Z))
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
 
 RaidOpen:AddToggle("AwakenFruits", {
     Title = "Auto Awaken Fruit",
@@ -7619,6 +7917,211 @@ LeviathanSection:AddToggle("LeviathanToggle", {
         _G.Leviathan1 = Value
     end
 })
+-- Tạo một nhóm quản lý chuyên biệt cho Leviathan Hunter trong Tab Sea Event
+local LeviathanGroup = Sea:AddLeftGroupbox("Leviathan Hunter")
+
+-- 1. Chức năng tự chạy tìm Leviathan
+LeviathanGroup:AddToggle("AutoFindLeviathan", {
+    Title = "Auto Find Leviathan (Auto Drive)",
+    Default = false,
+    Callback = function(Value)
+        _G.AutoFindLeviathan = Value
+    end
+})
+
+-- 2. Chức năng tự động chạy lại NPC triệu hồi khi ra đảo
+LeviathanGroup:AddToggle("AutoSummonLevi", {
+    Title = "Auto Summon Frozen Dimension",
+    Default = false,
+    Callback = function(Value)
+        _G.AutoSummonLeviathan = Value
+    end
+})
+
+-- Luồng logic vận hành song song hai chức năng không gây khựng game
+spawn(function()
+    while task.wait(0.5) do
+        -- XỬ LÝ CHỨC NĂNG 1: TỰ ĐỘNG CHẠY TÌM LEVIATHAN
+        if _G.AutoFindLeviathan then
+            pcall(function()
+                -- Nếu game đã phát hiện đảo Frozen Dimension hoặc thực thể Leviathan xuất hiện
+                if workspace.SeaBeasts:FindFirstChild("Leviathan") or workspace:FindFirstChild("Frozen Dimension") or CheckLeviathan() then
+                    -- Nếu đang kích hoạt Auto Tìm: Tự động nhả lái để nhường cho chức năng Triệu hồi xử lý
+                    local char = plr.Character
+                    if char and char:FindFirstChild("Humanoid") and char.Humanoid.Sit then
+                        char.Humanoid.Sit = false
+                    end
+                else
+                    -- Nếu chưa thấy đảo/Leviathan: Tiến hành mua thuyền và lái đi vô tận
+                    local myBoat = CheckBoat() -- Sử dụng hàm quét Boat của bạn trong script
+                    
+                    if not myBoat then
+                        -- Nếu chưa có thuyền: Di chuyển về NPC bán thuyền ở bến cảng Tiki Outpost
+                        local TikiNPC_Boat = CFrame.new(-16927.451, 9.086, 433.864)
+                        _tp(TikiNPC_Boat)
+                        
+                        -- Khoảng cách đủ gần NPC thì ra lệnh mua thuyền thông qua Remote
+                        if (TikiNPC_Boat.Position - plr.Character.HumanoidRootPart.Position).Magnitude <= 15 then
+                            -- Sử dụng loại thuyền bạn chọn trước hoặc mặc định là Beast Hunter
+                            local selectedBoat = _G.SelectedBoat or "Beast Hunter"
+                            replicated.Remotes.CommF_:InvokeServer("BuyBoat", selectedBoat)
+                            task.wait(1)
+                        end
+                    else
+                        -- Nếu đã có thuyền: Kiểm tra vị trí nhân vật
+                        local char = plr.Character
+                        if char and char:FindFirstChild("Humanoid") then
+                            if not char.Humanoid.Sit then
+                                -- Chưa ngồi lái: Tự động nhảy vào ghế lái của thuyền (VehicleSeat)
+                                if myBoat:FindFirstChild("VehicleSeat") then
+                                    _tp(myBoat.VehicleSeat.CFrame * CFrame.new(0, 1, 0))
+                                end
+                            else
+                                -- Đã ngồi lái thành công: Thay đổi tọa độ thuyền liên tục để chạy ra biển xa (Vô tận)
+                                local currentSeatPos = myBoat.VehicleSeat.Position
+                                
+                                -- Kiểm tra an toàn: Nếu gặp quái biển (Shark, Terrorshark, Grand Brigade) cản đường, nhấc thuyền lên không trung
+                                if CheckTerrorShark() or CheckShark() or CheckPirateGrandBrigade() or CheckEnemiesBoat() then
+                                    _tp(CFrame.new(currentSeatPos.X - 50, 160, currentSeatPos.Z + 50)) -- Bay lên độ cao an toàn (Y = 160)
+                                else
+                                    _tp(CFrame.new(currentSeatPos.X - 50, 31, currentSeatPos.Z + 50)) -- Lái mượt sát mặt nước biển (Y = 31)
+                                end
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+        
+        -- XỬ LÝ CHỨC NĂNG 2: TỰ ĐỘNG CHẠY LẠI NPC TRIỆU HỒI ĐẢO (FROZEN DIMENSION)
+        if _G.AutoSummonLeviathan then
+            pcall(function()
+                -- Tìm kiếm Object đảo Frozen Dimension hoặc thực thể NPC thuộc đảo Leviathan trên Workspace
+                local FrozenIslandNPC = workspace:FindFirstChild("Frozen Dimension") or workspace:FindFirstChild("Leviathan NPC")
+                
+                if FrozenIslandNPC then
+                    local char = plr.Character
+                    if char and char:FindFirstChild("Humanoid") then
+                        -- Tự động nhảy khỏi ghế lái thuyền ngay lập tức để chạy bộ / bay tự do
+                        if char.Humanoid.Sit then
+                            char.Humanoid.Sit = false
+                            task.wait(0.2)
+                        end
+                        
+                        -- Dịch chuyển thẳng tới tọa độ của NPC triệu hồi cổng Leviathan
+                        _tp(FrozenIslandNPC:GetPivot())
+                        
+                        -- Khi đến đủ sát khoảng cách tương tác, gửi Remote Invoke để đối thoại mở cổng triệu hồi
+                        if (FrozenIslandNPC:GetPivot().Position - char.HumanoidRootPart.Position).Magnitude <= 15 then
+                            replicated.Remotes.CommF_:InvokeServer("LeviathanProgress", "Freeze")
+                        end
+                    end
+                else
+                    -- Trường hợp script phát hiện Leviathan Island nói chung nhưng chưa định vị cụ thể NPC
+                    local LeviIsland = workspace:FindFirstChild("Leviathan Island")
+                    if LeviIsland then
+                        local char = plr.Character
+                        if char and char.Humanoid.Sit then char.Humanoid.Sit = false end
+                        _tp(LeviIsland:GetPivot() * CFrame.new(0, 15, 0)) -- Bay lên trên tâm đảo
+                    end
+                end
+            end)
+        end
+        
+    end
+end)
+local LeviAttackGroup = Sea:AddLeftGroupbox("Leviathan Combat")
+
+-- 1. Bật/Tắt chế độ đánh bằng Trái Ác Quỷ M1 (Kitsune, T-Rex, Dragon...)
+LeviAttackGroup:AddToggle("AutoAttackLeviM1", {
+    Title = "Auto Attack Levi (Fruit M1)",
+    Default = false,
+    Callback = function(Value)
+        _G.AutoAttackLeviM1 = Value
+    end
+})
+
+-- 2. Bật/Tắt chế độ bắn bằng Súng (Soul Guitar, Serpent Bow, Kabucha...)
+LeviAttackGroup:AddToggle("AutoAttackLeviGun", {
+    Title = "Auto Attack Levi (Gun)",
+    Default = false,
+    Callback = function(Value)
+        _G.AutoAttackLeviGun = Value
+    end
+})
+
+-- Hàm hỗ trợ tự động trang bị vũ khí dựa trên Thể loại (Blox Fruit hoặc Gun)
+local function EquipWeaponByType(weaponType)
+    local backpack = Player.Backpack
+    local character = Player.Character
+    
+    -- Kiểm tra nếu vũ khí phù hợp đã được cầm trên tay chưa
+    for _, tool in pairs(character:GetChildren()) do
+        if tool:IsA("Tool") and tool.ToolTip == weaponType then
+            return tool
+        end
+    end
+    
+    -- Nếu chưa cầm trên tay, tìm trong Kho (Backpack) để lôi ra
+    for _, tool in pairs(backpack:GetChildren()) do
+        if tool:IsA("Tool") and tool.ToolTip == weaponType then
+            Humanoid:EquipTool(tool)
+            return tool
+        end
+    end
+    return nil
+end
+
+-- VÒNG LẶP XỬ LÝ TẤN CÔNG LEVIATHAN
+spawn(function()
+    while task.wait(0.1) do
+        if _G.AutoAttackLeviM1 or _G.AutoAttackLeviGun then
+            pcall(function()
+                -- Tìm thực thể Leviathan hoặc các phân đoạn (Segment) của nó trong Workspace
+                local Leviathan = workspace.SeaBeasts:FindFirstChild("Leviathan") or workspace:FindFirstChild("Leviathan")
+                
+                if Leviathan then
+                    -- Tìm phần mục tiêu có thể gây sát thương (Thường là Head hoặc các Part chính)
+                    local TargetPart = Leviathan:FindFirstChild("Head") or Leviathan:FindFirstChildWhichIsA("Part") or Leviathan:FindFirstChildWhichIsA("MeshPart")
+                    
+                    if TargetPart then
+                        -- Bay/Dịch chuyển nhân vật đến vị trí an toàn phía trên Leviathan để né skill của boss
+                        local combatCFrame = TargetPart.CFrame * CFrame.new(0, 30, 0)
+                        _tp(combatCFrame)
+                        
+                        -- HƯỚNG XỬ LÝ 1: TẤN CÔNG BẰNG M1 TRÁI ÁC QUỶ (Kitsune, T-Rex, Dragon...)
+                        if _G.AutoAttackLeviM1 then
+                            local fruitTool = EquipWeaponByType("Blox Fruit")
+                            if fruitTool then
+                                -- Kích hoạt Click chuột trái (M1) liên tục thông qua VirtualInputManager có sẵn trong file của bạn
+                                game:GetService("VirtualInputManager"):SendMouseButtonEvent(0, 0, 0, true, game, 0)
+                                game:GetService("VirtualInputManager"):SendMouseButtonEvent(0, 0, 0, false, game, 0)
+                            end
+                        end
+                        
+                        -- HƯỚNG XỬ LÝ 2: TẤN CÔNG BẰNG SÚNG (Soul Guitar, Ná độc/Serpent Bow...)
+                        if _G.AutoAttackLeviGun then
+                            local gunTool = EquipWeaponByType("Gun")
+                            if gunTool then
+                                -- Định hướng vị trí súng nhắm thẳng vào tâm của Leviathan
+                                local gunRemote = gunTool:FindFirstChild("Remote") or gunTool:FindFirstChild("WeaponActivation")
+                                if gunRemote and gunRemote:IsA("RemoteEvent") then
+                                    -- Gửi tín hiệu bắn thẳng vào mục tiêu
+                                    gunRemote:FireServer(TargetPart.Position)
+                                else
+                                    -- Phương pháp click giả lập nếu súng không dùng Remote Event riêng biệt
+                                    game:GetService("VirtualInputManager"):SendMouseButtonEvent(0, 0, 0, true, game, 0)
+                                    game:GetService("VirtualInputManager"):SendMouseButtonEvent(0, 0, 0, false, game, 0)
+                                end
+                            end
+                        end
+                        
+                    end
+                end
+            end)
+        end
+    end
+end)
 
 -- Spawn functions for Kitsune Event
 spawn(function()
