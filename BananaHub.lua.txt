@@ -7603,203 +7603,119 @@ LeviathanSection:AddButton({
         replicated.Remotes.CommF_:InvokeServer("InfoLeviathan", "2")
     end
 })
--- Thêm Groupbox cho chức năng tìm kiếm Leviathan
-local LeviathanGroup = Sea:AddLeftGroupbox("Leviathan Hunter")
+-- Thêm các thiết lập cấu hình cần thiết tương thích với Banana Hub
+_G.AutoFindLeviathan = false
 
-LeviathanGroup:AddToggle("AutoFindLeviathan", {
-    Title = "Auto Find Leviathan",
-    Default = false,
-    Callback = function(Value)
-        _G.AutoFindLeviathan = Value
-    end
-})
-
--- Luồng thực thi tự động mua thuyền, lái thuyền ra Sea và triệu hồi
-spawn(function()
-    while wait(0.5) do
-        if _G.AutoFindLeviathan then
-            pcall(function()
-                -- Tọa độ NPC Spy (triệu hồi Leviathan) và NPC bán thuyền tại Tiki Outpost
-                local TikiNPC_Spy = CFrame.new(-16235.3, 1184.8, 145.2)
-                local TikiNPC_Boat = CFrame.new(-16927.451, 9.086, 433.864)
-                
-                -- 1. KIỂM TRA LEVIATHAN ĐÃ XUẤT HIỆN CHƯA (Dựa trên hàm CheckLeviathan sẵn có của bạn)
-                if workspace.SeaBeasts:FindFirstChild("Leviathan") or workspace:FindFirstChild("Leviathan Island") then
-                    -- Nếu đã ra đảo Leviathan: Nhảy khỏi ghế lái và chạy lại chỗ NPC Leviathan để triệu hồi
-                    local character = game.Players.LocalPlayer.Character
-                    if character and character:FindFirstChild("Humanoid") then
-                        if character.Humanoid.Sit then
-                            character.Humanoid.Sit = false -- Tự động nhảy khỏi ghế thuyền
-                            wait(0.2)
-                        end
-                        
-                        -- Tìm kiếm NPC Frozen Dimension hoặc NPC liên quan trên đảo để ấn triệu hồi
-                        local LeviNPC = workspace:FindFirstChild("Frozen Dimension") or workspace:FindFirstChild("Leviathan NPC")
-                        if LeviNPC then
-                            _tp(LeviNPC:GetPivot())
-                            if (LeviNPC:GetPivot().Position - character.HumanoidRootPart.Position).Magnitude <= 15 then
-                                -- Thực hiện lệnh triệu hồi (gọi Remote đối thoại tương tác)
-                                game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("LeviathanProgress", "Freeze")
-                            end
-                        else
-                            -- Nếu chưa xác định rõ vị trí NPC, bay đến tâm đảo Leviathan trước
-                            local LeviIsland = workspace:FindFirstChild("Leviathan Island")
-                            if LeviIsland then
-                                _tp(LeviIsland:GetPivot() * CFrame.new(0, 20, 0))
-                            end
-                        end
-                    end
-                else
-                    -- 2. NẾU CHƯA CÓ LEVIATHAN: TIẾN HÀNH MUA VÀ LÁI THUYỀN RA KHƠI KHÔNG DỪNG
-                    local myBoat = CheckBoat() -- Sử dụng hàm check thuyền của bạn
-                    
-                    if not myBoat then
-                        -- Chưa có thuyền: Chạy lại NPC bán thuyền tại Tiki Outpost
-                        _tp(TikiNPC_Boat)
-                        if (TikiNPC_Boat.Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude <= 12 then
-                            -- Gọi Remote mua thuyền (Mặc định chọn Beast Hunter hoặc thuyền bạn chọn trước)
-                            local boatToBuy = _G.SelectedBoat or "Beast Hunter"
-                            game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuyBoat", boatToBuy)
-                            wait(1)
-                        end
-                    else
-                        -- Đã có thuyền: Tiến hành lái thuyền
-                        local character = game.Players.LocalPlayer.Character
-                        if character and character:FindFirstChild("Humanoid") then
-                            if not character.Humanoid.Sit then
-                                -- Nếu chưa ngồi vào ghế lái: Tween thẳng vào ghế
-                                if myBoat:FindFirstChild("VehicleSeat") then
-                                    _tp(myBoat.VehicleSeat.CFrame * CFrame.new(0, 1, 0))
-                                end
-                            else
-                                -- Nếu đã ngồi vào ghế: Tiến hành điều khiển / dịch chuyển thuyền ra Sea vô tận
-                                -- Đi thẳng theo hướng cố định ra vùng nguy hiểm (Vĩ độ lớn, bao xa cũng được)
-                                -- Tránh các sự kiện cản đường bằng cách cho thuyền đi cao lên nếu gặp quái
-                                local currentPosition = myBoat.VehicleSeat.Position
-                                local targetDestination = CFrame.new(-100000, 35, 100000) -- Hướng đi ra biển lớn không giới hạn
-                                
-                                -- Kiểm tra nếu gặp quái biển (Shark, Terror Shark, Grand Brigade...) thì bay thuyền lên cao
-                                if CheckEnemiesBoat() or CheckTerrorShark() or CheckShark() or CheckPirateGrandBrigade() then
-                                    _tp(CFrame.new(currentPosition.X - 50, 150, currentPosition.Z + 50)) -- Bay lên trời (Y = 150) để tiếp tục chạy không dừng
-                                else
-                                    _tp(CFrame.new(currentPosition.X - 50, 31, currentPosition.Z + 50)) -- Chạy mượt sát mặt nước (Y = 31)
-                                end
-                            end
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
-LeviathanSection:AddToggle("FrozenToggle", {
-    Title = "Teleport To Frozen Dimension",
-    Default = false,
-    Callback = function(Value)
-        _G.FrozenTP = Value
-    end
-})
-
-LeviathanSection:AddToggle("LeviathanToggle", {
-    Title = "Auto Attack Leviathan",
-    Default = false,
-    Callback = function(Value)
-        _G.Leviathan1 = Value
-    end
-})
-local LeviAttackGroup = Sea:AddLeftGroupbox("Leviathan Combat")
-
--- 1. Bật/Tắt chế độ đánh bằng Trái Ác Quỷ M1 (Kitsune, T-Rex, Dragon...)
-LeviAttackGroup:AddToggle("AutoAttackLeviM1", {
-    Title = "Auto Attack Levi (Fruit M1)",
-    Default = false,
-    Callback = function(Value)
-        _G.AutoAttackLeviM1 = Value
-    end
-})
-
--- 2. Bật/Tắt chế độ bắn bằng Súng (Soul Guitar, Serpent Bow, Kabucha...)
-LeviAttackGroup:AddToggle("AutoAttackLeviGun", {
-    Title = "Auto Attack Levi (Gun)",
-    Default = false,
-    Callback = function(Value)
-        _G.AutoAttackLeviGun = Value
-    end
-})
-
--- Hàm hỗ trợ tự động trang bị vũ khí dựa trên Thể loại (Blox Fruit hoặc Gun)
-local function EquipWeaponByType(weaponType)
-    local backpack = Player.Backpack
-    local character = Player.Character
-    
-    -- Kiểm tra nếu vũ khí phù hợp đã được cầm trên tay chưa
-    for _, tool in pairs(character:GetChildren()) do
-        if tool:IsA("Tool") and tool.ToolTip == weaponType then
-            return tool
-        end
-    end
-    
-    -- Nếu chưa cầm trên tay, tìm trong Kho (Backpack) để lôi ra
-    for _, tool in pairs(backpack:GetChildren()) do
-        if tool:IsA("Tool") and tool.ToolTip == weaponType then
-            Humanoid:EquipTool(tool)
-            return tool
+-- Hàm tìm kiếm thuyền của người chơi dựa trên cấu trúc cũ của script
+local function GetMyBoat()
+    for _, v in pairs(workspace.Boats:GetChildren()) do
+        if v:FindFirstChild("Owner") and tostring(v.Owner.Value) == tostring(game.Players.LocalPlayer.Name) then
+            return v
         end
     end
     return nil
 end
 
--- VÒNG LẶP XỬ LÝ TẤN CÔNG LEVIATHAN
-spawn(function()
-    while task.wait(0.1) do
-        if _G.AutoAttackLeviM1 or _G.AutoAttackLeviGun then
+-- Hàm thực hiện mua thuyền Beast Hunter từ NPC
+local function AutoBuyBeastBoat()
+    -- Vị trí NPC Beast Hunter tại Tiki Outpost (Sea 3)
+    local TikiNPC_CFrame = CFrame.new(-16205, 12, 1315) 
+    
+    -- Kiểm tra nếu chưa đứng gần NPC thì di chuyển tới gần bằng hàm _tp của hub
+    if (game.Players.LocalPlayer.Character.HumanoidRootPart.Position - TikiNPC_CFrame.Position).Magnitude > 20 then
+        _tp(TikiNPC_CFrame)
+        task.wait(1)
+    end
+    
+    -- Gọi Remote mua thuyền Beast Hunter dựa trên hệ thống CommF_ của game
+    game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuyBoat", "Beast Hunter")
+    task.wait(1.5)
+end
+
+-- Vòng lặp chính xử lý tìm kiếm Leviathan và điều khiển thuyền vô tận
+task.spawn(function()
+    while task.wait(0.5) do
+        if _G.AutoFindLeviathan then
             pcall(function()
-                -- Tìm thực thể Leviathan hoặc các phân đoạn (Segment) của nó trong Workspace
-                local Leviathan = workspace.SeaBeasts:FindFirstChild("Leviathan") or workspace:FindFirstChild("Leviathan")
+                -- 1. KIỂM TRA ĐẢO ĐÓNG BĂNG (FROZEN DIMENSION)
+                -- Tìm model đảo Frozen Dimension xuất hiện trong Workspace map
+                local FrozenDimension = workspace:FindFirstChild("Frozen Dimension") or workspace.Map:FindFirstChild("Frozen Dimension")
                 
-                if Leviathan then
-                    -- Tìm phần mục tiêu có thể gây sát thương (Thường là Head hoặc các Part chính)
-                    local TargetPart = Leviathan:FindFirstChild("Head") or Leviathan:FindFirstChildWhichIsA("Part") or Leviathan:FindFirstChildWhichIsA("MeshPart")
+                if FrozenDimension then
+                    -- Tìm vị trí Cổng (Gate) hoặc một Part trung tâm để dịch chuyển đến
+                    local Gate = FrozenDimension:FindFirstChild("Gate") or FrozenDimension:FindFirstChild("Entrance") or FrozenDimension.PrimaryPart
+                    if Gate then
+                        -- Khi thấy đảo, lập tức hủy lái thuyền, tắt chức năng chạy và bay thẳng tới cổng
+                        _G.AutoFindLeviathan = false
+                        
+                        -- Nhả ghế lái nếu đang ngồi để không kéo theo thuyền khi teleport bay
+                        if game.Players.LocalPlayer.Character.Humanoid.Sit then
+                            game.Players.LocalPlayer.Character.Humanoid.Sit = false
+                            task.wait(0.2)
+                        end
+                        
+                        -- Sử dụng hàm _tp có sẵn của script để bay tới cổng đảo Frozen
+                        _tp(Gate.CFrame * CFrame.new(0, 5, 0))
+                        
+                        -- Gửi thông báo lên màn hình thông qua thư viện UI của bạn
+                        if Library and Library.Notify then
+                            Library:Notify({
+                                Title = "Banana Hub",
+                                Description = "Đã tìm thấy đảo Frozen Dimension! Teleporting...",
+                                Duration = 5
+                            })
+                        end
+                    end
+                else
+                    -- 2. NẾU CHƯA CÓ ĐẢO FROZEN, TIẾN HÀNH KIỂM TRA VÀ ĐIỀU KHIỂN THUYỀN RUN VÔ TẬN
+                    local myBoat = GetMyBoat()
                     
-                    if TargetPart then
-                        -- Bay/Dịch chuyển nhân vật đến vị trí an toàn phía trên Leviathan để né skill của boss
-                        local combatCFrame = TargetPart.CFrame * CFrame.new(0, 30, 0)
-                        _tp(combatCFrame)
-                        
-                        -- HƯỚNG XỬ LÝ 1: TẤN CÔNG BẰNG M1 TRÁI ÁC QUỶ (Kitsune, T-Rex, Dragon...)
-                        if _G.AutoAttackLeviM1 then
-                            local fruitTool = EquipWeaponByType("Blox Fruit")
-                            if fruitTool then
-                                -- Kích hoạt Click chuột trái (M1) liên tục thông qua VirtualInputManager có sẵn trong file của bạn
-                                game:GetService("VirtualInputManager"):SendMouseButtonEvent(0, 0, 0, true, game, 0)
-                                game:GetService("VirtualInputManager"):SendMouseButtonEvent(0, 0, 0, false, game, 0)
+                    if not myBoat then
+                        -- Nếu chưa mua hoặc mất thuyền, chạy đi mua thuyền mới
+                        AutoBuyBeastBoat()
+                    else
+                        local VehicleSeat = myBoat:FindFirstChildOfClass("VehicleSeat")
+                        if VehicleSeat then
+                            local humanoid = game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+                            
+                            -- Nếu chưa ngồi vào ghế lái của thuyền, tự động dịch chuyển nhân vật vào ghế
+                            if humanoid and humanoid.SeatPart ~= VehicleSeat then
+                                game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = VehicleSeat.CFrame
+                                task.wait(0.5)
                             end
+                            
+                            -- Thiết lập thuộc tính chạy thẳng dài vô tận ra hướng biển lớn
+                            -- Hướng tiến lên (Throttle = 1) và giữ thẳng lái (Steer = 0)
+                            VehicleSeat.Throttle = 1
+                            VehicleSeat.Steer = 0
                         end
-                        
-                        -- HƯỚNG XỬ LÝ 2: TẤN CÔNG BẰNG SÚNG (Soul Guitar, Ná độc/Serpent Bow...)
-                        if _G.AutoAttackLeviGun then
-                            local gunTool = EquipWeaponByType("Gun")
-                            if gunTool then
-                                -- Định hướng vị trí súng nhắm thẳng vào tâm của Leviathan
-                                local gunRemote = gunTool:FindFirstChild("Remote") or gunTool:FindFirstChild("WeaponActivation")
-                                if gunRemote and gunRemote:IsA("RemoteEvent") then
-                                    -- Gửi tín hiệu bắn thẳng vào mục tiêu
-                                    gunRemote:FireServer(TargetPart.Position)
-                                else
-                                    -- Phương pháp click giả lập nếu súng không dùng Remote Event riêng biệt
-                                    game:GetService("VirtualInputManager"):SendMouseButtonEvent(0, 0, 0, true, game, 0)
-                                    game:GetService("VirtualInputManager"):SendMouseButtonEvent(0, 0, 0, false, game, 0)
-                                end
-                            end
-                        end
-                        
                     end
                 end
             end)
         end
     end
 end)
+
+-- Tích hợp Toggle vào mục Sea Event Groupbox của bạn
+-- (Thay thế 'SettingsSea' bằng tên Groupbox UI chính xác trong mã nguồn của bạn)
+if SettingsSea then
+    SettingsSea:AddToggle("AutoFindLeviToggle", {
+        Title = "Auto Find Leviathan (Infinite Sail)",
+        Default = false,
+        Callback = function(Value)
+            _G.AutoFindLeviathan = Value
+            if not Value then
+                -- Nếu tắt chức năng, dừng xe/thuyền ngay lập tức bằng cách reset lực nhấn ga
+                pcall(function()
+                    local myBoat = GetMyBoat()
+                    if myBoat and myBoat:FindFirstChildOfClass("VehicleSeat") then
+                        myBoat:FindFirstChildOfClass("VehicleSeat").Throttle = 0
+                    end
+                end)
+            end
+        end
+    })
+end
 
 -- Spawn functions for Kitsune Event
 spawn(function()
