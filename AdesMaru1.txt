@@ -1,0 +1,781 @@
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/shlexware/Rayfield/main/source"))()
+
+local Window = Library:CreateWindow({
+   Name = "Maru UI",
+   LoadingTitle = "Maru Style",
+   LoadingSubtitle = "Modern UI",
+   ConfigurationSaving = {
+      Enabled = false,
+   },
+   Discord = {
+      Enabled = false,
+   },
+   KeySystem = false,
+})
+
+-- TOGGLE UI BUTTON
+local UIS = game:GetService("UserInputService")
+local Open = true
+
+UIS.InputBegan:Connect(function(input)
+   if input.KeyCode == Enum.KeyCode.RightControl then
+      Open = not Open
+      if Open then
+         Library:ToggleUI()
+      else
+         Library:ToggleUI()
+      end
+   end
+end)
+
+-- HOME TAB
+local HomeTab = Window:CreateTab("🏠 Home", 4483362458)
+
+HomeTab:CreateSection("Welcome To Maru UI")
+
+HomeTab:CreateParagraph({
+   Title = "Maru Style",
+   Content = "Clean futuristic dark purple UI"
+})
+
+HomeTab:CreateButton({
+   Name = "Button Example",
+   Callback = function()
+   end,
+})
+
+HomeTab:CreateToggle({
+   Name = "Toggle Example",
+   CurrentValue = false,
+   Flag = "Toggle",
+   Callback = function(Value)
+   end,
+})
+
+HomeTab:CreateSlider({
+   Name = "Slider Example",
+   Range = {0, 100},
+   Increment = 1,
+   Suffix = "%",
+   CurrentValue = 50,
+   Flag = "Slider",
+   Callback = function(Value)
+   end,
+})
+
+-- SETTINGS TAB
+local SettingsTab = Window:CreateTab("⚙ Settings", 4483362458)
+
+SettingsTab:CreateSection("UI Settings")
+
+SettingsTab:CreateParagraph({
+   Title = "Theme",
+   Content = "Dark Purple Neon"
+})
+
+Library:Notify({
+   Title = "Maru UI",
+   Content = "Press RightCtrl To Toggle UI",
+   Duration = 5,
+   Image = 4483362458,
+})
+AutoModeFarm = Window:AddTab("Farming")
+
+SelectMethodFarm = AutoModeFarm:AddLeftGroupbox("Setting Farm")
+
+SelectMethodFarm:AddDropdown("SelectMethodFarm", {
+    Title = "Select Method Farm",
+    Values = {"Level Farm", "Farm Bones", "Farm Katakuri", "Farm Tyrant of the Skies", "Aura Farm"},
+    Default = nil,
+    Callback = function(Value)
+        _G.MethodSelect = Value
+    end
+})
+
+SelectMethodFarm:AddSlider({
+    Title = "Distance Farm Aura",
+    Min = 0,
+    Max = 500,
+    Default = 300,
+    Callback = function(Value)
+        _G.Safemode = Value
+    end
+})
+
+SelectMethodFarm:AddToggle("HopKataV1", {
+    Title = "Hop Find Katakuri",
+    Default = false,
+    Callback = function(Value)
+        _G.Auto_Cake_Prince = Value
+    end
+})
+
+spawn(function()
+    while wait() do
+        if _G.Auto_Cake_Prince then
+            pcall(function()
+                local player = game.Players.LocalPlayer
+                local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+                local enemies = workspace.Enemies
+                local bigMirror = workspace.Map.CakeLoaf.BigMirror
+                
+                if not root then return end
+                
+                local bossExists = bigMirror.Other.Transparency == 0 or enemies:FindFirstChild("Cake Prince")
+                
+                if bossExists then
+                    local v = GetConnectionEnemies("Cake Prince")
+                    if v then
+                        repeat wait() 
+                            Attack.Kill2(v, _G.Auto_Cake_Prince)
+                        until not _G.Auto_Cake_Prince or not v.Parent or v.Humanoid.Health <= 0
+                    else
+                        if bigMirror.Other.Transparency == 0 and (CFrame.new(-1990.67, 4533, -14973.67).Position - root.Position).Magnitude >= 2000 then
+                            _tp(CFrame.new(-2151.82, 149.32, -12404.91))
+                        end
+                    end
+                else
+                    Hop()
+                    wait(5)
+                end
+            end)
+        end
+    end
+end)
+
+SelectMethodFarm:AddToggle("AcceptQuest", {
+    Title = "Accept Quest [Katakuri/Bone/Tyrant]",
+    Default = false,
+    Callback = function(Value)
+        _G.AcceptQuestC = Value
+    end
+})
+
+SelectMethodFarm:AddToggle("StartFarm", {
+    Title = "Start Farm",
+    Default = false,
+    Callback = function(Value)
+        _G.StartFarm = Value
+    end
+})
+
+-- Level Farm
+spawn(function()
+    while task.wait(1) do
+        if _G.StartFarm and _G.MethodSelect == "Level Farm" then
+            pcall(function()
+                -- Update Root if needed
+                if not Root or not Root.Parent then
+                    Root = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+                    if not Root then return end
+                end
+                
+                local lvl = plr.Data.Level.Value
+                
+                -- Update submerged status
+                TeleportedToSub = IsInSubmergedIsland()
+                
+                if lvl >= 2600 and not TeleportedToSub then
+                    if not IsInSubmergedIsland() then
+                        repeat 
+                            task.wait() 
+                            _tp(CFrame.new(SubNPC)) 
+                        until not _G.StartFarm or (Root.Position - SubNPC).Magnitude <= 80
+                        
+                        pcall(function()
+                            game:GetService("ReplicatedStorage")
+                                .Modules.Net["RF/SubmarineWorkerSpeak"]
+                                :InvokeServer("TravelToSubmergedIsland")
+                        end)
+                        task.wait(1)
+                    end
+                end
+
+                local QuestGui = plr.PlayerGui:FindFirstChild("Main") and 
+                                 plr.PlayerGui.Main:FindFirstChild("Quest")
+                
+                if not QuestGui or not QuestGui.Container or not QuestGui.Container:FindFirstChild("QuestTitle") then 
+                    return 
+                end
+                
+                local QuestTitle = QuestGui.Container.QuestTitle.Title.Text
+                local questData = QuestNeta()
+                
+                if not questData then return end
+                
+                if not string.find(QuestTitle, questData[5]) then
+                    replicated.Remotes.CommF_:InvokeServer("AbandonQuest")
+                end
+
+                if not plr.PlayerGui.Main.Quest.Visible then
+                    local questPos = questData[6]
+                    local questName = questData[3]
+                    local questID = questData[2]
+
+                    if _G.DelayQuest then task.wait(20) end
+
+                    if not _G.RemoteQuest then
+                        for i = 1, 10 do
+                            _tp(questPos)
+                            task.wait(0.25)
+                            if Root and (Root.Position - questPos.Position).Magnitude <= 100 then
+                                pcall(function()
+                                    replicated.Remotes.CommF_:InvokeServer("StartQuest", questName, questID)
+                                end)
+                                break
+                            end
+                        end
+                    else
+                        for retry = 1, 3 do
+                            if plr.PlayerGui.Main.Quest.Visible then break end
+                            pcall(function()
+                                replicated.Remotes.CommF_:InvokeServer("StartQuest", questName, questID)
+                            end)
+                            task.wait(0.3)
+                        end
+                    end
+                elseif plr.PlayerGui.Main.Quest.Visible then
+                    local enemyName = questData[1]
+                    if workspace.Enemies:FindFirstChild(enemyName) then
+                        for _, v in pairs(workspace.Enemies:GetChildren()) do
+                            if Attack.Alive(v) and v.Name == enemyName then
+                                if string.find(QuestTitle, questData[5]) then
+                                    repeat 
+                                        task.wait() 
+                                        Attack.Kill(v, _G.StartFarm) 
+                                    until not _G.StartFarm or v.Humanoid.Health <= 0 or not v.Parent or not plr.PlayerGui.Main.Quest.Visible
+                                else
+                                    replicated.Remotes.CommF_:InvokeServer("AbandonQuest")
+                                end
+                            end
+                        end
+                    else
+                        _tp(questData[4])
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- Farm Bones
+spawn(function()
+    while task.wait(1) do
+        if _G.StartFarm and _G.MethodSelect == "Farm Bones" then
+            pcall(function()        
+                local player = game.Players.LocalPlayer
+                local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+                local questUI = player.PlayerGui:FindFirstChild("Main") and 
+                                player.PlayerGui.Main:FindFirstChild("Quest")
+                local BonesTable = {"Reborn Skeleton","Living Zombie","Demonic Soul","Posessed Mummy"}
+                
+                if not root then return end
+                
+                local bone = GetConnectionEnemies(BonesTable)
+                if bone then
+                    if _G.AcceptQuestC and questUI and not questUI.Visible then
+                        local questPos = CFrame.new(-9516.99316, 172.017181, 6078.46533, 0, 0, -1, 0, 1, 0, 1, 0, 0)
+                        _tp(questPos)
+                        
+                        local attempts = 0
+                        while attempts < 50 and (questPos.Position - root.Position).Magnitude > 50 do
+                            task.wait(0.2)
+                            attempts = attempts + 1
+                        end
+                        
+                        local randomQuest = math.random(1, 4)
+                        local questData = {
+                            [1] = {"StartQuest", "HauntedQuest2", 2},
+                            [2] = {"StartQuest", "HauntedQuest2", 1},
+                            [3] = {"StartQuest", "HauntedQuest1", 1},
+                            [4] = {"StartQuest", "HauntedQuest1", 2}
+                        }                    
+                        
+                        pcall(function()
+                            game.ReplicatedStorage.Remotes.CommF_:InvokeServer(unpack(questData[randomQuest]))
+                        end)
+                    end
+                    
+                    repeat 
+                        task.wait() 
+                        Attack.Kill(bone, _G.StartFarm) 
+                    until not _G.StartFarm or not bone or not bone.Parent or 
+                          (bone.Humanoid and bone.Humanoid.Health <= 0) or 
+                          (_G.AcceptQuestC and questUI and not questUI.Visible)
+                else
+                    _tp(CFrame.new(-9495.6806640625, 453.58624267578125, 5977.3486328125))
+                end
+            end)
+        end
+    end
+end)
+
+-- Farm Tyrant of the Skies
+spawn(function()
+    while task.wait(1) do
+        if _G.StartFarm and _G.MethodSelect == "Farm Tyrant of the Skies" then
+            pcall(function()
+                local player = game.Players.LocalPlayer
+                if not (player and player.Character) then return end
+                local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+                if not hrp then return end
+
+                local enemiesFolder = workspace:FindFirstChild("Enemies")
+                local bossPos = Vector3.new(-16268.287, 152.616, 1390.773)
+                
+                if (hrp.Position - bossPos).Magnitude > 5 then
+                    if _tp then 
+                        pcall(_tp, CFrame.new(bossPos))
+                    else
+                        pcall(function() 
+                            player.Character.HumanoidRootPart.CFrame = CFrame.new(bossPos) 
+                        end)
+                    end
+                    
+                    local attempts = 0
+                    repeat 
+                        wait() 
+                        attempts = attempts + 1
+                    until not _G.StartFarm or 
+                          (player.Character and player.Character:FindFirstChild("HumanoidRootPart") and 
+                          (player.Character.HumanoidRootPart.Position - bossPos).Magnitude <= 5) or
+                          attempts > 100
+                end
+
+                local boss = enemiesFolder and enemiesFolder:FindFirstChild("Tyrant of the Skies")
+                if boss and boss:FindFirstChild("Humanoid") and boss.Humanoid.Health > 0 then
+                    repeat
+                        if not _G.StartFarm then break end
+                        if AutoHaki then pcall(AutoHaki) end
+                        if SelectWeapon and EquipTool then pcall(EquipTool, SelectWeapon) end
+                        if Attack and Attack.Kill then
+                            pcall(function() Attack.Kill(boss, _G.StartFarm) end)
+                        end
+                        wait()
+                    until not _G.StartFarm or not boss.Parent or not boss:FindFirstChild("Humanoid") or boss.Humanoid.Health <= 0
+                    return
+                end
+
+                local mobList = {"Serpent Hunter","Skull Slayer","Isle Champion","Sun-kissed Warrior"}
+                if enemiesFolder then
+                    for _, mobName in ipairs(mobList) do
+                        if not _G.StartFarm then break end
+                        for _, mob in ipairs(enemiesFolder:GetChildren()) do
+                            if not _G.StartFarm then break end
+                            if mob and mob.Name == mobName and mob:FindFirstChild("HumanoidRootPart") and 
+                               mob:FindFirstChild("Humanoid") and mob.Humanoid.Health > 0 then
+                               
+                                hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+                                if not hrp then break end
+                                
+                                if (hrp.Position - mob.HumanoidRootPart.Position).Magnitude > 5000 then
+                                    if _tp then 
+                                        pcall(_tp, mob.HumanoidRootPart.CFrame * CFrame.new(0,30,0))
+                                    else
+                                        pcall(function() 
+                                            player.Character.HumanoidRootPart.CFrame = mob.HumanoidRootPart.CFrame * CFrame.new(0,30,0) 
+                                        end)
+                                    end
+                                    
+                                    local t0 = tick()
+                                    repeat 
+                                        wait() 
+                                        hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart") 
+                                    until not _G.StartFarm or not hrp or 
+                                          (hrp.Position - mob.HumanoidRootPart.Position).Magnitude <= 6 or 
+                                          tick() - t0 > 8
+                                end
+                                
+                                repeat
+                                    if not _G.StartFarm then break end
+                                    if AutoHaki then pcall(AutoHaki) end
+                                    if SelectWeapon and EquipTool then pcall(EquipTool, SelectWeapon) end
+                                    if Attack and Attack.Kill then
+                                        pcall(function() Attack.Kill(mob, _G.StartFarm) end)
+                                    end
+                                    wait()
+                                until not _G.StartFarm or not mob.Parent or 
+                                      not mob:FindFirstChild("Humanoid") or 
+                                      mob.Humanoid.Health <= 0
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- Aura Farm
+spawn(function()
+    while task.wait(1) do
+        if _G.StartFarm and _G.MethodSelect == "Aura Farm" then
+            pcall(function()
+                for i, v in pairs(workspace.Enemies:GetChildren()) do
+                    if not _G.StartFarm then break end
+                    
+                    if v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") then
+                        if v.Humanoid.Health > 0 then
+                            repeat 
+                                wait() 
+                                Attack.Kill(v, _G.StartFarm)  -- Sửa: dùng _G.StartFarm
+                            until not _G.StartFarm or not v.Parent or v.Humanoid.Health <= 0
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+MeterialFarm = AutoModeFarm:AddLeftGroupbox("Mastery Farm")
+
+MeterialFarm:AddDropdown("SelectMethodFarm", {
+    Title = "Select Method Farm Mastery",
+    Values = {"Blox Fruit", "Gun"},
+    Default = nil,
+    Callback = function(Value)
+        _G.MasteryTypeSelect = Value
+    end
+})
+
+MeterialFarm:AddToggle("MasteryStart", {
+    Title = "Farm Mastery",
+    Default = false,
+    Callback = function(Value)
+        _G.MasteryFarmStart = Value
+        if not _G.StartFarn then
+        Library:Notify({
+            Title = "Night Slayer Hub",
+            Description = "Open Start Farm Plz!",
+            Duration = 3
+        })
+        end
+    end
+})
+
+-- Thêm các biến cần thiết
+local RunSer = game:GetService("RunService")
+local vim1 = game:GetService("VirtualInputManager")
+local Sec = 0.1 -- Hoặc giá trị bạn muốn
+local mastery2 = {} -- Cần định nghĩa table này
+
+spawn(function()
+    RunSer.RenderStepped:Connect(function() 
+        pcall(function()
+            if _G.MasteryFarmStart and _G.StartFarm and not _G.MethodSelect then  -- Sửa: _G.MethodSelect thay vì _G.Method
+                local notifications = plr.PlayerGui:FindFirstChild("Notifications")
+                if notifications then
+                    for a, b in pairs(notifications:GetChildren()) do 
+                        if b.Name == "NotificationTemplate" then 
+                            if string.find(b.Text, "Skill locked!") then 
+                                b:Destroy()
+                            end 
+                        end 
+                    end 
+                end
+            end 
+        end)
+    end) 
+end)
+
+spawn(function()
+    local waitTime = 0.1  -- Khai báo biến waitTime
+    while wait(waitTime) do  -- Sửa: wait(waitTime) thay vì wait(Sec)
+        pcall(function()
+            if _G.MasteryFarmStart and _G.StartFarm and not _G.MethodSelect then  -- Sửa: _G.MethodSelect thay vì _G.Method
+                if _G.MasteryTypeSelect == "Blox Fruit" then
+                    local v = GetConnectionEnemies(mastery2)  -- mastery2 cần được định nghĩa
+                    if v and v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") then		
+                        HealthM = v.Humanoid.MaxHealth * 70 / 100
+                        repeat 
+                            wait()
+                            MousePos = v.HumanoidRootPart.Position
+                            Attack.Mas(v, _G.MasteryFarmStart)
+                        until not _G.MasteryFarmStart or not v.Parent or 
+                              (v.Humanoid and v.Humanoid.Health <= 0)		        
+                    else
+                        _tp(CFrame.new(-9495.6806640625, 453.58624267578125, 5977.3486328125)) 		    
+                    end
+                elseif _G.MasteryTypeSelect == "Gun" then
+                    local v = GetConnectionEnemies(mastery2)  -- mastery2 cần được định nghĩa
+                    if v and v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") then		      
+                        HealthM = v.Humanoid.MaxHealth * 70 / 100
+                        repeat 
+                            wait()
+                            MousePos = v.HumanoidRootPart.Position
+                            Attack.Masgun(v, _G.MasteryFarmStart)
+                            
+                            local Modules = replicated:FindFirstChild("Modules")
+                            local Net = Modules and Modules:FindFirstChild("Net")
+                            local RE_ShootGunEvent = Net and Net:FindFirstChild("RE/ShootGunEvent")    
+                            
+                            local character = plr.Character
+                            if not character then break end
+                            
+                            local tool = character:FindFirstChildOfClass("Tool")
+                            if not tool then break end
+                            
+                            if tool.ToolTip ~= "Gun" then break end
+                            
+                            if tool and tool.Name == 'Skull Guitar' then
+                                SoulGuitar = true
+                                if tool:FindFirstChild("RemoteEvent") then
+                                    tool.RemoteEvent:FireServer("TAP", MousePos)
+                                end
+                                if _G.MasteryFarmStart then
+                                    vim1:SendMouseButtonEvent(0, 0, 0, true, game, 1)
+                                    wait(0.05)
+                                    vim1:SendMouseButtonEvent(0, 0, 0, false, game, 1)
+                                    wait(0.05)
+                                end
+                            elseif tool and tool.Name ~= 'Skull Guitar' then
+                                SoulGuitar = false
+                                if RE_ShootGunEvent then
+                                    RE_ShootGunEvent:FireServer(MousePos, { v.HumanoidRootPart })
+                                end
+                                if _G.MasteryFarmStart then
+                                    vim1:SendMouseButtonEvent(0, 0, 0, true, game, 1)
+                                    wait(0.05)
+                                    vim1:SendMouseButtonEvent(0, 0, 0, false, game, 1)
+                                    wait(0.05)
+                                end
+                            end		            		
+                        until not _G.MasteryFarmStart or not v.Parent or 
+                              (v.Humanoid and v.Humanoid.Health <= 0)    
+                        SoulGuitar = false     		         		        
+                    else
+                        _tp(CFrame.new(-9495.6806640625, 453.58624267578125, 5977.3486328125)) 
+                    end
+                end
+            end
+        end)
+    end
+end)
+-- =========================================================================
+-- BANANA HUB - AUTO FARM LEVEL (LV 1 -> LV 2800) COMPLETELY OPTIMIZED
+-- =========================================================================
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+local TweenService = game:GetService("TweenService")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+
+local Player = Players.LocalPlayer
+local CommF_Remote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CommF_")
+local Enemies = Workspace:WaitForChild("Enemies")
+
+-- Cấu hình Farm
+_G.StartFarm = true
+_G.SelectWeapon = "Melee"  -- Các lựa chọn: "Melee", "Sword", "Blox Fruit"
+getgenv().TweenSpeed = 350  -- Tốc độ bay (Duy trì mượt mà và an toàn)
+
+-- Hàm trang bị vũ khí dựa theo file mẫu
+local function EquipWeapon(weaponType)
+    if not weaponType then return end
+    for _, tool in pairs(Player.Backpack:GetChildren()) do
+        if tool:IsA("Tool") and (tool.ToolTip == weaponType or tool.Name == weaponType) then
+            Player.Character.Humanoid:EquipTool(tool)
+            break
+        end
+    end
+end
+
+-- Hàm di chuyển Tween mượt mà kết hợp bật NoClip chống kẹt địa hình
+local function _tp(targetCFrame)
+    local character = Player.Character
+    if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+    local rootPart = character.HumanoidRootPart
+    local distance = (targetCFrame.Position - rootPart.Position).Magnitude
+    
+    -- Xử lý NoClip khi đang di chuyển
+    for _, part in pairs(character:GetChildren()) do
+        if part:IsA("BasePart") then part.CanCollide = false end
+    end
+    
+    if character.Humanoid.Sit then character.Humanoid.Sit = false end
+    
+    local tweenInfo = TweenInfo.new(distance / (getgenv().TweenSpeed or 300), Enum.EasingStyle.Linear)
+    local tween = TweenService:Create(rootPart, tweenInfo, {CFrame = targetCFrame})
+    tween:Play()
+    tween.Completed:Wait()
+end
+
+-- Hàm Gom Quái (Bring Mob) kéo tụ lại một điểm để xả kỹ năng lan nhanh hơn
+local function BringEnemy(posMon)
+    for _, v in pairs(Enemies:GetChildren()) do
+        if v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 then
+            if (v.PrimaryPart.Position - posMon).Magnitude <= 300 then
+                v.PrimaryPart.CFrame = CFrame.new(posMon)
+                v.PrimaryPart.CanCollide = false
+                v.Humanoid.WalkSpeed = 0
+                v.Humanoid.JumpPower = 0
+                if v.Humanoid:FindFirstChild("Animator") then 
+                    v.Humanoid.Animator:Destroy()
+                end
+            end
+        end                               
+    end  
+end
+
+-- BẢNG DỮ LIỆU QUEST VÀ VỊ TRÍ QUÁI TỪ CẤP 1 ĐẾN 2800 (Tính toán chuẩn xác vị trí map)
+local function GetQuestData()
+    local level = Player.Data.Level.Value
+    
+    -- SEA 1 (Cấp 1 -> 699)
+    if level < 700 then
+        if level >= 1 and level < 15 then
+            return {"Bandit", "BanditQuest1", 1, CFrame.new(1059, 16, 1549), CFrame.new(1145, 17, 1634), "Bandit"}
+        elseif level >= 15 and level < 30 then
+            return {"Monkey", "JungleQuest", 1, CFrame.new(-1598, 36, 153), CFrame.new(-1610, 37, 148), "Monkey"}
+        elseif level >= 30 and level < 60 then
+            return {"Pirate", "BuggyQuest1", 1, CFrame.new(-1141, 5, 3827), CFrame.new(-1201, 5, 3890), "Pirate"}
+        elseif level >= 60 and level < 90 then
+            return {"Desert Bandit", "DesertQuest", 1, CFrame.new(894, 6, 4390), CFrame.new(992, 6, 4425), "Desert Bandit"}
+        elseif level >= 90 and level < 120 then
+            return {"Snow Bandit", "SnowQuest", 1, CFrame.new(1386, 87, -1298), CFrame.new(1289, 105, -1342), "Snow Bandit"}
+        elseif level >= 120 and level < 150 then
+            return {"Chief Petty Officer", "MarineQuest", 1, CFrame.new(-5039, 28, 4324), CFrame.new(-4880, 23, 4340), "Chief Petty Officer"}
+        elseif level >= 150 and level < 190 then
+            return {"Sky Bandit", "SkyQuest", 1, CFrame.new(1149, 414, -5108), CFrame.new(1190, 414, -5140), "Sky Bandit"}
+        elseif level >= 190 and level < 250 then
+            return {"Toga Warrior", "PrisonQuest", 1, CFrame.new(5191, 3, 686), CFrame.new(5334, 3, 474), "Toga Warrior"}
+        elseif level >= 250 and level < 300 then
+            return {"Magma Ninja", "MagmaQuest", 1, CFrame.new(-5313, 12, 8516), CFrame.new(-5415, 11, 8447), "Magma Ninja"}
+        elseif level >= 300 and level < 450 then
+            return {"Fishman Warrior", "FishmanQuest", 1, CFrame.new(61122, 18, 1569), CFrame.new(61000, 18, 1400), "Fishman Warrior"}
+        elseif level >= 450 and level < 625 then
+            return {"Gods Guard", "SkyQuest2", 1, CFrame.new(-4722, 856, -464), CFrame.new(-4630, 855, -450), "Gods Guard"}
+        else
+            return {"Galley Pirate", "FontaineQuest", 1, CFrame.new(5424, 38, 4362), CFrame.new(5560, 38, 4100), "Galley Pirate"}
+        end
+        
+    -- SEA 2 (Cấp 700 -> 1499)
+    elseif level >= 700 and level < 1500 then
+        if level >= 700 and level < 775 then
+            return {"Raider", "Area1Quest", 1, CFrame.new(-424, 73, 1836), CFrame.new(-426, 72, 2034), "Raider"}
+        elseif level >= 775 and level < 875 then
+            return {"Swan Pirate", "Area2Quest", 1, CFrame.new(634, 73, 915), CFrame.new(875, 121, 1220), "Swan Pirate"}
+        elseif level >= 875 and level < 950 then
+            return {"Marine Captain", "MarineQuest2", 1, CFrame.new(-2448, 73, -3210), CFrame.new(-2320, 73, -3295), "Marine Captain"}
+        elseif level >= 950 and level < 1100 then
+            return {"Zombie", "GraveyardQuest", 1, CFrame.new(-2935, 73, -3211), CFrame.new(-3120, 73, -2990), "Zombie"}
+        elseif level >= 1100 and level < 1250 then
+            return {"Snow Trooper", "SnowMountainQuest", 1, CFrame.new(607, 401, -5373), CFrame.new(505, 401, -5500), "Snow Trooper"}
+        elseif level >= 1250 and level < 1350 then
+            return {"Sea Soldier", "IceQuest", 1, CFrame.new(5668, 28, -6484), CFrame.new(6000, 27, -6200), "Sea Soldier"}
+        else
+            return {"Ship Bandit", "ShipQuest1", 1, CFrame.new(1037, 125, 32902), CFrame.new(1030, 125, 33113), "Ship Bandit"}
+        end
+
+    -- SEA 3 (Cấp 1500 -> 2800+)
+    else
+        if level >= 1500 and level < 1575 then
+            return {"Forest Pirate", "TurtleQuest", 1, CFrame.new(-13446, 413, -7760), CFrame.new(-13300, 415, -7900), "Forest Pirate"}
+        elseif level >= 1575 and level < 1700 then
+            return {"Mythological Pirate", "TurtleQuest", 2, CFrame.new(-13446, 413, -7760), CFrame.new(-13545, 470, -6917), "Mythological Pirate"}
+        elseif level >= 1700 and level < 1900 then
+            return {"Marine Commodore", "FloatingTurtleQuest", 1, CFrame.new(-13282, 496, -9565), CFrame.new(2401, 123, -7589), "Marine Commodore"}
+        elseif level >= 1900 and level < 2100 then
+            return {"Living Zombie", "HauntedQuest1", 1, CFrame.new(-9430, 13, 5650), CFrame.new(-10227, 421, 6161), "Living Zombie"}
+        elseif level >= 2100 and level < 2300 then
+            return {"Ice Cream Chef", "IceCreamIslandQuest", 1, CFrame.new(-1160, 14, -10712), CFrame.new(-877, 118, -11032), "Ice Cream Chef"}
+        elseif level >= 2300 and level < 2500 then
+            return {"Cookie Crafter", "CakeQuest1", 1, CFrame.new(-1900, 38, -11900), CFrame.new(-2021, 38, -12028), "Cookie Crafter"}
+        elseif level >= 2500 and level < 2600 then
+            return {"Cocoa Warrior", "ChocoQuest1", 1, CFrame.new(231, 23, -12194), CFrame.new(95, 73, -12309), "Cocoa Warrior"}
+        else
+            -[span_4](start_span)- Cấp độ từ 2600 đến 2800+ thuộc vùng biển chìm (Submerged Island)[span_4](end_span)
+            return {"Submerged Bandit", "SubmergedQuest1", 1, CFrame.new(-16267, 25, 1373), CFrame.new(-16450, 40, 1500), "Submerged Bandit"}
+        end
+    end
+end
+
+-- VÒNG LẶP CHÍNH AUTO FARM LEVEL
+task.spawn(function()
+    while task.wait(0.1) do
+        if _G.StartFarm then
+            pcall(function()
+                local level = Player.Data.Level.Value
+                
+                -- TỰ ĐỘNG CHUYỂN THẾ GIỚI (AUTO TRAVEL SEA) KHI ĐẠT ĐỦ CẤP ĐỘ
+                if level >= 700 and game.PlaceId == 2753915549 then -- Đủ cấp rời Sea 1
+                    CommF_Remote:InvokeServer("TravelDressrosa")
+                    task.wait(2)
+                    return
+                [span_5](start_span)elseif level >= 1500 and game.PlaceId == 4442272183 then -- Đủ cấp rời Sea 2[span_5](end_span)
+                    [span_6](start_span)CommF_Remote:InvokeServer("F_", "TravelZou")[span_6](end_span)
+                    task.wait(2)
+                    return
+                end
+                
+                -- Kiểm tra UI Quest của game Blox Fruits
+                local QuestGui = Player.PlayerGui:FindFirstChild("Main") and Player.PlayerGui.Main:FindFirstChild("Quest")
+                if not QuestGui or not QuestGui.Container then return end
+                
+                -- Đọc dữ liệu bãi quái phù hợp hiện tại
+                local questData = GetQuestData()
+                if not questData then return end
+                
+                local enemyName = questData[1]
+                local questName = questData[2]
+                local questID = questData[3]
+                local npcPos = questData[4]
+                local enemyPos = questData[5]
+                local checkName = questData[6]
+                
+                -[span_7](start_span)- Nếu đang giữ sai Nhiệm vụ -> Hủy Quest cũ để đồng bộ[span_7](end_span)
+                if QuestGui.Visible and not string.find(QuestGui.Container.QuestTitle.Title.Text, checkName) then
+                    CommF_Remote:InvokeServer("AbandonQuest")
+                end
+                
+                -- TRƯỜNG HỢP 1: CHƯA NHẬN QUEST -> Di chuyển tới NPC để nhận
+                if not QuestGui.Visible then
+                    _tp(npcPos)
+                    if (Player.Character.HumanoidRootPart.Position - npcPos.Position).Magnitude <= 30 then
+                        CommF_Remote:InvokeServer("StartQuest", questName, questID)
+                    end
+                
+                -- TRƯỜNG HỢP 2: ĐÃ CÓ QUEST -> Tiến hành tiêu diệt quái
+                elseif QuestGui.Visible then
+                    local targetEnemy = nil
+                    
+                    -- Tìm mục tiêu quái còn sống trong Workspace
+                    for _, v in pairs(Enemies:GetChildren()) do
+                        if v.Name == enemyName and v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 and v:FindFirstChild("HumanoidRootPart") then
+                            targetEnemy = v
+                            break
+                        end
+                    end
+                    
+                    if targetEnemy then
+                        -- Khóa vị trí quái để kích hoạt mang Gom Quái lại chung một điểm
+                        local lockedCFrame = targetEnemy.HumanoidRootPart.CFrame
+                        BringEnemy(lockedCFrame.Position)
+                        
+                        -- Trang bị công cụ chiến đấu (Melee/Sword/Fruit)
+                        EquipWeapon(_G.SelectWeapon)
+                        
+                        -- Bay phía trên đầu quái để giữ khoảng cách an toàn và tự động Click tấn công liên tục
+                        repeat
+                            if not _G.StartFarm or not targetEnemy.Parent or targetEnemy.Humanoid.Health <= 0 or not QuestGui.Visible then break end
+                            
+                            -- Giữ vị trí người chơi an toàn trên đầu quái 20-30 Studs tránh mất máu
+                            _tp(targetEnemy.HumanoidRootPart.CFrame * CFrame.new(0, 25, 0) * CFrame.Angles(math.rad(-90), 0, 0))
+                            
+                            -- Giả lập thao tác nhấp chuột / Click Attack bằng VirtualInputManager
+                            VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 1)
+                            VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 1)
+                            
+                            task.wait()
+                        until targetEnemy.Humanoid.Health <= 0
+                    else
+                        -- Nếu chưa thấy quái xuất hiện, bay đến điểm chờ (Spawn) của quái
+                        _tp(enemyPos)
+                    end
+                end
+            end)
+        end
+    end
+end)
