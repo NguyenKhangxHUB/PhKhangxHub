@@ -7603,97 +7603,54 @@ LeviathanSection:AddButton({
         replicated.Remotes.CommF_:InvokeServer("InfoLeviathan", "2")
     end
 })
--- Thêm các thiết lập cấu hình cần thiết tương thích với Banana Hub
-_G.AutoFindLeviathan = false
-
--- Hàm tìm kiếm thuyền của người chơi dựa trên cấu trúc cũ của script
-local function GetMyBoat()
-    for _, v in pairs(workspace.Boats:GetChildren()) do
-        if v:FindFirstChild("Owner") and tostring(v.Owner.Value) == tostring(game.Players.LocalPlayer.Name) then
-            return v
-        end
-    end
-    return nil
-end
-
--- Hàm thực hiện mua thuyền Beast Hunter từ NPC
-local function AutoBuyBeastBoat()
-    -- Vị trí NPC Beast Hunter tại Tiki Outpost (Sea 3)
-    local TikiNPC_CFrame = CFrame.new(-16205, 12, 1315) 
-    
-    -- Kiểm tra nếu chưa đứng gần NPC thì di chuyển tới gần bằng hàm _tp của hub
-    if (game.Players.LocalPlayer.Character.HumanoidRootPart.Position - TikiNPC_CFrame.Position).Magnitude > 20 then
-        _tp(TikiNPC_CFrame)
-        task.wait(1)
-    end
-    
-    -- Gọi Remote mua thuyền Beast Hunter dựa trên hệ thống CommF_ của game
-    game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuyBoat", "Beast Hunter")
-    task.wait(1.5)
-end
-
--- Vòng lặp chính xử lý tìm kiếm Leviathan và điều khiển thuyền vô tận
-task.spawn(function()
-    while task.wait(0.5) do
-        if _G.AutoFindLeviathan then
-            pcall(function()
-                -- 1. KIỂM TRA ĐẢO ĐÓNG BĂNG (FROZEN DIMENSION)
-                -- Tìm model đảo Frozen Dimension xuất hiện trong Workspace map
-                local FrozenDimension = workspace:FindFirstChild("Frozen Dimension") or workspace.Map:FindFirstChild("Frozen Dimension")
-                
-                if FrozenDimension then
-                    -- Tìm vị trí Cổng (Gate) hoặc một Part trung tâm để dịch chuyển đến
-                    local Gate = FrozenDimension:FindFirstChild("Gate") or FrozenDimension:FindFirstChild("Entrance") or FrozenDimension.PrimaryPart
-                    if Gate then
-                        -- Khi thấy đảo, lập tức hủy lái thuyền, tắt chức năng chạy và bay thẳng tới cổng
-                        _G.AutoFindLeviathan = false
-                        
-                        -- Nhả ghế lái nếu đang ngồi để không kéo theo thuyền khi teleport bay
-                        if game.Players.LocalPlayer.Character.Humanoid.Sit then
-                            game.Players.LocalPlayer.Character.Humanoid.Sit = false
-                            task.wait(0.2)
-                        end
-                        
-                        -- Sử dụng hàm _tp có sẵn của script để bay tới cổng đảo Frozen
-                        _tp(Gate.CFrame * CFrame.new(0, 5, 0))
-                        
-                        -- Gửi thông báo lên màn hình thông qua thư viện UI của bạn
-                        if Library and Library.Notify then
-                            Library:Notify({
-                                Title = "Banana Hub",
-                                Description = "Đã tìm thấy đảo Frozen Dimension! Teleporting...",
-                                Duration = 5
-                            })
-                        end
-                    end
+local targetDestination = nil
+spawn(function()
+  while wait() do
+    if _G.Prehis_Find then 
+      pcall(function()
+        if not workspace["_WorldOrigin"].Locations:FindFirstChild("Prehistoric Island", true) then                
+          local myBoat = CheckBoat()
+          if not myBoat then
+            local buyBoatCFrame = CFrame.new(-16927.451, 9.086, 433.864)
+            TeleportToTarget(buyBoatCFrame)
+            if (buyBoatCFrame.Position - plr.Character.HumanoidRootPart.Position).Magnitude <= 10 then 
+              replicated.Remotes.CommF_:InvokeServer("BuyBoat", _G.SelectedBoat) 
+            end
+          else
+            if plr.Character.Humanoid.Sit == false then
+              local boatSeatCFrame = myBoat.VehicleSeat.CFrame * CFrame.new(0, 1, 0)
+              _tp(boatSeatCFrame)
+            else                            
+              repeat wait() 
+                local targetDestination = CFrame.new(-10000000, 31, 37016.25)
+                if CheckEnemiesBoat() or CheckTerrorShark() or CheckPirateGrandBrigade() then
+                  _tp(CFrame.new(-10000000, 150, 37016.25))
                 else
-                    -- 2. NẾU CHƯA CÓ ĐẢO FROZEN, TIẾN HÀNH KIỂM TRA VÀ ĐIỀU KHIỂN THUYỀN RUN VÔ TẬN
-                    local myBoat = GetMyBoat()
-                    
-                    if not myBoat then
-                        -- Nếu chưa mua hoặc mất thuyền, chạy đi mua thuyền mới
-                        AutoBuyBeastBoat()
-                    else
-                        local VehicleSeat = myBoat:FindFirstChildOfClass("VehicleSeat")
-                        if VehicleSeat then
-                            local humanoid = game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-                            
-                            -- Nếu chưa ngồi vào ghế lái của thuyền, tự động dịch chuyển nhân vật vào ghế
-                            if humanoid and humanoid.SeatPart ~= VehicleSeat then
-                                game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = VehicleSeat.CFrame
-                                task.wait(0.5)
-                            end
-                            
-                            -- Thiết lập thuộc tính chạy thẳng dài vô tận ra hướng biển lớn
-                            -- Hướng tiến lên (Throttle = 1) và giữ thẳng lái (Steer = 0)
-                            VehicleSeat.Throttle = 1
-                            VehicleSeat.Steer = 0
-                        end
-                    end
+                  _tp(CFrame.new(-10000000, 31, 37016.25))
                 end
-            end)
+              until not _G.Prehis_Find or (targetDestination.Position - plr.Character.HumanoidRootPart.Position).Magnitude <= 10 or workspace["_WorldOrigin"].Locations:FindFirstChild("Prehistoric Island") or plr.Character.Humanoid.Sit == false
+              plr.Character.Humanoid.Sit = false
+            end
+          end
+        else
+          if (workspace["_WorldOrigin"].Locations:FindFirstChild("Prehistoric Island").CFrame.Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude >= 2000 then 
+            _tp(workspace["_WorldOrigin"].Locations:FindFirstChild("Prehistoric Island").CFrame)
+          end
+          if workspace.Map:FindFirstChild("PrehistoricIsland", true) or workspace["_WorldOrigin"].Locations:FindFirstChild("Prehistoric Island", true) then            
+            if workspace.Map.PrehistoricIsland.Core.ActivationPrompt:FindFirstChild("ProximityPrompt", true) then
+              if plr:DistanceFromCharacter(workspace.Map.PrehistoricIsland.Core.ActivationPrompt.CFrame.Position) <= 150 then
+                fireproximityprompt(workspace.Map.PrehistoricIsland.Core.ActivationPrompt.ProximityPrompt, math.huge)
+                vim1:SendKeyEvent(true, "E", false, game) 
+                wait(1.5) 
+                vim1:SendKeyEvent(false, "E", false, game)
+              end
+              _tp(workspace.Map.PrehistoricIsland.Core.ActivationPrompt.CFrame)              
+            end
+          end
         end
+      end)
     end
+  end
 end)
 
 -- Tích hợp Toggle vào mục Sea Event Groupbox của bạn
