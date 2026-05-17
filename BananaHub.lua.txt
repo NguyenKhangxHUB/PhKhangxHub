@@ -119,7 +119,7 @@ local ClickState = 0
 local Num_self = 25
 
 -- Team mặc định
-getgenv().Team = getgenv().Team or "Pirates"
+getgenv().Team = getgenv().Team or "Marines"
 
 repeat 
     local start = plr.PlayerGui:WaitForChild("Main"):WaitForChild("Loading") 
@@ -128,7 +128,7 @@ until start and game:IsLoaded()
 
 -- Thiết lập team
 if getgenv().Team == "Pirates" then
-    replicated.Remotes.CommF_:InvokeServer("SetTeam", "Marines")
+    replicated.Remotes.CommF_:InvokeServer("SetTeam", "Pirates")
 elseif getgenv().Team == "Marines" then
     replicated.Remotes.CommF_:InvokeServer("SetTeam", "Marines")
 else
