@@ -128,7 +128,7 @@ until start and game:IsLoaded()
 
 -- Thiết lập team
 if getgenv().Team == "Pirates" then
-    replicated.Remotes.CommF_:InvokeServer("SetTeam", "Pirates")
+    replicated.Remotes.CommF_:InvokeServer("SetTeam", "Marines")
 elseif getgenv().Team == "Marines" then
     replicated.Remotes.CommF_:InvokeServer("SetTeam", "Marines")
 else
@@ -2695,7 +2695,7 @@ Library = loadstring(game:HttpGet("https://pastefy.app/vgSGtrbP/raw"))()
 
 Window = Library:CreateWindow({
     Title = "Banana Cat Hub",
-    Subtitle = "- Blox Fruit",
+    Subtitle = "- Ades",
     Image = "rbxassetid://130947856929902"
 })
 
@@ -4127,7 +4127,7 @@ SelectMethodFarm = AutoModeFarm:AddLeftGroupbox("Setting Farm")
 
 SelectMethodFarm:AddDropdown("SelectMethodFarm", {
     Title = "Select Method Farm",
-    Values = {"Level Farm", "Farm Bones", "Farm Katakuri", "Farm Tyrant of the Skies", "Aura Farm"},
+    Values = {"Level Farm", "Farm Bones", "Farm Katakuri", "Farm Tyrant of the Skies"},
     Default = nil,
     Callback = function(Value)
         _G.MethodSelect = Value
@@ -4381,75 +4381,70 @@ end)
 
 -- Farm Katakuri
 spawn(function()
-    while task.wait(1) do
-        if _G.StartFarm and _G.MethodSelect == "Farm Katakuri" then
-            pcall(function()
-                local player = game.Players.LocalPlayer
-                local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-                local questUI = player.PlayerGui:FindFirstChild("Main") and 
-                                player.PlayerGui.Main:FindFirstChild("Quest")
-                local enemies = workspace.Enemies
-                local bigMirror = workspace.Map.CakeLoaf.BigMirror
-                
-                if not root then return end
-                if not bigMirror:FindFirstChild("Other") then
-                    _tp(CFrame.new(-2077, 252, -12373))
-                end        
-                
-                if bigMirror.Other.Transparency == 0 or enemies:FindFirstChild("Cake Prince") then
-                    local v = GetConnectionEnemies("Cake Prince")
-                    if v then
-                        repeat 
-                            wait() 
-                            Attack.Kill2(v, _G.StartFarm)  -- Sửa: dùng _G.StartFarm thay vì _G.Auto_Cake_Prince
-                        until not _G.StartFarm or not v.Parent or v.Humanoid.Health <= 0
-                    else
-                        if bigMirror.Other.Transparency == 0 and (CFrame.new(-1990.67, 4533, -14973.67).Position - root.Position).Magnitude >= 2000 then
-                            _tp(CFrame.new(-2151.82, 149.32, -12404.91))
-                        end
-                    end
-                else
-                    local CakePrince = {"Cookie Crafter","Cake Guard","Baking Staff","Head Baker"}
-                    local v = GetConnectionEnemies(CakePrince)
-                    if v then
-                        if _G.AcceptQuestC and questUI and not questUI.Visible then
-                            local questPos = CFrame.new(-1927.92, 37.8, -12842.54)
-                            _tp(questPos)
-                            
-                            local attempts = 0
-                            while attempts < 50 and (questPos.Position - root.Position).Magnitude > 50 do
-                                wait(0.2)
-                                attempts = attempts + 1
-                            end
-                            
-                            local randomQuest = math.random(1, 4)
-                            local questData = {
-                                [1] = {"StartQuest", "CakeQuest2", 2},
-                                [2] = {"StartQuest", "CakeQuest2", 1},
-                                [3] = {"StartQuest", "CakeQuest1", 1},
-                                [4] = {"StartQuest", "CakeQuest1", 2}
-                            }                    
-                            
-                            pcall(function()
-                                game.ReplicatedStorage.Remotes.CommF_:InvokeServer(unpack(questData[randomQuest]))
-                            end)
-                        end
-                        
-                        repeat 
-                            wait() 
-                            Attack.Kill(v, _G.StartFarm)  -- Sửa: dùng _G.StartFarm
-                        until not _G.StartFarm or not v or not v.Parent or 
-                              (v.Humanoid and v.Humanoid.Health <= 0) or 
-                              bigMirror.Other.Transparency == 0 or 
-                              (_G.AcceptQuestC and questUI and not questUI.Visible)
-                    else
-                        _tp(CFrame.new(-2077, 252, -12373))
-                    end
-                end
-            end)
-        end
-    end
-end)
+	while wait() do
+		if _G.Auto_Cake_Prince then
+			pcall(function()
+				local Y = game.Players.LocalPlayer;
+				local d = Y.Character and Y.Character:FindFirstChild("HumanoidRootPart");
+				local R = Y.PlayerGui.Main.Quest;
+				local Q = workspace.Enemies;
+				local r = workspace.Map.CakeLoaf.BigMirror;
+				if not d then
+					return;
+				end;
+				if not r:FindFirstChild("Other") then
+					_tp(CFrame.new(-2077, 252, -12373));
+				end;
+				if r.Other.Transparency == 0 or Q:FindFirstChild("Cake Prince") then
+					local Y = GetConnectionEnemies("Cake Prince");
+					if Y then
+						repeat
+							wait();
+							f.Kill2(Y, _G.Auto_Cake_Prince);
+						until not _G.Auto_Cake_Prince or not Y.Parent or Y.Humanoid.Health <= 0;
+					else
+						if r.Other.Transparency == 0 and ((CFrame.new(-1990.67, 4533, -14973.67)).Position - d.Position).Magnitude >= 2000 then
+							_tp(CFrame.new(-2151.82, 149.32, -12404.91));
+						end;
+					end;
+				else
+					local Y = {
+							"Cookie Crafter",
+							"Cake Guard",
+							"Baking Staff",
+							"Head Baker",
+						};
+					local Q = GetConnectionEnemies(Y);
+					if Q then
+						if _G.AcceptQuestC and not R.Visible then
+							local Y = CFrame.new(-1927.92, 37.8, -12842.54);
+							_tp(Y);
+							while (Y.Position - d.Position).Magnitude > 50 do
+								wait(.2);
+							end;
+							local R = math.random(1, 4);
+							local Q = {
+									[1] = { "StartQuest", "CakeQuest2", 2 },
+									[2] = { "StartQuest", "CakeQuest2", 1 },
+									[3] = { "StartQuest", "CakeQuest1", 1 },
+									[4] = { "StartQuest", "CakeQuest1", 2 },
+								};
+							local r, a = pcall(function()
+									return game.ReplicatedStorage.Remotes.CommF_:InvokeServer(unpack(Q[R]));
+								end);
+						end;
+						repeat
+							wait();
+							f.Kill(Q, _G.Auto_Cake_Prince);
+						until not _G.Auto_Cake_Prince or Q.Humanoid.Health <= 0 or r.Other.Transparency == 0 or _G.AcceptQuestC and not R.Visible;
+					else
+						_tp(CFrame.new(-2077, 252, -12373));
+					end;
+				end;
+			end);
+		end;
+	end;
+end);
 
 -- Farm Tyrant of the Skies
 spawn(function()
@@ -7603,10 +7598,18 @@ LeviathanSection:AddButton({
         replicated.Remotes.CommF_:InvokeServer("InfoLeviathan", "2")
     end
 })
-local targetDestination = nil
+
+-- Tích hợp Toggle vào mục Sea Event Groupbox của bạn
+-- (Thay thế 'SettingsSea' bằng tên Groupbox UI chính xác trong mã nguồn của bạn)
+if SettingsSea then
+    SettingsSea:AddToggle("AutoFindLeviToggle", {
+        Title = "Auto Find Leviathan (Infinite Sail)",
+        Default = false,
+        Callback = function(Value)
+            local targetDestination = nil
 spawn(function()
   while wait() do
-    if _G.Prehis_Find then 
+    if _G.levi_Find then 
       pcall(function()
         if not workspace["_WorldOrigin"].Locations:FindFirstChild("Prehistoric Island", true) then                
           local myBoat = CheckBoat()
@@ -7652,27 +7655,6 @@ spawn(function()
     end
   end
 end)
-
--- Tích hợp Toggle vào mục Sea Event Groupbox của bạn
--- (Thay thế 'SettingsSea' bằng tên Groupbox UI chính xác trong mã nguồn của bạn)
-if SettingsSea then
-    SettingsSea:AddToggle("AutoFindLeviToggle", {
-        Title = "Auto Find Leviathan (Infinite Sail)",
-        Default = false,
-        Callback = function(Value)
-            _G.AutoFindLeviathan = Value
-            if not Value then
-                -- Nếu tắt chức năng, dừng xe/thuyền ngay lập tức bằng cách reset lực nhấn ga
-                pcall(function()
-                    local myBoat = GetMyBoat()
-                    if myBoat and myBoat:FindFirstChildOfClass("VehicleSeat") then
-                        myBoat:FindFirstChildOfClass("VehicleSeat").Throttle = 0
-                    end
-                end)
-            end
-        end
-    })
-end
 
 -- Spawn functions for Kitsune Event
 spawn(function()
