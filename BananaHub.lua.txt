@@ -4127,7 +4127,7 @@ SelectMethodFarm = AutoModeFarm:AddLeftGroupbox("Setting Farm")
 
 SelectMethodFarm:AddDropdown("SelectMethodFarm", {
     Title = "Select Method Farm",
-    Values = {"Level Farm", "Farm Bones", "Farm Katakuri", "Farm Tyrant of the Skies"},
+    Values = {"Level Farm", "Farm Bones", "Farm Katakuri", "Farm Tyrant of the Skies", "Aura Farm"}
     Default = nil,
     Callback = function(Value)
         _G.MethodSelect = Value
