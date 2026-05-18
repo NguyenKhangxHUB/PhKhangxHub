@@ -6630,6 +6630,7 @@ spawn(function()
     end
   end)
 end)
+
 --// AUTO BUY + START RAID CHIP
 _G.AutoBuyRaidChip = false
 _G.SelectRaidChip = "Flame"
@@ -6909,83 +6910,6 @@ DungeonOpen:AddToggle("AutoDungeon", {
         end
     end
 })
---// AUTO CLEAR DUNGEON
-_G.AutoDungeon = false
-
-DungeonOpen:AddToggle("AutoDungeonFarm", {
-    Title = "Auto Clear Dungeon",
-    Default = false,
-    Callback = function(v)
-        _G.AutoDungeon = v
-    end
-})
-
-task.spawn(function()
-    while task.wait(0.15) do
-        pcall(function()
-
-            if _G.AutoDungeon then
-
-                local plr = game.Players.LocalPlayer
-                local char = plr.Character
-                local hrp = char and char:FindFirstChild("HumanoidRootPart")
-
-                if not hrp then
-                    return
-                end
-
-                -- auto haki
-                if AutoHaki then
-                    pcall(AutoHaki)
-                end
-
-                -- equip weapon đã chọn
-                if _G.SelectWeapon and EquipWeapon then
-                    pcall(function()
-                        EquipWeapon(_G.SelectWeapon)
-                    end)
-                end
-
-                -- tìm mob dungeon
-                for _,mob in pairs(workspace.Enemies:GetChildren()) do
-
-                    if mob:FindFirstChild("Humanoid")
-                    and mob:FindFirstChild("HumanoidRootPart")
-                    and mob.Humanoid.Health > 0 then
-
-                        -- bring mob
-                        if DungeonBring then
-                            pcall(function()
-                                mob.HumanoidRootPart.CanCollide = false
-                                mob.HumanoidRootPart.Size = Vector3.new(10,10,10)
-                            end)
-                        end
-
-                        repeat
-                            task.wait()
-
-                            -- đứng trên đầu mob
-                            hrp.CFrame =
-                                mob.HumanoidRootPart.CFrame
-                                * CFrame.new(0,30,0)
-
-                            -- đánh
-                            if Attack and Attack.Kill then
-                                pcall(function()
-                                    Attack.Kill(mob, true)
-                                end)
-                            end
-
-                        until not _G.AutoDungeon
-                        or not mob.Parent
-                        or mob.Humanoid.Health <= 0
-                    end
-                end
-            end
-
-        end)
-    end
-end)
 
 -- Toggle Bring Mobs
 DungeonOpen:AddToggle("DungeonBringMob", {
