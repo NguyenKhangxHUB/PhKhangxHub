@@ -119,7 +119,7 @@ local ClickState = 0
 local Num_self = 25
 
 -- Team mặc định
-getgenv().Team = getgenv().Team or "Marines"
+getgenv().Team = getgenv().Team or "Pirates"
 
 repeat 
     local start = plr.PlayerGui:WaitForChild("Main"):WaitForChild("Loading") 
@@ -2695,7 +2695,7 @@ Library = loadstring(game:HttpGet("https://pastefy.app/vgSGtrbP/raw"))()
 
 Window = Library:CreateWindow({
     Title = "Banana Cat Hub",
-    Subtitle = "- Ades",
+    Subtitle = "- Blox Fruit",
     Image = "rbxassetid://130947856929902"
 })
 
@@ -4127,7 +4127,7 @@ SelectMethodFarm = AutoModeFarm:AddLeftGroupbox("Setting Farm")
 
 SelectMethodFarm:AddDropdown("SelectMethodFarm", {
     Title = "Select Method Farm",
-    Values = {"Level Farm", "Farm Bones", "Farm Katakuri", "Farm Tyrant of the Skies", "Aura Farm"}
+    Values = {"Level Farm", "Farm Bones", "Farm Katakuri", "Farm Tyrant of the Skies", "Aura Farm"},
     Default = nil,
     Callback = function(Value)
         _G.MethodSelect = Value
@@ -4381,70 +4381,75 @@ end)
 
 -- Farm Katakuri
 spawn(function()
-	while wait() do
-		if _G.Auto_Cake_Prince then
-			pcall(function()
-				local Y = game.Players.LocalPlayer;
-				local d = Y.Character and Y.Character:FindFirstChild("HumanoidRootPart");
-				local R = Y.PlayerGui.Main.Quest;
-				local Q = workspace.Enemies;
-				local r = workspace.Map.CakeLoaf.BigMirror;
-				if not d then
-					return;
-				end;
-				if not r:FindFirstChild("Other") then
-					_tp(CFrame.new(-2077, 252, -12373));
-				end;
-				if r.Other.Transparency == 0 or Q:FindFirstChild("Cake Prince") then
-					local Y = GetConnectionEnemies("Cake Prince");
-					if Y then
-						repeat
-							wait();
-							f.Kill2(Y, _G.Auto_Cake_Prince);
-						until not _G.Auto_Cake_Prince or not Y.Parent or Y.Humanoid.Health <= 0;
-					else
-						if r.Other.Transparency == 0 and ((CFrame.new(-1990.67, 4533, -14973.67)).Position - d.Position).Magnitude >= 2000 then
-							_tp(CFrame.new(-2151.82, 149.32, -12404.91));
-						end;
-					end;
-				else
-					local Y = {
-							"Cookie Crafter",
-							"Cake Guard",
-							"Baking Staff",
-							"Head Baker",
-						};
-					local Q = GetConnectionEnemies(Y);
-					if Q then
-						if _G.AcceptQuestC and not R.Visible then
-							local Y = CFrame.new(-1927.92, 37.8, -12842.54);
-							_tp(Y);
-							while (Y.Position - d.Position).Magnitude > 50 do
-								wait(.2);
-							end;
-							local R = math.random(1, 4);
-							local Q = {
-									[1] = { "StartQuest", "CakeQuest2", 2 },
-									[2] = { "StartQuest", "CakeQuest2", 1 },
-									[3] = { "StartQuest", "CakeQuest1", 1 },
-									[4] = { "StartQuest", "CakeQuest1", 2 },
-								};
-							local r, a = pcall(function()
-									return game.ReplicatedStorage.Remotes.CommF_:InvokeServer(unpack(Q[R]));
-								end);
-						end;
-						repeat
-							wait();
-							f.Kill(Q, _G.Auto_Cake_Prince);
-						until not _G.Auto_Cake_Prince or Q.Humanoid.Health <= 0 or r.Other.Transparency == 0 or _G.AcceptQuestC and not R.Visible;
-					else
-						_tp(CFrame.new(-2077, 252, -12373));
-					end;
-				end;
-			end);
-		end;
-	end;
-end);
+    while task.wait(1) do
+        if _G.StartFarm and _G.MethodSelect == "Farm Katakuri" then
+            pcall(function()
+                local player = game.Players.LocalPlayer
+                local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+                local questUI = player.PlayerGui:FindFirstChild("Main") and 
+                                player.PlayerGui.Main:FindFirstChild("Quest")
+                local enemies = workspace.Enemies
+                local bigMirror = workspace.Map.CakeLoaf.BigMirror
+                
+                if not root then return end
+                if not bigMirror:FindFirstChild("Other") then
+                    _tp(CFrame.new(-2077, 252, -12373))
+                end        
+                
+                if bigMirror.Other.Transparency == 0 or enemies:FindFirstChild("Cake Prince") then
+                    local v = GetConnectionEnemies("Cake Prince")
+                    if v then
+                        repeat 
+                            wait() 
+                            Attack.Kill2(v, _G.StartFarm)  -- Sửa: dùng _G.StartFarm thay vì _G.Auto_Cake_Prince
+                        until not _G.StartFarm or not v.Parent or v.Humanoid.Health <= 0
+                    else
+                        if bigMirror.Other.Transparency == 0 and (CFrame.new(-1990.67, 4533, -14973.67).Position - root.Position).Magnitude >= 2000 then
+                            _tp(CFrame.new(-2151.82, 149.32, -12404.91))
+                        end
+                    end
+                else
+                    local CakePrince = {"Cookie Crafter","Cake Guard","Baking Staff","Head Baker"}
+                    local v = GetConnectionEnemies(CakePrince)
+                    if v then
+                        if _G.AcceptQuestC and questUI and not questUI.Visible then
+                            local questPos = CFrame.new(-1927.92, 37.8, -12842.54)
+                            _tp(questPos)
+                            
+                            local attempts = 0
+                            while attempts < 50 and (questPos.Position - root.Position).Magnitude > 50 do
+                                wait(0.2)
+                                attempts = attempts + 1
+                            end
+                            
+                            local randomQuest = math.random(1, 4)
+                            local questData = {
+                                [1] = {"StartQuest", "CakeQuest2", 2},
+                                [2] = {"StartQuest", "CakeQuest2", 1},
+                                [3] = {"StartQuest", "CakeQuest1", 1},
+                                [4] = {"StartQuest", "CakeQuest1", 2}
+                            }                    
+                            
+                            pcall(function()
+                                game.ReplicatedStorage.Remotes.CommF_:InvokeServer(unpack(questData[randomQuest]))
+                            end)
+                        end
+                        
+                        repeat 
+                            wait() 
+                            Attack.Kill(v, _G.StartFarm)  -- Sửa: dùng _G.StartFarm
+                        until not _G.StartFarm or not v or not v.Parent or 
+                              (v.Humanoid and v.Humanoid.Health <= 0) or 
+                              bigMirror.Other.Transparency == 0 or 
+                              (_G.AcceptQuestC and questUI and not questUI.Visible)
+                    else
+                        _tp(CFrame.new(-2077, 252, -12373))
+                    end
+                end
+            end)
+        end
+    end
+end)
 
 -- Farm Tyrant of the Skies
 spawn(function()
@@ -6625,6 +6630,64 @@ spawn(function()
     end
   end)
 end)
+--// AUTO BUY + START RAID CHIP
+_G.AutoBuyRaidChip = false
+_G.SelectRaidChip = "Flame"
+
+Tabs["Fruit and Raid,Dungeon"]:AddToggle("AutoBuyRaidChip", {
+    Title = "Auto Buy & Start Raid",
+    Default = false,
+    Callback = function(v)
+        _G.AutoBuyRaidChip = v
+    end
+})
+
+Tabs["Fruit and Raid,Dungeon"]:AddDropdown("SelectRaidChip", {
+    Title = "Select Raid Chip",
+    Values = {
+        "Flame","Ice","Quake","Light","Dark",
+        "Spider","Rumble","Magma","Buddha","Phoenix"
+    },
+    Multi = false,
+    Default = 1,
+    Callback = function(v)
+        _G.SelectRaidChip = v
+    end
+})
+
+task.spawn(function()
+    while task.wait(2) do
+        pcall(function()
+
+            if _G.AutoBuyRaidChip then
+
+                local plr = game.Players.LocalPlayer
+                local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+
+                -- mua chip
+                game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer(
+                    "RaidsNpc",
+                    "Select",
+                    _G.SelectRaidChip
+                )
+
+                task.wait(0.5)
+
+                -- teleport tới chỗ raid
+                hrp.CFrame = CFrame.new(-6438, 250, -4501)
+
+                task.wait(1)
+
+                -- bắt đầu raid
+                game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer(
+                    "RaidsNpc",
+                    "Start"
+                )
+            end
+
+        end)
+    end
+end)
 
 RaidOpen:AddToggle("AwakenFruits", {
     Title = "Auto Awaken Fruit",
@@ -6846,6 +6909,83 @@ DungeonOpen:AddToggle("AutoDungeon", {
         end
     end
 })
+--// AUTO CLEAR DUNGEON
+_G.AutoDungeon = false
+
+DungeonOpen:AddToggle("AutoDungeonFarm", {
+    Title = "Auto Clear Dungeon",
+    Default = false,
+    Callback = function(v)
+        _G.AutoDungeon = v
+    end
+})
+
+task.spawn(function()
+    while task.wait(0.15) do
+        pcall(function()
+
+            if _G.AutoDungeon then
+
+                local plr = game.Players.LocalPlayer
+                local char = plr.Character
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+
+                if not hrp then
+                    return
+                end
+
+                -- auto haki
+                if AutoHaki then
+                    pcall(AutoHaki)
+                end
+
+                -- equip weapon đã chọn
+                if _G.SelectWeapon and EquipWeapon then
+                    pcall(function()
+                        EquipWeapon(_G.SelectWeapon)
+                    end)
+                end
+
+                -- tìm mob dungeon
+                for _,mob in pairs(workspace.Enemies:GetChildren()) do
+
+                    if mob:FindFirstChild("Humanoid")
+                    and mob:FindFirstChild("HumanoidRootPart")
+                    and mob.Humanoid.Health > 0 then
+
+                        -- bring mob
+                        if DungeonBring then
+                            pcall(function()
+                                mob.HumanoidRootPart.CanCollide = false
+                                mob.HumanoidRootPart.Size = Vector3.new(10,10,10)
+                            end)
+                        end
+
+                        repeat
+                            task.wait()
+
+                            -- đứng trên đầu mob
+                            hrp.CFrame =
+                                mob.HumanoidRootPart.CFrame
+                                * CFrame.new(0,30,0)
+
+                            -- đánh
+                            if Attack and Attack.Kill then
+                                pcall(function()
+                                    Attack.Kill(mob, true)
+                                end)
+                            end
+
+                        until not _G.AutoDungeon
+                        or not mob.Parent
+                        or mob.Humanoid.Health <= 0
+                    end
+                end
+            end
+
+        end)
+    end
+end)
 
 -- Toggle Bring Mobs
 DungeonOpen:AddToggle("DungeonBringMob", {
@@ -7599,62 +7739,21 @@ LeviathanSection:AddButton({
     end
 })
 
--- Tích hợp Toggle vào mục Sea Event Groupbox của bạn
--- (Thay thế 'SettingsSea' bằng tên Groupbox UI chính xác trong mã nguồn của bạn)
-if SettingsSea then
-    SettingsSea:AddToggle("AutoFindLeviToggle", {
-        Title = "Auto Find Leviathan (Infinite Sail)",
-        Default = false,
-        Callback = function(Value)
-            local targetDestination = nil
-spawn(function()
-  while wait() do
-    if _G.levi_Find then 
-      pcall(function()
-        if not workspace["_WorldOrigin"].Locations:FindFirstChild("Prehistoric Island", true) then                
-          local myBoat = CheckBoat()
-          if not myBoat then
-            local buyBoatCFrame = CFrame.new(-16927.451, 9.086, 433.864)
-            TeleportToTarget(buyBoatCFrame)
-            if (buyBoatCFrame.Position - plr.Character.HumanoidRootPart.Position).Magnitude <= 10 then 
-              replicated.Remotes.CommF_:InvokeServer("BuyBoat", _G.SelectedBoat) 
-            end
-          else
-            if plr.Character.Humanoid.Sit == false then
-              local boatSeatCFrame = myBoat.VehicleSeat.CFrame * CFrame.new(0, 1, 0)
-              _tp(boatSeatCFrame)
-            else                            
-              repeat wait() 
-                local targetDestination = CFrame.new(-10000000, 31, 37016.25)
-                if CheckEnemiesBoat() or CheckTerrorShark() or CheckPirateGrandBrigade() then
-                  _tp(CFrame.new(-10000000, 150, 37016.25))
-                else
-                  _tp(CFrame.new(-10000000, 31, 37016.25))
-                end
-              until not _G.Prehis_Find or (targetDestination.Position - plr.Character.HumanoidRootPart.Position).Magnitude <= 10 or workspace["_WorldOrigin"].Locations:FindFirstChild("Prehistoric Island") or plr.Character.Humanoid.Sit == false
-              plr.Character.Humanoid.Sit = false
-            end
-          end
-        else
-          if (workspace["_WorldOrigin"].Locations:FindFirstChild("Prehistoric Island").CFrame.Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude >= 2000 then 
-            _tp(workspace["_WorldOrigin"].Locations:FindFirstChild("Prehistoric Island").CFrame)
-          end
-          if workspace.Map:FindFirstChild("PrehistoricIsland", true) or workspace["_WorldOrigin"].Locations:FindFirstChild("Prehistoric Island", true) then            
-            if workspace.Map.PrehistoricIsland.Core.ActivationPrompt:FindFirstChild("ProximityPrompt", true) then
-              if plr:DistanceFromCharacter(workspace.Map.PrehistoricIsland.Core.ActivationPrompt.CFrame.Position) <= 150 then
-                fireproximityprompt(workspace.Map.PrehistoricIsland.Core.ActivationPrompt.ProximityPrompt, math.huge)
-                vim1:SendKeyEvent(true, "E", false, game) 
-                wait(1.5) 
-                vim1:SendKeyEvent(false, "E", false, game)
-              end
-              _tp(workspace.Map.PrehistoricIsland.Core.ActivationPrompt.CFrame)              
-            end
-          end
-        end
-      end)
+LeviathanSection:AddToggle("FrozenToggle", {
+    Title = "Teleport To Frozen Dimension",
+    Default = false,
+    Callback = function(Value)
+        _G.FrozenTP = Value
     end
-  end
-end)
+})
+
+LeviathanSection:AddToggle("LeviathanToggle", {
+    Title = "Auto Attack Leviathan",
+    Default = false,
+    Callback = function(Value)
+        _G.Leviathan1 = Value
+    end
+})
 
 -- Spawn functions for Kitsune Event
 spawn(function()
@@ -9388,65 +9487,42 @@ spawn(function()
     end
   end
 end)
-VolcanoFarm:AddToggle("DeleteLavaVolcano", {
-    Title = "Xoá Lava Đảo Núi Lửa",
+--// XÓA LAVA ĐẢO NÚI LỬA
+_G.RemoveVolcanoLava = false
+
+Tabs.Prehistoric:AddToggle("RemoveVolcanoLava", {
+    Title = "Xóa Lava Đảo Núi Lửa",
     Default = false,
-    Callback = function(Value)
-        _G.DeleteLavaEnabled = Value
-        
-        -- Hàm thực thi ẩn/hiển thị lava và tắt cơ chế sát thương
-        local function updateLavaState()
-            -- Quét toàn bộ map để tìm các khối Lava/Magma liên quan đến đảo núi lửa
-            for _, object in pairs(workspace:GetDescendants()) do
-                if object:IsA("BasePart") then
-                    -- Nhận diện các Part dung nham ở khu vực núi lửa và khu vực spawn Golem
-                    if object.Name == "Lava" or object.Name == "Magma" or (object.Parent and (object.Parent.Name == "Volcano" or object.Parent.Name == "Golem" or object.Parent.Name == "Magma Admiral")) then
-                        if _G.DeleteLavaEnabled then
-                            -- Khi BẬT: Làm tàng hình ô lava và tắt va chạm khựng nhân vật
-                            object.Transparency = 1
-                            object.CanCollide = false
-                            
-                            -- Vô hiệu hóa và xóa bỏ các Script gây sát thương/trừ máu giẫm vào lava
-                            for _, child in pairs(object:GetChildren()) do
-                                if child:IsA("TouchTransmitter") or child:IsA("Script") or child:IsA("LocalScript") then
-                                    child:Destroy()
-                                end
+    Callback = function(v)
+        _G.RemoveVolcanoLava = v
+    end
+})
+
+task.spawn(function()
+    while task.wait(1) do
+        pcall(function()
+            if _G.RemoveVolcanoLava then
+                for _,v in pairs(workspace:GetDescendants()) do
+                    if v:IsA("BasePart") then
+                        local name = string.lower(v.Name)
+
+                        if string.find(name,"lava")
+                        or string.find(name,"magma")
+                        or string.find(name,"volcano") then
+
+                            v.Transparency = 1
+                            v.CanCollide = false
+                            v.CanTouch = false
+
+                            local touch = v:FindFirstChildOfClass("TouchTransmitter")
+                            if touch then
+                                touch:Destroy()
                             end
-                        else
-                            -- Khi TẮT: Trả lại trạng thái dung nham hiển thị bình thường cho game
-                            object.Transparency = 0
-                            object.CanCollide = true
                         end
                     end
                 end
             end
-        end
-
-        -- Chạy kiểm tra ngay khi ấn nút
-        updateLavaState()
-    end
-})
-
--- Tự động quét lại và xóa Lava nếu nhân vật bị chết/respawn lại hoặc khi chuyển đảo
-spawn(function()
-    while task.wait(5) do
-        if _G.DeleteLavaEnabled then
-            pcall(function()
-                for _, object in pairs(workspace:GetDescendants()) do
-                    if object:IsA("BasePart") and (object.Name == "Lava" or object.Name == "Magma") then
-                        if object.Transparency ~= 1 then
-                            object.Transparency = 1
-                            object.CanCollide = false
-                            for _, child in pairs(object:GetChildren()) do
-                                if child:IsA("TouchTransmitter") then
-                                    child:Destroy()
-                                end
-                            end
-                        end
-                    end
-                end
-            end)
-        end
+        end)
     end
 end)
 
