@@ -4380,140 +4380,179 @@ spawn(function()
 end)
 
 -- Farm Katakuri
--- Bật chức năng farm
-getgenv().AutoFarmKatakuriV1 = true 
-_G.SelectWeapon = _G.SelectWeapon or "Melee" -- Vũ khí sử dụng (Melee, Sword, Blox Fruit)
+-- [[ KHOÁ CẤU HÌNH HỆ THỐNG ]]
+getgenv().AutoKatakuriV1 = true
+[span_6](start_span)getgenv().TweenSpeed = getgenv().TweenSpeed or 300 -- Tốc độ đồng bộ giống file mẫu (mặc định 300)[span_6](end_span)
 
--- Tốc độ Tween lấy mặc định của Hub hoặc bạn có thể tự chỉnh tại đây
-getgenv().TweenSpeed = getgenv().TweenSpeed or 300 
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
--- Danh sách 4 quái mục tiêu theo yêu cầu
-local TargetMonsters = {
-    "Cookie Crafter",
-    "Cake Guard",
-    "Baking Staff",
-    "Head Baker"
+local Player = Players.LocalPlayer
+[span_7](start_span)local CommF_ = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CommF_")[span_7](end_span)
+
+-- Danh sách quái cần farm theo yêu cầu
+local TargetEnemies = {"Cookie Crafter", "Cake Guard", "Baking Staff", "Head Baker"}
+
+-[span_8](start_span)- Tọa độ các vị trí bãi quái trích xuất tương thích[span_8](end_span)
+local EnemyPositions = {
+    [span_9](start_span)["Cookie Crafter"] = CFrame.new(-2021, 38, -12028),[span_9](end_span)
+    [span_10](start_span)["Cake Guard"] = CFrame.new(-2024, 38, -12026),[span_10](end_span)
+    [span_11](start_span)["Baking Staff"] = CFrame.new(-1932, 38, -12848),[span_11](end_span)
+    [span_12](start_span)["Head Baker"] = CFrame.new(-1932, 38, -12848)[span_12](end_span)
 }
 
--- Biến lưu trữ loại quái đang được chọn để farm tập trung
-local currentTargetName = nil
+-[span_13](start_span)- Các tọa độ cốt lõi tại khu vực Cake Loaf[span_13](end_span)
+[span_14](start_span)local CakeIslandPosition = CFrame.new(-2151.82, 149.32, -12404.91) -- Tọa độ trung tâm đảo Cake[span_14](end_span)
+local SummonNPCCFrame = CFrame.new(-2103, 15, -12140) -- Vị trí của NPC triệu hồi (Drip Mama)
+local KatakuriV1SpawnCFrame = CFrame.new(-2241, 15, -12142) -- Vị trí cửa sau gương / Nơi boss xuất hiện
 
--- Vị trí trung tâm Đảo Bánh để đứng chờ/bay lơ lửng khi quái chưa spawn
-local CakeIslandCenter = CFrame.new(-1932, 250, -12500)
-
--- Hàm kiểm tra Model quái còn sống hay không
-local function isMonsterAlive(model)
-    return model and model:FindFirstChild("Humanoid") and model.Humanoid.Health > 0 and model:FindFirstChild("HumanoidRootPart")
-end
-
--- Hàm đếm xem trong Workspace còn bao nhiêu con quái thuộc loại `monsterName` đang sống
-local function countMonstersAliveByName(monsterName)
-    local count = 0
-    if not workspace:FindFirstChild("Enemies") then return 0 end
-    for _, enemy in pairs(workspace.Enemies:GetChildren()) do
-        if enemy.Name == monsterName and isMonsterAlive(enemy) then
-            count = count + 1
-        end
-    end
-    return count
-end
-
--- Hàm tìm quái mục tiêu (Có cơ chế khóa bãi quái)
-local function getTargetMonster()
-    if not workspace:FindFirstChild("Enemies") then return nil end
-    
-    -- 1. Nếu trước đó đã chọn một loại quái và bãi đó VẪN CÒN quái sống, tiếp tục farm loại đó
-    if currentTargetName and countMonstersAliveByName(currentTargetName) > 0 then
-        for _, enemy in pairs(workspace.Enemies:GetChildren()) do
-            if enemy.Name == currentTargetName and isMonsterAlive(enemy) then
+-- [[ HÀM TÌM QUÁI HIỆN TẠI ]]
+local function GetCurrentEnemy()
+    for _, enemyName in ipairs(TargetEnemies) do
+        for _, enemy in pairs(Workspace.Enemies:GetChildren()) do
+            if enemy.Name == enemyName and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 and enemy:FindFirstChild("HumanoidRootPart") then
                 return enemy
             end
         end
     end
-    
-    -- 2. Nếu chưa chọn bãi hoặc bãi cũ đã BỊ DIỆT SẠCH, tìm một bãi mới bất kỳ trong danh sách có quái đang sống
-    for _, name in pairs(TargetMonsters) do
-        if countMonstersAliveByName(name) > 0 then
-            currentTargetName = name -- Khóa mục tiêu vào bãi quái mới này
-            for _, enemy in pairs(workspace.Enemies:GetChildren()) do
-                if enemy.Name == currentTargetName and isMonsterAlive(enemy) then
-                    return enemy
-                end
-            end
-        end
-    end
-    
-    -- 3. Nếu toàn bộ map không còn con quái nào thuộc 4 loại trên sống
-    currentTargetName = nil
     return nil
 end
 
--- Vòng lặp điều khiển tiến trình Farm chính
-spawn(function()
-    while task.wait(0.1) do
-        if getgenv().AutoFarmKatakuriV1 then
+-- [[ HÀM TÌM CỤC SPAWN KHI QUÁI CHƯA RA ]]
+local function GetSpawnPoint()
+    if Workspace:FindFirstChild("_WorldOrigin") and Workspace._WorldOrigin:FindFirstChild("EnemySpawns") then
+        for _, enemyName in ipairs(TargetEnemies) do
+            local spawner = Workspace._WorldOrigin.EnemySpawns:FindFirstChild(enemyName)
+            if spawner then return spawner.CFrame end
+        end
+    end
+    -[span_15](start_span)- Nếu không thấy cục spawner cụ thể, lấy tạm vị trí bãi mặc định trong bảng dữ liệu[span_15](end_span)
+    [span_16](start_span)return EnemyPositions["Cookie Crafter"][span_16](end_span)
+end
+
+-- [[ HÀM DI CHUYỂN TWEEN LIÊN ĐẢO ]]
+local CurrentTween
+local function TweenToIsland(targetCFrame)
+    local char = Player.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    local hrp = char.HumanoidRootPart
+
+    local distance = (hrp.Position - targetCFrame.Position).Magnitude
+    [span_17](start_span)local duration = distance / getgenv().TweenSpeed[span_17](end_span)
+
+    if CurrentTween then CurrentTween:Cancel() end
+
+    -- Thiết lập Platform để nhân vật không bị rơi rụng tự do khi đang bay qua biển
+    local platform = char:FindFirstChild("FarmPlatform") or Instance.new("Part", char)
+    platform.Name = "FarmPlatform"
+    platform.Size = Vector3.new(8, 1, 8)
+    platform.Anchored = true
+    platform.CanCollide = true
+    platform.Transparency = 1
+
+    char.Humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+
+    [span_18](start_span)CurrentTween = TweenService:Create(hrp, TweenInfo.new(duration, Enum.EasingStyle.Linear), {CFrame = targetCFrame})[span_18](end_span)
+    CurrentTween:Play()
+
+    -- Cập nhật sàn di chuyển theo chân liên tục trong lúc Tween
+    while CurrentTween.PlaybackState == Enum.PlaybackState.Playing do
+        if hrp and platform then platform.CFrame = hrp.CFrame * CFrame.new(0, -3.5, 0) end
+        task.wait()
+    end
+    if platform then platform:Destroy() end
+end
+
+-- [[ HÀM DI CHUYỂN TỨC THỜI (INSTANT TP) NỘI BỘ ĐẢO ]]
+local function InstantTP(targetCFrame)
+    local char = Player.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        char.HumanoidRootPart.CFrame = targetCFrame
+        [span_19](start_span)char.HumanoidRootPart.Velocity = Vector3.new(0, 0, 0) -- Triệt tiêu lực nảy hình[span_19](end_span)
+    end
+end
+
+-- [[ LOGIC TẤN CÔNG & PHÒNG THỦ TRÊN ĐẦU QUÁI ]]
+local function AttackEnemy(enemy)
+    local char = Player.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    local hrp = char.HumanoidRootPart
+    
+    -- Khóa cứng nhân vật ở trên đầu quái 13 studs (An toàn tuyệt đối, chống dính sát thương)
+    local targetPosition = enemy.HumanoidRootPart.CFrame * CFrame.new(0, 13, 0) * CFrame.Angles(math.rad(-90), 0, 0)
+    hrp.CFrame = targetPosition
+    [span_20](start_span)hrp.Velocity = Vector3.new(0, 0, 0)[span_20](end_span)
+
+    -- Giả lập bấm chuột trái / Tool Click để farm liên tục
+    local Tool = char:FindFirstChildOfClass("Tool")
+    if Tool then
+        Tool:Activate()
+    else
+        -[span_21](start_span)- Nếu chưa cầm vũ khí, tự động trang bị Melee/Sword từ Inventory[span_21](end_span)
+        for _, item in pairs(Player.Backpack:GetChildren()) do
+            [span_22](start_span)if item:IsA("Tool") and (item.ToolTip == "Melee" or item.ToolTip == "Sword") then[span_22](end_span)
+                char.Humanoid:EquipTool(item)
+                break
+            end
+        end
+    end
+end
+
+-- [[ VÒNG LẶP ĐIỀU KHIỂN CHÍNH (MAIN LOOP) ]]
+task.spawn(function()
+    local hasTweenedToCake = false
+
+    while true do
+        task.wait()
+        if getgenv().AutoKatakuriV1 then
             pcall(function()
-                local player = game.Players.LocalPlayer
-                local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-                if not root then return end
+                local char = Player.Character
+                if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+                local hrp = char.HumanoidRootPart
+
+                -[span_23](start_span)- KIỂM TRA ĐẢO: Nếu khoảng cách tới đảo bánh > 2500 studs => Cần Tween bay tới[span_23](end_span)
+                [span_24](start_span)if (hrp.Position - CakeIslandPosition.Position).Magnitude > 2500 then[span_24](end_span)
+                    hasTweenedToCake = false
+                    [span_25](start_span)TweenToIsland(CakeIslandPosition * CFrame.new(0, 50, 0))[span_25](end_span)
+                    hasTweenedToCake = true
+                end
+
+                -[span_26](start_span)- Đọc tiến trình giết quái từ hệ thống Game Replicated (Kiểm tra xem phòng gương đã mở chưa)[span_26](end_span)
+                local progression = CommF_:InvokeServer("CakePrinceProgress")
+                local killCount = tonumber(progression) or 0
+
+                -- KIỂM TRA BOSS KATA V1 XUẤT HIỆN TRONG KHU VỰC
+                [span_27](start_span)local boss = Workspace.Enemies:FindFirstChild("Cake Prince") or Workspace.Enemies:FindFirstChild("Katakuri")[span_27](end_span)
+                if boss and boss:FindFirstChild("Humanoid") and boss.Humanoid.Health > 0 then
+                    -[span_28](start_span)- Nếu Boss xuất hiện, Instant TP thẳng tới phòng gương sau lưng NPC[span_28](end_span)
+                    InstantTP(boss.HumanoidRootPart.CFrame * CFrame.new(0, 13, 0))
+                    AttackEnemy(boss)
                 
-                -- Đọc số lượng quái đã diệt trên Server từ hệ thống của game
-                local killCount = game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("CakePrinceProgress")
-                local currentKills = tonumber(killCount) or 0
-                
-                -- Kiểm tra xem Boss Katakuri v1 (Cake Prince) có xuất hiện không
-                local boss = workspace:FindFirstChild("Enemies") and workspace.Enemies:FindFirstChild("Cake Prince")
-                
-                if boss and isMonsterAlive(boss) then
-                    -- BƯỚC 4: Nếu Boss xuất hiện, ưu tiên diệt boss trước
-                    _tp(boss.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0)) 
-                    
-                    if _B then 
-                        PosMon = boss.HumanoidRootPart.Position
-                        BringEnemy() -- Gom quái nếu tính năng bật
-                    end
-                    
-                    -- Tự động Click đánh thường
-                    EquipWeapon(_G.SelectWeapon)
-                    game:GetService("VirtualUser"):CaptureController()
-                    game:GetService("VirtualUser"):Button1Down(Vector2.new(1280, 720))
-                    
-                elseif currentKills >= 500 then
-                    -- BƯỚC 3: Đạt đủ 500 quái, di chuyển tween lại gần NPC triệu hồi (Big Mirror)
-                    local npcPosition = CFrame.new(-2077, 252, -12373)
-                    _tp(npcPosition)
-                    
-                    -- Khi đã tới vị trí NPC, tiến hành gọi Remote triệu hồi Katakuri v1
-                    if (root.Position - npcPosition.Position).Magnitude <= 15 then
-                        game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("CakePrinceSpawn")
-                        task.wait(1)
-                    end
-                    
+                -- KIỂM TRA ĐIỀU KIỆN ĐỦ 500 CON ĐỂ TRIỆU HỒI
+                elseif killCount >= 500 then
+                    -- Chạy lại vị trí NPC Drip Mama bằng hình thức di chuyển tức thời
+                    InstantTP(SummonNPCCFrame)
+                    task.wait(0.2)
+                    -[span_29](start_span)- Kích hoạt remote mở cổng phòng gương Katakuri V1[span_29](end_span)
+                    CommF_:InvokeServer("CakePrinceSummon")
+                    task.wait(0.5)
+                    -- Đi thẳng ra sau lưng vào cổng gương đợi boss
+                    InstantTP(KatakuriV1SpawnCFrame)
+
+                -- TIẾN HÀNH FARM QUÁI THƯỜNG ĐỂ GOM ĐỦ SỐ LƯỢNG
                 else
-                    -- BƯỚC 1 & 2: Di chuyển tween tới Đảo Bánh để tự động farm 4 loại quái chỉ định
-                    local monster = getTargetMonster()
-                    
-                    if monster then
-                        -- CHỈ ĐỨNG TRÊN ĐẦU QUÁI (quái không động đến nhân vật, không đánh trúng)
-                        _tp(monster.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
-                        
-                        if _B then
-                            PosMon = monster.HumanoidRootPart.Position
-                            BringEnemy() -- Khóa vị trí quái bằng tính năng của Hub
-                        end
-                        
-                        -- Thực hiện tấn công thường
-                        EquipWeapon(_G.SelectWeapon)
-                        game:GetService("VirtualUser"):CaptureController()
-                        game:GetService("VirtualUser"):Button1Down(Vector2.new(1280, 720))
+                    local targetEnemy = GetCurrentEnemy()
+                    if targetEnemy then
+                        -- Đã ở trên đảo bánh: Chuyển bãi bằng hình thức di chuyển tức thời (Instant TP) theo yêu cầu
+                        InstantTP(targetEnemy.HumanoidRootPart.CFrame * CFrame.new(0, 13, 0))
+                        AttackEnemy(targetEnemy)
                     else
-                        -- Khi đánh xong sạch toàn bộ các bãi quái (đang chờ hồi), bay lơ lửng ở trung tâm
-                        _tp(CakeIslandCenter)
-                        
-                        -- Triệt tiêu lực rơi tự do để nhân vật đứng yên trên không chờ quái spawn lại
-                        if root.Velocity.Magnitude > 0 then
-                            root.Velocity = Vector3.new(0, 0, 0)
-                        end
+                        -[span_30](start_span)- Nếu quái chết hết chưa hồi sinh: Đứng im hoặc treo lơ lửng trên trời tại điểm spawn chờ quái ra[span_30](end_span)
+                        local spawnCF = GetSpawnPoint()
+                        InstantTP(spawnCF * CFrame.new(0, 25, 0))
                     end
                 end
             end)
@@ -4521,17 +4560,18 @@ spawn(function()
     end
 end)
 
--- Vòng lặp phụ NoClip liên tục giúp nhân vật không bị kẹt địa hình hoặc vật cản khi Tween di chuyển trên đầu quái
-spawn(function()
-    game:GetService("RunService").Stepped:Connect(function()
-        if getgenv().AutoFarmKatakuriV1 and game.Players.LocalPlayer.Character then
-            for _, part in pairs(game.Players.LocalPlayer.Character:GetDescendants()) do
+-- [[ CHỐNG RỚT VÀ VÔ HIỆU HÓA VA CHẠM KHI FARM ]]
+RunService.Stepped:Connect(function()
+    if getgenv().AutoKatakuriV1 then
+        local char = Player.Character
+        if char then
+            for _, part in pairs(char:GetChildren()) do
                 if part:IsA("BasePart") then
-                    part.CanCollide = false
+                    part.CanCollide = false -- Đi xuyên vật thể loại bỏ hoàn toàn rung giật địa hình
                 end
             end
         end
-    end)
+    end
 end)
 
 -- Farm Tyrant of the Skies
