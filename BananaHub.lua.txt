@@ -4779,10 +4779,51 @@ end)
 
 MeterialFarm = AutoModeFarm:AddLeftGroupbox("Farming Meterial")
 
-if World1 then MaterialList = {"Leather + Scrap Metal", "Angel Wings", "Magma Ore", "Fish Tail"}
-elseif World2 then MaterialList = {"Leather + Scrap Metal", "Radioactive Material", "Ectoplasm", "Mystic Droplet", "Magma Ore", "Vampire Fang"}
-elseif World3 then MaterialList = {"Scrap Metal", "Demonic Wisp", "Conjured Cocoa", "Dragon Scale", "Gunpowder", "Fish Tail", "Mini Tusk"}
+-- ====================================================================
+-- DANH SÁCH NGUYÊN LIỆU & NPC KHU VỰC (Dựa theo dữ liệu của bạn)
+-- ====================================================================
+local MaterialData = {}
+
+if game.PlaceId == 2753915549 then -- [ SEA 1 ]
+    MaterialData = {
+        ["Leather"] = {"Pirate", "Brute", "Mercenary"},
+        ["Scrap Metal"] = {"Pirate", "Brute", "Mercenary", "Military Soldier"},
+        ["Angel Wings"] = {"God's Guard", "Shanda", "Royal Squad"},
+        ["Magma Ore"] = {"Military Spy", "Military Soldier", "Magma Admiral"},
+        ["Fish Tail"] = {"Fishman Warrior", "Fishman Commando"},
+        ["Mystic Droplet"] = {"Sky Bandit", "Dark Master", "Shanda", "Royal Soldier"}
+    }
+elseif game.PlaceId == 4442272183 then -- [ SEA 2 ]
+    MaterialData = {
+        ["Leather"] = {"Swan Pirate", "Marine Lieutenant", "Snow Trooper"},
+        ["Scrap Metal"] = {"Factory Staff", "Lab Subordinate", "Swan Pirate"},
+        ["Magma Ore"] = {"Magma Ninja", "Lava Pirate"},
+        ["Fish Tail"] = {"Fishman Warrior", "Fishman Raider", "Fishman Captain"},
+        ["Mystic Droplet"] = {"Marine Commodore", "Marine Rear Admiral", "Sea Soldier", "Water Fighter"},
+        ["Angel Wings"] = {"Arctic Warrior", "Snow Lurker"},
+        ["Radioactive Material"] = {"Factory Staff", "Core"},
+        ["Ectoplasm"] = {"Ship Deckhand", "Ship Engineer", "Ship Steward", "Ship Officer", "Zombie", "Vampire"},
+        ["Vampire Fang"] = {"Vampire"}
+    }
+elseif game.PlaceId == 7449423635 then -- [ SEA 3 ]
+    MaterialData = {
+        ["Leather"] = {"Pirate Millionaire", "Pistol Billionaire", "Jungle Pirate"},
+        ["Scrap Metal"] = {"Pirate Millionaire", "Pistol Billionaire"},
+        ["Fish Tail"] = {"Fishman Raider", "Fishman Captain", "Shark Warrior"},
+        ["Mystic Droplet"] = {"Forest Pirate", "Mythological Pirate"},
+        ["Dragon Scale"] = {"Dragon Crew Warrior", "Dragon Crew Archer"},
+        ["Mini Tusk"] = {"Jungle Pirate", "Musketeer Pirate"},
+        ["Conjured Cocoa"] = {"Chocolate Bar Battler", "Cocoa Warrior", "Chocolate Warrior", "Sweet Thief"},
+        ["Demonic Wisp"] = {"Demonic Soul"}
+    }
 end
+
+-- Tự động trích xuất danh sách tên nguyên liệu để đưa vào Dropdown UI
+local MaterialList = {}
+for matName, _ in pairs(MaterialData) do
+    table.insert(MaterialList, matName)
+end
+table.sort(MaterialList) -- Sắp xếp tên theo thứ tự chữ cái A-Z cho đẹp mắt
 
 MeterialFarm:AddDropdown("SelectMethodFarm", {
     Title = "Select Meterial",
@@ -4801,7 +4842,7 @@ MeterialFarm:AddToggle("MeterialStart", {
         if not _G.StartFarm then
             Library:Notify({
                 Title = "Night Slayer Hub",
-                Description = "Open Start Farm Plz!",
+                Description = "Open Start Farm Nguyên liệu!",
                 Duration = 3
             })
         end
