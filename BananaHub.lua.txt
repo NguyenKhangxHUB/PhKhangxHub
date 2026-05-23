@@ -119,7 +119,7 @@ local ClickState = 0
 local Num_self = 25
 
 -- Team mặc định
-getgenv().Team = getgenv().Team or "Marines"
+getgenv().Team = getgenv().Team or "Pirates"
 
 repeat 
     local start = plr.PlayerGui:WaitForChild("Main"):WaitForChild("Loading") 
@@ -2695,15 +2695,15 @@ Library = loadstring(game:HttpGet("https://pastefy.app/vgSGtrbP/raw"))()
 
 Window = Library:CreateWindow({
     Title = "Banana Cat Hub",
-    Subtitle = "- Ades Chô",
+    Subtitle = "- Blox Fruit",
     Image = "rbxassetid://130947856929902"
 })
 
 wait(1)
 
 Library:Notify({
-    Title = "Ui Ades Chô Library",
-    Description = "The UI Ades Chô automatically hides once executed.\nPress the button at the bottom-left of the screen to show the GUI.",
+    Title = "Ui Library",
+    Description = "The UI automatically hides once executed.\nPress the button at the bottom-left of the screen to show the GUI.",
     Duration = 3
 })
 
@@ -3861,7 +3861,7 @@ SetAutoFarm = Settings:AddLeftGroupbox("Setting Farm")
 
 SetAutoFarm:AddDropdown("SelectWeapon", {
     Title = "Select Weapon",
-    Values = {"Melee","Sword","Fruit"},
+    Values = {"Melee","Sword","Blox Fruit"},
     Default = nil,
     Callback = function(Value)
         _G.ChooseWP = Value
@@ -3907,93 +3907,6 @@ SetAutoFarm:AddToggle("BringMob", {
         _B = Value
     end
 })
--- ============================================================
--- BRING MOB — bring CẢ mob farm + mob phụ về _lockedBringPos mỗi 0.1s
--- Không bring nếu có player khác trong phạm vi 500 stud quanh player
--- ============================================================
-spawn(function()
-    while task.wait(0.1) do
-        pcall(function()
-            -- Đồng bộ getgenv với _G
-            getgenv().IsFarming     = _G.StartFarm
-            getgenv().MaxBringCount = _G.BringCount or 2
-            getgenv().BringMob      = _G.AutoBring
-
-            -- Guard
-            if not getgenv().BringMob  then return end
-            if not getgenv().IsFarming then return end
-
-            local targetMob = getgenv().CurrentTargetMob
-            if not targetMob or not targetMob.Parent then return end
-
-            -- Phải có vị trí đã chốt (tức là tracking đã teleport ít nhất 1 lần)
-            local bringCF = _lockedBringPos
-            if not bringCF then return end
-
-            local myChar = Player.Character
-            if not myChar then return end
-            local myHRP = myChar:FindFirstChild("HumanoidRootPart")
-            if not myHRP then return end
-
-            -- ── CHECK PLAYER KHÁC trong 500 stud — nếu có thì KHÔNG bring ──
-            for _, otherPlayer in ipairs(Players:GetPlayers()) do
-                if otherPlayer == Player then continue end  -- bỏ qua bản thân
-                local otherChar = otherPlayer.Character
-                if not otherChar then continue end
-                local otherHRP = otherChar:FindFirstChild("HumanoidRootPart")
-                if not otherHRP then continue end
-                local distToOther = (otherHRP.Position - myHRP.Position).Magnitude
-                if distToOther <= 500 then
-                    return  -- có player khác gần → bỏ bring lần này
-                end
-            end
-
-            local mobName  = targetMob.Name
-            --   BringCount = 2 → bring thêm 1 (tổng 2 con dưới chân)
-            --   BringCount = 3 → bring thêm 2 (tổng 3 con)
-            local maxExtra = math.max(0, (getgenv().MaxBringCount or 2) - 1)
-
-            -- ── Tìm mob phụ cùng loại, KHÔNG giới hạn khoảng cách ──────
-            -- Collect tất cả mob cùng tên, sort theo khoảng cách gần nhất, lấy maxExtra con
-            local allSame = {}
-            for _, enemy in ipairs(workspace.Enemies:GetChildren()) do
-                if enemy == targetMob then continue end
-                local humanoid = enemy:FindFirstChild("Humanoid")
-                local rootPart = enemy:FindFirstChild("HumanoidRootPart")
-                if humanoid and rootPart and humanoid.Health > 0 and rootPart.Parent then
-                    if enemy.Name == mobName then
-                        local dist = (rootPart.Position - myHRP.Position).Magnitude
-                        -- Chỉ bring mob phụ trong phạm vi 300 stud tính từ player
-                        if dist <= 300 then
-                            table.insert(allSame, { rp = rootPart, dist = dist })
-                        end
-                    end
-                end
-            end
-            -- Sort gần → xa
-            table.sort(allSame, function(a, b) return a.dist < b.dist end)
-
-            local candidates = {}
-            for i = 1, math.min(maxExtra, #allSame) do
-                table.insert(candidates, allSame[i].rp)
-            end
-
-            -- ── Bring mob farm (luôn bring, kể cả khi không có mob phụ) ─
-            local farmHRP = targetMob:FindFirstChild("HumanoidRootPart")
-            local farmHum = targetMob:FindFirstChild("Humanoid")
-            if farmHRP and farmHum and farmHum.Health > 0 then
-                farmHRP.CFrame = bringCF
-                sethiddenproperty(Player, "SimulationRadius", math.huge)
-            end
-
-            -- ── Bring mob phụ (gần nhất, không giới hạn khoảng cách) ───
-            for _, rp in ipairs(candidates) do
-                rp.CFrame = bringCF
-                sethiddenproperty(Player, "SimulationRadius", math.huge)
-            end
-        end)
-    end
-end)
 
 SetAutoFarm:AddToggle("ObservationOpen", {
     Title = "Teleport Y if low hearth",
@@ -4467,75 +4380,122 @@ spawn(function()
 end)
 
 -- Farm Katakuri
+-- Khởi tạo các cấu hình biến toàn cục cho chức năng farm
+getgenv().AutoFarmKatakuriV1 = true -- Chuyển thành false nếu muốn tắt
+_G.SelectWeapon = _G.SelectWeapon or "Melee" -- Vũ khí sử dụng (Melee, Sword, Blox Fruit)
+
+-- Danh sách quái cần farm theo yêu cầu của bạn
+local TargetMonsters = {
+    "Cookie Crafter",
+    "Cake Guard",
+    "Baking Staff",
+    "Head Baker"
+}
+
+-- Vị trí trung tâm Đảo Bánh để đứng chờ quái spawn
+local CakeIslandCenter = CFrame.new(-1932, 250, -12500)
+
+-- Hàm kiểm tra xem Model quái còn sống hay không
+local function isMonsterAlive(model)
+    return model and model:FindFirstChild("Humanoid") and model.Humanoid.Health > 0 and model:FindFirstChild("HumanoidRootPart")
+end
+
+-- Hàm tìm quái mục tiêu trong Workspace dựa trên danh sách chỉ định
+local function getTargetMonster()
+    for _, enemy in pairs(workspace.Enemies:GetChildren()) do
+        if table.find(TargetMonsters, enemy.Name) and isMonsterAlive(enemy) then
+            return enemy
+        end
+    end
+    return nil
+end
+
+-- Vòng lặp Farm chính điều khiển toàn bộ tiến trình
 spawn(function()
-    while task.wait(1) do
-        if _G.StartFarm and _G.MethodSelect == "Farm Katakuri" then
+    while task.wait(0.5) do
+        if getgenv().AutoFarmKatakuriV1 then
             pcall(function()
                 local player = game.Players.LocalPlayer
                 local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-                local questUI = player.PlayerGui:FindFirstChild("Main") and 
-                                player.PlayerGui.Main:FindFirstChild("Quest")
-                local enemies = workspace.Enemies
-                local bigMirror = workspace.Map.CakeLoaf.BigMirror
-                
                 if not root then return end
-                if not bigMirror:FindFirstChild("Other") then
-                    _tp(CFrame.new(-2077, 252, -12373))
-                end        
                 
-                if bigMirror.Other.Transparency == 0 or enemies:FindFirstChild("Cake Prince") then
-                    local v = GetConnectionEnemies("Cake Prince")
-                    if v then
-                        repeat 
-                            wait() 
-                            Attack.Kill2(v, _G.StartFarm)  -- Sửa: dùng _G.StartFarm thay vì _G.Auto_Cake_Prince
-                        until not _G.StartFarm or not v.Parent or v.Humanoid.Health <= 0
-                    else
-                        if bigMirror.Other.Transparency == 0 and (CFrame.new(-1990.67, 4533, -14973.67).Position - root.Position).Magnitude >= 2000 then
-                            _tp(CFrame.new(-2151.82, 149.32, -12404.91))
-                        end
+                -- Lấy số lượng quái đã diệt trên máy chủ từ hệ thống game (Katakuri Progression)
+                local killCount = game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("CakePrinceProgress")
+                -- Nếu phản hồi trả về dạng chuỗi hoặc số, chúng ta lọc lấy số lượng quái hiện tại
+                local currentKills = tonumber(killCount) or 0
+                
+                -- Kiểm tra xem Boss Katakuri v1 (Cake Prince) có đang xuất hiện không
+                local boss = workspace.Enemies:FindFirstChild("Cake Prince")
+                
+                if boss and isMonsterAlive(boss) then
+                    -- BƯỚC 4: Nếu Boss Katakuri V1 xuất hiện, lập tức vào phòng sau lưng NPC và tiêu diệt
+                    root.CFrame = boss.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0) -- Đứng trên đầu boss không cho đánh trúng
+                    
+                    -- Gom boss (nếu cần) và tự động xả skill
+                    if _B then 
+                        PosMon = boss.HumanoidRootPart.Position
+                        BringEnemy() 
                     end
+                    
+                    -- Kích hoạt công cụ click tấn công tự động
+                    EquipWeapon(_G.SelectWeapon)
+                    game:GetService("VirtualUser"):CaptureController()
+                    game:GetService("VirtualUser"):Button1Down(Vector2.new(1280, 720))
+                    
+                elseif currentKills >= 500 then
+                    -- BƯỚC 3: Nếu đã đủ 500 quái, di chuyển tới NPC Big Mirror để tiến hành triệu hồi Katakuri v1
+                    local bigMirror = workspace.Map.CakeLoaf.BigMirror
+                    _tp(CFrame.new(-2077, 252, -12373)) -- Vị trí trước gương NPC triệu hồi
+                    task.wait(0.5)
+                    
+                    -- Gửi lệnh triệu hồi tới máy chủ qua hệ thống Remote của game
+                    game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("CakePrinceSpawn")
+                    task.wait(1)
+                    
                 else
-                    local CakePrince = {"Cookie Crafter","Cake Guard","Baking Staff","Head Baker"}
-                    local v = GetConnectionEnemies(CakePrince)
-                    if v then
-                        if _G.AcceptQuestC and questUI and not questUI.Visible then
-                            local questPos = CFrame.new(-1927.92, 37.8, -12842.54)
-                            _tp(questPos)
-                            
-                            local attempts = 0
-                            while attempts < 50 and (questPos.Position - root.Position).Magnitude > 50 do
-                                wait(0.2)
-                                attempts = attempts + 1
-                            end
-                            
-                            local randomQuest = math.random(1, 4)
-                            local questData = {
-                                [1] = {"StartQuest", "CakeQuest2", 2},
-                                [2] = {"StartQuest", "CakeQuest2", 1},
-                                [3] = {"StartQuest", "CakeQuest1", 1},
-                                [4] = {"StartQuest", "CakeQuest1", 2}
-                            }                    
-                            
-                            pcall(function()
-                                game.ReplicatedStorage.Remotes.CommF_:InvokeServer(unpack(questData[randomQuest]))
-                            end)
+                    -- BƯỚC 1 & 2: Tiến hành đi đến đảo bánh và farm 4 loại quái chỉ định
+                    local monster = getTargetMonster()
+                    
+                    if monster then
+                        -- Triển khai cơ chế đứng farm AN TOÀN TRÊN ĐẦU QUÁI (quái không đánh trúng)
+                        root.CFrame = monster.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0)
+                        
+                        -- Chống quái đánh trả bằng cách khóa vị trí và vô hiệu hóa chuyển động của quái (BringEnemy từ Hub)
+                        if _B then
+                            PosMon = monster.HumanoidRootPart.Position
+                            BringEnemy()
                         end
                         
-                        repeat 
-                            wait() 
-                            Attack.Kill(v, _G.StartFarm)  -- Sửa: dùng _G.StartFarm
-                        until not _G.StartFarm or not v or not v.Parent or 
-                              (v.Humanoid and v.Humanoid.Health <= 0) or 
-                              bigMirror.Other.Transparency == 0 or 
-                              (_G.AcceptQuestC and questUI and not questUI.Visible)
+                        -- Tự động trang bị vũ khí và đánh thường liên tục
+                        EquipWeapon(_G.SelectWeapon)
+                        game:GetService("VirtualUser"):CaptureController()
+                        game:GetService("VirtualUser"):Button1Down(Vector2.new(1280, 720))
                     else
-                        _tp(CFrame.new(-2077, 252, -12373))
+                        -- Khi không có quái spawn, nhân vật sẽ bay lơ lửng an toàn trên không trung quanh đảo chờ quái hồi sinh
+                        _tp(CakeIslandCenter)
+                        
+                        -- Giữ nhân vật lơ lửng không bị rơi xuống biển/đất
+                        if root.Velocity.Magnitude > 0 then
+                            root.Velocity = Vector3.new(0, 0, 0)
+                        end
                     end
                 end
             end)
         end
     end
+end)
+
+-- Tạo một vòng lặp phụ NoClip liên tục chạy song song để tránh nhân vật bị kẹt địa hình khi di chuyển trên đầu quái
+spawn(function()
+    game:GetService("RunService").Stepped:Connect(function()
+        if getgenv().AutoFarmKatakuriV1 and game.Players.LocalPlayer.Character then
+            for _, part in pairs(game.Players.LocalPlayer.Character:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = false
+                end
+            end
+        end
+    end)
 end)
 
 -- Farm Tyrant of the Skies
@@ -5463,7 +5423,7 @@ end)
 
 DarkbeardBoss = Stack:AddLeftGroupbox("Boss Darkbeard")
 DarkbeardBoss:AddToggle("DarkBreadNormal", {
-    Title = "Auto Darkbread",
+    Title = "Auto Darkbeard",
     Default = false,
     Callback = function(Value)
         _G.Auto_Def_DarkCoat = Value
@@ -5491,7 +5451,7 @@ spawn(function()
 end)
 
 DarkbeardBoss:AddToggle("DarkBreadHop", {
-    Title = "Auto Darkbread [ Hop Server ]",
+    Title = "Auto Darkbeard [ Hop Server ]",
     Default = false,
     Callback = function(Value)
         _G.DarkbreadHop = Value
@@ -9439,76 +9399,6 @@ spawn(function()
     end
   end
 end)
-VolcanoFarm:AddLabel("[ Săn Núi Lửa ]") -- Tiêu đề chức năng nổi bật giống ảnh ví dụ
-VolcanoFarm:AddToggle("RemoveVolcanoLavaToggle", {
-    Title = "Xóa Lava & Lửa (No Damage)",
-    Default = false,
-    Callback = function(Value)
-        getgenv().RemoveVolcanoLava = Value
-        
-        if Value then
-            Library:Notify({
-                Title = "Banana Hub",
-                Description = "Đã dập tắt lửa đỏ và xóa Lava! Mượt 100%, không lag máy.",
-                Duration = 4
-            })
-            
-            -- [LOGIC TỐI ƯU] Chỉ quét 1 lần duy nhất khi vừa BẬT chức năng để dọn sạch Map ngay lập tức
-            pcall(function()
-                for _, v in pairs(game.Workspace:GetDescendants()) do
-                    if v:IsA("BasePart") then
-                        local nameLower = v.Name:lower()
-                        if nameLower:match("lava") or nameLower:match("magma") or nameLower == "damagepart" then
-                            v:Destroy()
-                        end
-                    elseif v:IsA("ParticleEmitter") or v:IsA("Fire") then
-                        local nameLower = v.Name:lower()
-                        if nameLower:match("fire") or nameLower:match("lava") or nameLower:match("magma") or nameLower:match("burn") or nameLower:match("eruption") then
-                            v.Enabled = false
-                            v:Destroy()
-                        end
-                    elseif v:IsA("TouchTransmitter") and v.Parent then
-                        local partName = v.Parent.Name:lower()
-                        if partName:match("lava") or partName:match("magma") or partName:match("damage") or partName:match("fire") then
-                            v:Destroy()
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
--- [LOGIC ĐÓN LÕNG VẬT THỂ MỚI] Gộp chung tại đây, không dùng vòng lặp, chạy cực nhẹ
-if not getgenv().LavaListenerLoaded then
-    getgenv().LavaListenerLoaded = true
-    
-    game.Workspace.DescendantAdded:Connect(function(v)
-        if getgenv().RemoveVolcanoLava then
-            pcall(function()
-                -- Nếu đảo núi lửa phun trào tạo ra lửa/lava mới, xóa nó ngay lập tức
-                if v:IsA("BasePart") then
-                    local nameLower = v.Name:lower()
-                    if nameLower:match("lava") or nameLower:match("magma") or nameLower == "damagepart" then
-                        task.wait() -- Chờ 1 nhịp siêu nhỏ tránh xung đột luồng game
-                        v:Destroy()
-                    end
-                elseif v:IsA("ParticleEmitter") or v:IsA("Fire") then
-                    local nameLower = v.Name:lower()
-                    if nameLower:match("fire") or nameLower:match("lava") or nameLower:match("magma") or nameLower:match("burn") or nameLower:match("eruption") then
-                        v.Enabled = false
-                        v:Destroy()
-                    end
-                elseif v:IsA("TouchTransmitter") and v.Parent then
-                    local partName = v.Parent.Name:lower()
-                    if partName:match("lava") or partName:match("magma") or partName:match("damage") or partName:match("fire") then
-                        v:Destroy() -- Bẻ gãy kết nối chạm trừ máu
-                    end
-                end
-            end)
-        end
-    end)
-end
 
 VolcanoFarm:AddToggle("EventVolcanoStart", {
     Title = "Auto Event Prehistoric Island",
