@@ -4328,90 +4328,26 @@ spawn(function()
 end)
 
 -- Farm Bones
-spawn(function()
-    while task.wait(1) do
-        if _G.StartFarm and _G.MethodSelect == "Farm Bones" then
-            pcall(function()        
-                local player = game.Players.LocalPlayer
-                local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-                local questUI = player.PlayerGui:FindFirstChild("Main") and 
-                                player.PlayerGui.Main:FindFirstChild("Quest")
-                local BonesTable = {"Reborn Skeleton","Living Zombie","Demonic Soul","Posessed Mummy"}
-                
-                if not root then return end
-                
-                local bone = GetConnectionEnemies(BonesTable)
-                if bone then
-                    if _G.AcceptQuestC and questUI and not questUI.Visible then
-                        local questPos = CFrame.new(-9516.99316, 172.017181, 6078.46533, 0, 0, -1, 0, 1, 0, 1, 0, 0)
-                        _tp(questPos)
-                        
-                        local attempts = 0
-                        while attempts < 50 and (questPos.Position - root.Position).Magnitude > 50 do
-                            task.wait(0.2)
-                            attempts = attempts + 1
-                        end
-                        
-                        local randomQuest = math.random(1, 4)
-                        local questData = {
-                            [1] = {"StartQuest", "HauntedQuest2", 2},
-                            [2] = {"StartQuest", "HauntedQuest2", 1},
-                            [3] = {"StartQuest", "HauntedQuest1", 1},
-                            [4] = {"StartQuest", "HauntedQuest1", 2}
-                        }                    
-                        
-                        pcall(function()
-                            game.ReplicatedStorage.Remotes.CommF_:InvokeServer(unpack(questData[randomQuest]))
-                        end)
-                    end
-                    
-                    repeat 
-                        task.wait() 
-                        Attack.Kill(bone, _G.StartFarm) 
-                    until not _G.StartFarm or not bone or not bone.Parent or 
-                          (bone.Humanoid and bone.Humanoid.Health <= 0) or 
-                          (_G.AcceptQuestC and questUI and not questUI.Visible)
-                else
-                    _tp(CFrame.new(-9495.6806640625, 453.58624267578125, 5977.3486328125))
-                end
-            end)
-        end
-    end
-end)
-
--- Farm Katakuri
--- [[ KHOÁ CẤU HÌNH HỆ THỐNG ]]
-getgenv().AutoKatakuriV1 = true
-[span_6](start_span)getgenv().TweenSpeed = getgenv().TweenSpeed or 300 -- Tốc độ đồng bộ giống file mẫu (mặc định 300)[span_6](end_span)
+-- [[ CẤU HÌNH HỆ THỐNG ]]
+getgenv().AutoFarmBone = true
+getgenv().TweenSpeed = getgenv().TweenSpeed or 300 -- Tốc độ di chuyển lấy từ file cấu hình của bạn
 
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Player = Players.LocalPlayer
-[span_7](start_span)local CommF_ = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CommF_")[span_7](end_span)
 
--- Danh sách quái cần farm theo yêu cầu
-local TargetEnemies = {"Cookie Crafter", "Cake Guard", "Baking Staff", "Head Baker"}
+-- Danh sách các quái mục tiêu theo yêu cầu rơi ra Bone
+local BoneEnemies = {"Posessed Mummy", "Demonic Soul", "Living Zombie", "Reborn Skeleton"}
 
--[span_8](start_span)- Tọa độ các vị trí bãi quái trích xuất tương thích[span_8](end_span)
-local EnemyPositions = {
-    [span_9](start_span)["Cookie Crafter"] = CFrame.new(-2021, 38, -12028),[span_9](end_span)
-    [span_10](start_span)["Cake Guard"] = CFrame.new(-2024, 38, -12026),[span_10](end_span)
-    [span_11](start_span)["Baking Staff"] = CFrame.new(-1932, 38, -12848),[span_11](end_span)
-    [span_12](start_span)["Head Baker"] = CFrame.new(-1932, 38, -12848)[span_12](end_span)
-}
+-- Tọa độ trung tâm Đảo Lâu Đài Bóng Tối (Haunted Castle) để nhận diện liên đảo
+local HauntedCastleCFrame = CFrame.new(-9514.56, 164.01, 5515.56)
 
--[span_13](start_span)- Các tọa độ cốt lõi tại khu vực Cake Loaf[span_13](end_span)
-[span_14](start_span)local CakeIslandPosition = CFrame.new(-2151.82, 149.32, -12404.91) -- Tọa độ trung tâm đảo Cake[span_14](end_span)
-local SummonNPCCFrame = CFrame.new(-2103, 15, -12140) -- Vị trí của NPC triệu hồi (Drip Mama)
-local KatakuriV1SpawnCFrame = CFrame.new(-2241, 15, -12142) -- Vị trí cửa sau gương / Nơi boss xuất hiện
-
--- [[ HÀM TÌM QUÁI HIỆN TẠI ]]
+-- [[ HÀM TÌM QUÁI HIỆN TẠI TRÊN SÂN ]]
 local function GetCurrentEnemy()
-    for _, enemyName in ipairs(TargetEnemies) do
+    for _, enemyName in ipairs(BoneEnemies) do
         for _, enemy in pairs(Workspace.Enemies:GetChildren()) do
             if enemy.Name == enemyName and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 and enemy:FindFirstChild("HumanoidRootPart") then
                 return enemy
@@ -4421,79 +4357,86 @@ local function GetCurrentEnemy()
     return nil
 end
 
--- [[ HÀM TÌM CỤC SPAWN KHI QUÁI CHƯA RA ]]
+-- [[ HÀM TÌM ĐIỂM SPAWN KHI QUÁI CHƯA RA KHỎI ĐẤT ]]
 local function GetSpawnPoint()
     if Workspace:FindFirstChild("_WorldOrigin") and Workspace._WorldOrigin:FindFirstChild("EnemySpawns") then
-        for _, enemyName in ipairs(TargetEnemies) do
+        for _, enemyName in ipairs(BoneEnemies) do
             local spawner = Workspace._WorldOrigin.EnemySpawns:FindFirstChild(enemyName)
             if spawner then return spawner.CFrame end
         end
     end
-    -[span_15](start_span)- Nếu không thấy cục spawner cụ thể, lấy tạm vị trí bãi mặc định trong bảng dữ liệu[span_15](end_span)
-    [span_16](start_span)return EnemyPositions["Cookie Crafter"][span_16](end_span)
+    return HauntedCastleCFrame * CFrame.new(0, 60, 0)
 end
 
--- [[ HÀM DI CHUYỂN TWEEN LIÊN ĐẢO ]]
+-- [[ HÀM GOM QUÁI (BRING MOBS) - KHÔNG LỖI - KHÔNG GIẬT ]]
+local function BringMobs(targetEnemy, farmCFrame)
+    for _, enemy in pairs(Workspace.Enemies:GetChildren()) do
+        if table.find(BoneEnemies, enemy.Name) and enemy:FindFirstChild("HumanoidRootPart") and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 then
+            -- Chỉ gom quái trong phạm vi gần bãi tránh lỗi anti-cheat
+            if (enemy.HumanoidRootPart.Position - targetEnemy.HumanoidRootPart.Position).Magnitude < 250 then
+                enemy.Humanoid:ChangeState(11)
+                enemy.HumanoidRootPart.CanCollide = false
+                
+                -- Đưa quái về vị trí đứng farm (dưới chân người chơi 13 studs)
+                enemy.HumanoidRootPart.CFrame = farmCFrame * CFrame.new(0, -13, 0)
+                
+                if enemy.HumanoidRootPart:FindFirstChild("BodyVelocity") then
+                    enemy.HumanoidRootPart.BodyVelocity:Destroy()
+                end
+            end
+        end
+    end
+end
+
+-- [[ HÀM DI CHUYỂN TWEEN MƯỢT MÀ 100% (LIÊN ĐẢO VÀ NỘI ĐẢO) ]]
 local CurrentTween
-local function TweenToIsland(targetCFrame)
+local function TweenTo(targetCFrame)
     local char = Player.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return end
     local hrp = char.HumanoidRootPart
 
     local distance = (hrp.Position - targetCFrame.Position).Magnitude
-    [span_17](start_span)local duration = distance / getgenv().TweenSpeed[span_17](end_span)
+    
+    -- Nếu khoảng cách quá nhỏ (đang ở ngay trên đầu quái), bỏ qua không chạy lại tween để chống rung giật
+    if distance < 4 then return end
+
+    local duration = distance / getgenv().TweenSpeed
 
     if CurrentTween then CurrentTween:Cancel() end
 
-    -- Thiết lập Platform để nhân vật không bị rơi rụng tự do khi đang bay qua biển
-    local platform = char:FindFirstChild("FarmPlatform") or Instance.new("Part", char)
-    platform.Name = "FarmPlatform"
-    platform.Size = Vector3.new(8, 1, 8)
+    -- Tạo sàn ẩn bám sát chân để nhân vật lướt mượt mà không bị rơi rớt khi di chuyển liên đảo/nội đảo
+    local platform = char:FindFirstChild("BoneFarmPlatform") or Instance.new("Part", char)
+    platform.Name = "BoneFarmPlatform"
+    platform.Size = Vector3.new(12, 1, 12)
     platform.Anchored = true
     platform.CanCollide = true
     platform.Transparency = 1
 
     char.Humanoid:ChangeState(Enum.HumanoidStateType.Physics)
 
-    [span_18](start_span)CurrentTween = TweenService:Create(hrp, TweenInfo.new(duration, Enum.EasingStyle.Linear), {CFrame = targetCFrame})[span_18](end_span)
+    CurrentTween = TweenService:Create(hrp, TweenInfo.new(duration, Enum.EasingStyle.Linear), {CFrame = targetCFrame})
     CurrentTween:Play()
 
-    -- Cập nhật sàn di chuyển theo chân liên tục trong lúc Tween
+    -- Cập nhật sàn ẩn liên tục chạy theo chân nhân vật suốt quãng đường Tween
     while CurrentTween.PlaybackState == Enum.PlaybackState.Playing do
-        if hrp and platform then platform.CFrame = hrp.CFrame * CFrame.new(0, -3.5, 0) end
+        if hrp and platform then 
+            platform.CFrame = hrp.CFrame * CFrame.new(0, -3.5, 0) 
+        end
         task.wait()
     end
+    
     if platform then platform:Destroy() end
 end
 
--- [[ HÀM DI CHUYỂN TỨC THỜI (INSTANT TP) NỘI BỘ ĐẢO ]]
-local function InstantTP(targetCFrame)
-    local char = Player.Character
-    if char and char:FindFirstChild("HumanoidRootPart") then
-        char.HumanoidRootPart.CFrame = targetCFrame
-        [span_19](start_span)char.HumanoidRootPart.Velocity = Vector3.new(0, 0, 0) -- Triệt tiêu lực nảy hình[span_19](end_span)
-    end
-end
-
--- [[ LOGIC TẤN CÔNG & PHÒNG THỦ TRÊN ĐẦU QUÁI ]]
-local function AttackEnemy(enemy)
-    local char = Player.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-    local hrp = char.HumanoidRootPart
-    
-    -- Khóa cứng nhân vật ở trên đầu quái 13 studs (An toàn tuyệt đối, chống dính sát thương)
-    local targetPosition = enemy.HumanoidRootPart.CFrame * CFrame.new(0, 13, 0) * CFrame.Angles(math.rad(-90), 0, 0)
-    hrp.CFrame = targetPosition
-    [span_20](start_span)hrp.Velocity = Vector3.new(0, 0, 0)[span_20](end_span)
-
-    -- Giả lập bấm chuột trái / Tool Click để farm liên tục
+-- [[ HÀM CLICK TẤN CÔNG LIÊN TỤC ]]
+local function ActiveAttack(char)
     local Tool = char:FindFirstChildOfClass("Tool")
     if Tool then
         Tool:Activate()
     else
-        -[span_21](start_span)- Nếu chưa cầm vũ khí, tự động trang bị Melee/Sword từ Inventory[span_21](end_span)
+        -- Tự động cầm vũ khí cận chiến (Melee) hoặc Kiếm (Sword) ra từ balo
         for _, item in pairs(Player.Backpack:GetChildren()) do
-            [span_22](start_span)if item:IsA("Tool") and (item.ToolTip == "Melee" or item.ToolTip == "Sword") then[span_22](end_span)
+            if item:IsA("Tool") and (item.ToolTip == "Melee" or item.ToolTip == "Sword") then
                 char.Humanoid:EquipTool(item)
                 break
             end
@@ -4503,56 +4446,167 @@ end
 
 -- [[ VÒNG LẶP ĐIỀU KHIỂN CHÍNH (MAIN LOOP) ]]
 task.spawn(function()
-    local hasTweenedToCake = false
-
     while true do
         task.wait()
-        if getgenv().AutoKatakuriV1 then
+        if getgenv().AutoFarmBone then
             pcall(function()
                 local char = Player.Character
                 if not char or not char:FindFirstChild("HumanoidRootPart") then return end
                 local hrp = char.HumanoidRootPart
 
-                -[span_23](start_span)- KIỂM TRA ĐẢO: Nếu khoảng cách tới đảo bánh > 2500 studs => Cần Tween bay tới[span_23](end_span)
-                [span_24](start_span)if (hrp.Position - CakeIslandPosition.Position).Magnitude > 2500 then[span_24](end_span)
-                    hasTweenedToCake = false
-                    [span_25](start_span)TweenToIsland(CakeIslandPosition * CFrame.new(0, 50, 0))[span_25](end_span)
-                    hasTweenedToCake = true
+                -- BƯỚC 1: KIỂM TRA LIÊN ĐẢO - Nếu khoảng cách > 3000 studs => Tiến hành Tween từ xa về Đảo Lâu Đài
+                if (hrp.Position - HauntedCastleCFrame.Position).Magnitude > 3000 then
+                    TweenTo(HauntedCastleCFrame * CFrame.new(0, 100, 0))
                 end
 
-                -[span_26](start_span)- Đọc tiến trình giết quái từ hệ thống Game Replicated (Kiểm tra xem phòng gương đã mở chưa)[span_26](end_span)
-                local progression = CommF_:InvokeServer("CakePrinceProgress")
-                local killCount = tonumber(progression) or 0
-
-                -- KIỂM TRA BOSS KATA V1 XUẤT HIỆN TRONG KHU VỰC
-                [span_27](start_span)local boss = Workspace.Enemies:FindFirstChild("Cake Prince") or Workspace.Enemies:FindFirstChild("Katakuri")[span_27](end_span)
-                if boss and boss:FindFirstChild("Humanoid") and boss.Humanoid.Health > 0 then
-                    -[span_28](start_span)- Nếu Boss xuất hiện, Instant TP thẳng tới phòng gương sau lưng NPC[span_28](end_span)
-                    InstantTP(boss.HumanoidRootPart.CFrame * CFrame.new(0, 13, 0))
-                    AttackEnemy(boss)
-                
-                -- KIỂM TRA ĐIỀU KIỆN ĐỦ 500 CON ĐỂ TRIỆU HỒI
-                elseif killCount >= 500 then
-                    -- Chạy lại vị trí NPC Drip Mama bằng hình thức di chuyển tức thời
-                    InstantTP(SummonNPCCFrame)
-                    task.wait(0.2)
-                    -[span_29](start_span)- Kích hoạt remote mở cổng phòng gương Katakuri V1[span_29](end_span)
-                    CommF_:InvokeServer("CakePrinceSummon")
-                    task.wait(0.5)
-                    -- Đi thẳng ra sau lưng vào cổng gương đợi boss
-                    InstantTP(KatakuriV1SpawnCFrame)
-
-                -- TIẾN HÀNH FARM QUÁI THƯỜNG ĐỂ GOM ĐỦ SỐ LƯỢNG
+                -- BƯỚC 2: LOGIC FARM QUÁI NỘI ĐẢO BẰNG TWEEN
+                local targetEnemy = GetCurrentEnemy()
+                if targetEnemy then
+                    -- Khóa vị trí đứng cao hơn đầu quái đúng 13 studs và úp mặt hướng thẳng xuống mặt đất để không mất máu
+                    local FarmCFrame = targetEnemy.HumanoidRootPart.CFrame * CFrame.new(0, 13, 0) * CFrame.Angles(math.rad(-90), 0, 0)
+                    
+                    -- NỘI ĐẢO: Di chuyển đến bãi quái tiếp theo 100% bằng Tween mượt mà theo yêu cầu
+                    TweenTo(FarmCFrame)
+                    
+                    -- Khóa cứng tọa độ ngay sau khi Tween xong để triệt tiêu hoàn toàn rung lắc camera
+                    hrp.CFrame = FarmCFrame
+                    hrp.Velocity = Vector3.new(0, 0, 0)
+                    
+                    -- Gọi hàm gom quái đồng bộ và xả sát thương
+                    BringMobs(targetEnemy, FarmCFrame)
+                    ActiveAttack(char)
                 else
-                    local targetEnemy = GetCurrentEnemy()
-                    if targetEnemy then
-                        -- Đã ở trên đảo bánh: Chuyển bãi bằng hình thức di chuyển tức thời (Instant TP) theo yêu cầu
-                        InstantTP(targetEnemy.HumanoidRootPart.CFrame * CFrame.new(0, 13, 0))
-                        AttackEnemy(targetEnemy)
+                    -- BƯỚC 3: KHI QUÁI CHẾT HẾT VÀ CHƯA HỒI SINH (TREO MÁY TRÊN KHÔNG)
+                    local spawnCF = GetSpawnPoint()
+                    -- Dùng Tween bay lên độ cao lơ lửng 35 studs trên không trung bãi spawn đứng chờ
+                    local IdleCFrame = spawnCF * CFrame.new(0, 35, 0)
+                    
+                    TweenTo(IdleCFrame)
+                    
+                    -- Đứng lơ lửng tĩnh lặng tuyệt đối trên trời, quái spawn ra sẽ lập tức lướt xuống farm tiếp
+                    hrp.CFrame = IdleCFrame
+                    hrp.Velocity = Vector3.new(0, 0, 0)
+                end
+            end)
+        end
+    end
+end)
+
+-- [[ KHỬ VA CHẠM VÀ TRIỆT TIÊU LỰC ĐẨY ĐỂ CHỐNG LẮC / CHỐNG MẤT MÁU ]]
+RunService.Stepped:Connect(function()
+    if getgenv().AutoFarmBone then
+        local char = Player.Character
+        if char then
+            for _, part in pairs(char:GetChildren()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = false -- Đi xuyên mọi vật thể địa hình khi Tween nội đảo không lo kẹt tường
+                end
+            end
+        end
+    end
+end)
+
+-- Farm Katakuri
+-- Bật chức năng farm
+getgenv().AutoFarmKatakuriV1 = true 
+_G.SelectWeapon = _G.SelectWeapon or "Melee" -- Vũ khí sử dụng (Melee, Sword, Blox Fruit)
+
+-- Tốc độ Tween lấy mặc định của Hub hoặc bạn có thể tự chỉnh tại đây
+getgenv().TweenSpeed = getgenv().TweenSpeed or 300 
+
+-- Danh sách 4 quái mục tiêu theo yêu cầu
+local TargetMonsters = {
+    "Cookie Crafter",
+    "Cake Guard",
+    "Baking Staff",
+    "Head Baker"
+}
+
+-- Vị trí trung tâm Đảo Bánh để đứng chờ/bay lơ lửng khi quái chưa spawn
+local CakeIslandCenter = CFrame.new(-1932, 250, -12500)
+
+-- Hàm kiểm tra Model quái còn sống hay không
+local function isMonsterAlive(model)
+    return model and model:FindFirstChild("Humanoid") and model.Humanoid.Health > 0 and model:FindFirstChild("HumanoidRootPart")
+end
+
+-- Hàm tìm quái mục tiêu trong Workspace
+local function getTargetMonster()
+    for _, enemy in pairs(workspace.Enemies:GetChildren()) do
+        if table.find(TargetMonsters, enemy.Name) and isMonsterAlive(enemy) then
+            return enemy
+        end
+    end
+    return nil
+end
+
+-- Vòng lặp điều khiển tiến trình Farm chính
+spawn(function()
+    while task.wait(0.1) do
+        if getgenv().AutoFarmKatakuriV1 then
+            pcall(function()
+                local player = game.Players.LocalPlayer
+                local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+                if not root then return end
+                
+                -- Đọc số lượng quái đã diệt trên Server từ hệ thống của game
+                local killCount = game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("CakePrinceProgress")
+                local currentKills = tonumber(killCount) or 0
+                
+                -- Kiểm tra xem Boss Katakuri v1 (Cake Prince) có xuất hiện không
+                local boss = workspace.Enemies:FindFirstChild("Cake Prince")
+                
+                if boss and isMonsterAlive(boss) then
+                    -- BƯỚC 4: Nếu Boss xuất hiện, dùng tween chạy thẳng vào cửa sau lưng NPC và diệt boss
+                    -- Đứng TRÊN ĐẦU BOSS (CFrame * CFrame.new(0, 30, 0)) quái không đánh trúng
+                    _tp(boss.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0)) 
+                    
+                    if _B then 
+                        PosMon = boss.HumanoidRootPart.Position
+                        BringEnemy() -- Gom quái nếu tính năng bật
+                    end
+                    
+                    -- Tự động Click đánh thường
+                    EquipWeapon(_G.SelectWeapon)
+                    game:GetService("VirtualUser"):CaptureController()
+                    game:GetService("VirtualUser"):Button1Down(Vector2.new(1280, 720))
+                    
+                elseif currentKills >= 500 then
+                    -- BƯỚC 3: Đạt đủ 500 quái, di chuyển tween lại gần NPC triệu hồi (Big Mirror)
+                    local npcPosition = CFrame.new(-2077, 252, -12373)
+                    _tp(npcPosition)
+                    
+                    -- Khi đã tới vị trí NPC, tiến hành gọi Remote triệu hồi Katakuri v1
+                    if (root.Position - npcPosition.Position).Magnitude <= 15 then
+                        game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("CakePrinceSpawn")
+                        task.wait(1)
+                    end
+                    
+                else
+                    -- BƯỚC 1 & 2: Di chuyển tween tới Đảo Bánh để tự động farm 4 loại quái chỉ định
+                    local monster = getTargetMonster()
+                    
+                    if monster then
+                        -- CHỈ ĐỨNG TRÊN ĐẦU QUÁI (quái không động đến nhân vật, không đánh trúng)
+                        _tp(monster.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+                        
+                        if _B then
+                            PosMon = monster.HumanoidRootPart.Position
+                            BringEnemy() -- Khóa vị trí quái bằng tính năng của Hub
+                        end
+                        
+                        -- Thực hiện tấn công thường
+                        EquipWeapon(_G.SelectWeapon)
+                        game:GetService("VirtualUser"):CaptureController()
+                        game:GetService("VirtualUser"):Button1Down(Vector2.new(1280, 720))
                     else
-                        -[span_30](start_span)- Nếu quái chết hết chưa hồi sinh: Đứng im hoặc treo lơ lửng trên trời tại điểm spawn chờ quái ra[span_30](end_span)
-                        local spawnCF = GetSpawnPoint()
-                        InstantTP(spawnCF * CFrame.new(0, 25, 0))
+                        -- Khi đánh xong hết quái, nhân vật dùng tween di chuyển ra trung tâm đảo và BAY LƠ LỬNG trên không
+                        _tp(CakeIslandCenter)
+                        
+                        -- Triệt tiêu lực rơi tự do để nhân vật đứng yên trên không chờ quái spawn lại
+                        if root.Velocity.Magnitude > 0 then
+                            root.Velocity = Vector3.new(0, 0, 0)
+                        end
                     end
                 end
             end)
@@ -4560,18 +4614,17 @@ task.spawn(function()
     end
 end)
 
--- [[ CHỐNG RỚT VÀ VÔ HIỆU HÓA VA CHẠM KHI FARM ]]
-RunService.Stepped:Connect(function()
-    if getgenv().AutoKatakuriV1 then
-        local char = Player.Character
-        if char then
-            for _, part in pairs(char:GetChildren()) do
+-- Vòng lặp phụ NoClip liên tục giúp nhân vật không bị kẹt địa hình hoặc vật cản khi Tween di chuyển trên đầu quái
+spawn(function()
+    game:GetService("RunService").Stepped:Connect(function()
+        if getgenv().AutoFarmKatakuriV1 and game.Players.LocalPlayer.Character then
+            for _, part in pairs(game.Players.LocalPlayer.Character:GetDescendants()) do
                 if part:IsA("BasePart") then
-                    part.CanCollide = false -- Đi xuyên vật thể loại bỏ hoàn toàn rung giật địa hình
+                    part.CanCollide = false
                 end
             end
         end
-    end
+    end)
 end)
 
 -- Farm Tyrant of the Skies
@@ -6791,39 +6844,311 @@ spawn(function()
 end)
     
 RaidOpen:AddToggle("RaidFarming", {
-    Title = "Auto Raid",
+    Title = "Auto start Raid",
     Default = false,
     Callback = function(Value)
         _G.Raiding = Value
     end
 })
 
-spawn(function()
-  pcall(function() 
-    while wait(Sec) do
-      if _G.Raiding then  
-        if plr.PlayerGui.Main.TopHUDList.RaidTimer.Visible == true then          
-          local islands = {"Island5","Island 4", "Island 3", "Island 2", "Island 1"}
-          for _, island in ipairs(islands) do
-          local location = game:GetService("Workspace")["_WorldOrigin"].Locations:FindFirstChild(island)
-            if location then
-              for i,v in pairs(workspace.Enemies:GetChildren()) do
-                if v:FindFirstChild("Humanoid") or v:FindFirstChild("HumanoidRootPart") then
-                  if v.Humanoid.Health > 0 then
-                    repeat wait() Attack.Kill(v,_G.Raiding) NextIs=false until not _G.Raiding or not v.Parent or v.Humanoid.Health <= 0 NextIs=true
-                  end
-                end
-              end
-            end
-          end
-        else
-          NextIs = false
+-- [[ CẤU HÌNH HỆ THỐNG ]]
+getgenv().AutoStartRaid = true
+getgenv().TweenSpeed = getgenv().TweenSpeed or 300 -- Tốc độ di chuyển đồng bộ với file mẫu của bạn
+
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local Workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
+
+local Player = Players.LocalPlayer
+
+-- Tọa độ phòng bấm nút Raid tại Đảo Pháo Đài Trên Biển (Castle on the Sea)
+local RaidRoomCFrame = CFrame.new(-5002.5, 314.5, -3134.2)
+-- Tọa độ đứng an toàn sau lưng nút tròn xanh lá cây (Bảo đảm không bị lỗi hoặc rung lắc)
+local ButtonStandCFrame = CFrame.new(-5007.4, 315.5, -3148.6) * CFrame.Angles(0, math.rad(180), 0)
+
+-- [[ HÀM DI CHUYỂN TWEEN MƯỢT MÀ 100% ]]
+local CurrentTween
+local function TweenTo(targetCFrame)
+    local char = Player.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    local hrp = char.HumanoidRootPart
+
+    local distance = (hrp.Position - targetCFrame.Position).Magnitude
+    
+    -- Nếu đã đứng rất gần mục tiêu thì không cần Tween tiếp để tránh giật hình
+    if distance < 3 then return end
+
+    local duration = distance / getgenv().TweenSpeed
+
+    if CurrentTween then CurrentTween:Cancel() end
+
+    -- Tạo sàn đỡ tàng hình dưới chân giúp nhân vật lướt mượt mà xuyên biển không bị rơi tự do
+    local platform = char:FindFirstChild("RaidPlatform") or Instance.new("Part", char)
+    platform.Name = "RaidPlatform"
+    platform.Size = Vector3.new(12, 1, 12)
+    platform.Anchored = true
+    platform.CanCollide = true
+    platform.Transparency = 1
+
+    char.Humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+
+    CurrentTween = TweenService:Create(hrp, TweenInfo.new(duration, Enum.EasingStyle.Linear), {CFrame = targetCFrame})
+    CurrentTween:Play()
+
+    -- Duy trì vị trí sàn nâng đi theo chân nhân vật suốt quãng đường Tween
+    while CurrentTween.PlaybackState == Enum.PlaybackState.Playing do
+        if hrp and platform then 
+            platform.CFrame = hrp.CFrame * CFrame.new(0, -3.5, 0) 
         end
-      else
-        NextIs = false
-      end
+        task.wait()
     end
-  end)
+    
+    if platform then platform:Destroy() end
+end
+
+-- [[ HÀM TỰ ĐỘNG CẦM CHIP RAID TRÊN TAY ]]
+local function EquipRaidChip()
+    local char = Player.Character
+    if not char then return false end
+
+    -- Kiểm tra xem Chip đã có sẵn trên tay chưa
+    for _, item in pairs(char:GetChildren()) do
+        if item:IsA("Tool") and string.find(item.Name, "Microchip") or string.find(item.Name, "Chip") then
+            return true
+        end
+    end
+
+    -- Nếu chưa cầm, tìm trong Balo (Backpack) để trang bị lên tay
+    for _, item in pairs(Player.Backpack:GetChildren()) do
+        if item:IsA("Tool") and (string.find(item.Name, "Microchip") or string.find(item.Name, "Chip")) then
+            char.Humanoid:EquipTool(item)
+            return true
+        end
+    end
+
+    return false
+end
+
+-- [[ VÒNG LẶP ĐIỀU KHIỂN CHÍNH (MAIN LOOP) ]]
+task.spawn(function()
+    while true do
+        task.wait()
+        if getgenv().AutoStartRaid then
+            pcall(function()
+                local char = Player.Character
+                if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+                local hrp = char.HumanoidRootPart
+
+                -- BƯỚC 1: Kiểm tra khoảng cách tới phòng Raid, nếu ở xa (> 500 studs) thì lướt Tween tới đảo
+                if (hrp.Position - RaidRoomCFrame.Position).Magnitude > 500 then
+                    -- Đầu tiên bay đến khu vực phòng điều khiển
+                    TweenTo(RaidRoomCFrame)
+                else
+                    -- BƯỚC 2: Khi đã ở trong phòng, lướt Tween vào vị trí đứng sau lưng nút bấm xanh lá
+                    TweenTo(ButtonStandCFrame)
+                    
+                    -- Khóa cứng tọa độ và triệt tiêu mọi gia tốc vật lý (Chống rung lắc camera tuyệt đối)
+                    hrp.CFrame = ButtonStandCFrame
+                    hrp.Velocity = Vector3.new(0, 0, 0)
+
+                    -- BƯỚC 3: Tự động lôi Chip Raid ra cầm trên tay
+                    local holdingChip = EquipRaidChip()
+
+                    if holdingChip then
+                        -- BƯỚC 4: Kích hoạt hệ thống ấn nút xanh (Start Raid) bằng Remote hoặc ProximityPrompt gần đó
+                        -- Tìm kiếm nút bấm thực tế trong phòng điều khiển để tương tác
+                        local raidButton = Workspace:FindFirstChild("RaidButton") or Workspace.Map:FindFirstChild("RaidButton")
+                        
+                        if raidButton and raidButton:FindFirstChild("ProximityPrompt") then
+                            fireproximityprompt(raidButton.ProximityPrompt, 1)
+                        else
+                            -- Phương thức phụ: Gửi tín hiệu trực tiếp lên hệ thống Server nếu không tìm thấy Prompt vật lý
+                            local RaidRemote = game:GetService("ReplicatedStorage"):FindFirstChild("Remotes"):FindFirstChild("CommF_")
+                            if RaidRemote then
+                                RaidRemote:InvokeServer("StartRaid")
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- [[ VÔ HIỆU HÓA VA CHẠM ĐỂ DI CHUYỂN XUYÊN TƯỜNG PHÒNG RAID ]]
+RunService.Stepped:Connect(function()
+    if getgenv().AutoStartRaid then
+        local char = Player.Character
+        if char then
+            for _, part in pairs(char:GetChildren()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = false -- Giúp nhân vật đi xuyên thẳng qua lớp kính/tường vào sau lưng nút bấm mượt mà
+                end
+            end
+        end
+    end
+end)
+-- [[ KHỞI TẠO TIÊU ĐỀ & CHỨC NĂNG TOGGLE TRÊN MENU ]]
+-- (Lưu ý: Thay thế 'TabRaid' bằng tên biến Tab giao diện Raid thực tế trong Hub của bạn)
+TabRaid:AddToggle("AutoCompleteRaidToggle", {
+    Title = "Auto Complete Raid",
+    Default = false,
+    Callback = function(Value)
+        getgenv().AutoCompleteRaid = Value
+        
+        -- Nếu tắt toggle, hủy tiến trình Tween đang chạy ngay lập tức
+        if not Value and CurrentTween then
+            CurrentTween:Cancel()
+            local char = game:GetService("Players").LocalPlayer.Character
+            if char and char:FindFirstChild("RaidFarmPlatform") then
+                char.RaidFarmPlatform:Destroy()
+            end
+        end
+    end
+end)
+
+-- [[ CẤU HÌNH HỆ THỐNG LOGIC ]]
+getgenv().TweenSpeed = getgenv().TweenSpeed or 300 
+
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local Workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
+
+local Player = Players.LocalPlayer
+
+-- [[ HÀM TÌM KIẾM QUÁI TRONG TRẬN RAID ]]
+local function GetRaidEnemy()
+    for _, enemy in pairs(Workspace.Enemies:GetChildren()) do
+        if enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 and enemy:FindFirstChild("HumanoidRootPart") then
+            if not Players:GetPlayerFromCharacter(enemy) then
+                return enemy
+            end
+        end
+    end
+    return nil
+end
+
+-- [[ HÀM GOM QUÁI RAID TRONG PHẠM VI BÃI ]]
+local function BringRaidMobs(targetEnemy, farmCFrame)
+    for _, enemy in pairs(Workspace.Enemies:GetChildren()) do
+        if enemy:FindFirstChild("HumanoidRootPart") and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 then
+            if not Players:GetPlayerFromCharacter(enemy) then
+                if (enemy.HumanoidRootPart.Position - targetEnemy.HumanoidRootPart.Position).Magnitude < 350 then
+                    enemy.Humanoid:ChangeState(11)
+                    enemy.HumanoidRootPart.CanCollide = false
+                    
+                    enemy.HumanoidRootPart.CFrame = farmCFrame * CFrame.new(0, -13, 0)
+                    
+                    if enemy.HumanoidRootPart:FindFirstChild("BodyVelocity") then
+                        enemy.HumanoidRootPart.BodyVelocity:Destroy()
+                    end
+                end
+            end
+        end
+    end
+end
+
+-- [[ HÀM TWEEN MƯỢT MÀ 100% (DI CHUYỂN LIÊN ĐẢO RAID & TIẾP CẬN QUÁI) ]]
+local CurrentTween
+local function TweenToRaid(targetCFrame)
+    local char = Player.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    local hrp = char.HumanoidRootPart
+
+    local distance = (hrp.Position - targetCFrame.Position).Magnitude
+    if distance < 4 then return end 
+
+    local duration = distance / getgenv().TweenSpeed
+
+    if CurrentTween then CurrentTween:Cancel() end
+
+    local platform = char:FindFirstChild("RaidFarmPlatform") or Instance.new("Part", char)
+    platform.Name = "RaidFarmPlatform"
+    platform.Size = Vector3.new(12, 1, 12)
+    platform.Anchored = true
+    platform.CanCollide = true
+    platform.Transparency = 1
+
+    char.Humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+
+    CurrentTween = TweenService:Create(hrp, TweenInfo.new(duration, Enum.EasingStyle.Linear), {CFrame = targetCFrame})
+    CurrentTween:Play()
+
+    while CurrentTween.PlaybackState == Enum.PlaybackState.Playing do
+        if hrp and platform then 
+            platform.CFrame = hrp.CFrame * CFrame.new(0, -3.5, 0) 
+        end
+        task.wait()
+    end
+    
+    if platform then platform:Destroy() end
+end
+
+-- [[ HÀM TỰ ĐỘNG KÍCH HOẠT VŨ KHÍ TẤN CÔNG ]]
+local function AutoAttack(char)
+    local Tool = char:FindFirstChildOfClass("Tool")
+    if Tool then
+        Tool:Activate()
+    else
+        for _, item in pairs(Player.Backpack:GetChildren()) do
+            if item:IsA("Tool") and (item.ToolTip == "Melee" or item.ToolTip == "Sword") then
+                char.Humanoid:EquipTool(item)
+                break
+            end
+        end
+    end
+end
+
+-- [[ VÒNG LẶP ĐIỀU KHIỂN CHÍNH (MAIN LOOP) ]]
+task.spawn(function()
+    while true do
+        task.wait()
+        if getgenv().AutoCompleteRaid then
+            pcall(function()
+                local char = Player.Character
+                if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+                local hrp = char.HumanoidRootPart
+
+                local raidEnemy = GetRaidEnemy()
+
+                if raidEnemy then
+                    -- Khóa vị trí 13 studs trên đầu quái, úp mặt xuống (Không mất máu, ko lag)
+                    local FarmCFrame = raidEnemy.HumanoidRootPart.CFrame * CFrame.new(0, 13, 0) * CFrame.Angles(math.rad(-90), 0, 0)
+                    
+                    -- Di chuyển liên đảo và tiếp cận bãi 100% bằng Tween
+                    TweenToRaid(FarmCFrame)
+                    
+                    -- Giữ cố định vị trí (Chống rung lắc camera tuyệt đối)
+                    hrp.CFrame = FarmCFrame
+                    hrp.Velocity = Vector3.new(0, 0, 0)
+                    
+                    BringRaidMobs(raidEnemy, FarmCFrame)
+                    AutoAttack(char)
+                else
+                    -- Khi dọn sạch đảo và đợi game load sang đảo tiếp theo: Đứng lơ lửng chờ trên không
+                    local IdleCFrame = hrp.CFrame * CFrame.new(0, 40, 0)
+                    hrp.CFrame = IdleCFrame
+                    hrp.Velocity = Vector3.new(0, 0, 0)
+                end
+            end)
+        end
+    end
+end)
+
+-- [[ TỰ ĐỘNG KHỬ VA CHẠM ]]
+RunService.Stepped:Connect(function()
+    if getgenv().AutoCompleteRaid then
+        local char = Player.Character
+        if char then
+            for _, part in pairs(char:GetChildren()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = false 
+                end
+            end
+        end
+    end
 end)
 
 RaidOpen:AddToggle("AwakenFruits", {
