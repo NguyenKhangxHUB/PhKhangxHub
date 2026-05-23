@@ -3211,90 +3211,86 @@ task.spawn(function()
     end
 end)
 
--- ========== CHỨC NĂNG TRẠNG THÁI & ĐẾM NGƯỢC SPAWN ITEM ==========
--- Khởi tạo Label trên giao diện (sử dụng thư viện UI hiện tại của bạn)
--- Thay 'TrialRace' bằng Tab UI bạn muốn hiển thị (Ví dụ: Status, Main, Server...)
-local ItemStatusLabel = TrialRace:AddLabel("Vật phẩm Server: ⏳ Đang quét...")
-local FistCountdownLabel = TrialRace:AddLabel("Key Râu Đen (Rương): ⏳ Cần 04:00:00")
-local ChaliceCountdownLabel = TrialRace:AddLabel("Chén Thánh (Rương): ⏳ Cần 04:00:00")
+--// STATUS GOD CHALICE & FIST OF DARKNESS + TIMER
 
--- Biến lưu cấu trúc trạng thái thông báo
-local notifiedSpawnFist = false
-local notifiedSpawnChalice = false
+local JoinTime = tick()
 
-task.spawn(function()
-    while true do
+local StatusLabel = Instance.new("TextLabel")
+StatusLabel.Size = UDim2.new(0, 350, 0, 65)
+StatusLabel.Position = UDim2.new(0.5, -175, 0, 120)
+StatusLabel.BackgroundTransparency = 0.25
+StatusLabel.BackgroundColor3 = Color3.fromRGB(20,20,20)
+StatusLabel.TextColor3 = Color3.fromRGB(255,255,255)
+StatusLabel.TextStrokeTransparency = 0
+StatusLabel.Font = Enum.Font.GothamBold
+StatusLabel.TextScaled = false
+StatusLabel.TextSize = 16
+StatusLabel.Parent = game.CoreGui
+
+local function formatTime(seconds)
+    local h = math.floor(seconds / 3600)
+    local m = math.floor((seconds % 3600) / 60)
+    local s = math.floor(seconds % 60)
+    return string.format("%02d:%02d:%02d", h, m, s)
+end
+
+spawn(function()
+    while task.wait(1) do
         pcall(function()
-            -- 1. KIỂM TRA TRẠNG THÁI HIỆN TẠI (Vật phẩm đã xuất hiện chưa)
-            local isFistPresent = false
-            local isChalicePresent = false
 
-            -- Kiểm tra trong Túi đồ (Backpack) hoặc trên tay của tất cả người chơi
-            for _, player in ipairs(game:GetService("Players"):GetPlayers()) do
-                if player.Character then
-                    if player.Character:FindFirstChild("Fist of Darkness") or (player:FindFirstChild("Backpack") and player.Backpack:FindFirstChild("Fist of Darkness")) then
-                        isFistPresent = true
-                    end
-                    if player.Character:FindFirstChild("God's Chalice") or (player:FindFirstChild("Backpack") and player.Backpack:FindFirstChild("God's Chalice")) then
-                        isChalicePresent = true
-                    end
+            local chalice = false
+            local fist = false
+
+            -- Check inventory
+            if game.Players.LocalPlayer.Backpack:FindFirstChild("God's Chalice")
+            or game.Players.LocalPlayer.Character:FindFirstChild("God's Chalice") then
+                chalice = true
+            end
+
+            if game.Players.LocalPlayer.Backpack:FindFirstChild("Fist of Darkness")
+            or game.Players.LocalPlayer.Character:FindFirstChild("Fist of Darkness") then
+                fist = true
+            end
+
+            -- Check workspace
+            for _,v in pairs(workspace:GetDescendants()) do
+                if v.Name == "God's Chalice" then
+                    chalice = true
+                end
+
+                if v.Name == "Fist of Darkness" then
+                    fist = true
                 end
             end
 
-            -- Kiểm tra xem vật phẩm có đang nằm rơi tự do trên sàn Map (Workspace) không
-            for _, object in ipairs(game:GetService("Workspace"):GetChildren()) do
-                if object.Name == "Fist of Darkness" then
-                    isFistPresent = true
-                elseif object.Name == "God's Chalice" then
-                    isChalicePresent = true
-                end
+            -- Timer
+            local passed = tick() - JoinTime
+
+            local chaliceRemain = math.max(0, 4*3600 - passed)
+            local fistRemain = math.max(0, 4*3600 - passed)
+
+            local chaliceText = chalice
+                and "✅ Chén Thánh: ĐÃ SPAWN"
+                or "⏳ Chén Thánh: " .. formatTime(chaliceRemain)
+
+            local fistText = fist
+                and "✅ Key Râu Đen: ĐÃ SPAWN"
+                or "⏳ Key Râu Đen: " .. formatTime(fistRemain)
+
+            StatusLabel.Text =
+                chaliceText ..
+                "\n" ..
+                fistText ..
+                "\n🕒 Server Time: " .. formatTime(passed)
+
+            -- Color
+            if chalice or fist then
+                StatusLabel.BackgroundColor3 = Color3.fromRGB(0,120,0)
+            else
+                StatusLabel.BackgroundColor3 = Color3.fromRGB(120,0,0)
             end
 
-            -- Cập nhật dòng trạng thái tổng quan nhanh
-            local txtStatus = "Vật phẩm Server:"
-            txtStatus = txtStatus .. (isFistPresent and " ⬛ [Fist: ✅]" or " ⬛ [Fist: ❌]")
-            txtStatus = txtStatus .. (isChalicePresent and " 🏆 [Chalice: ✅]" or " 🏆 [Chalice: ❌]")
-            ItemStatusLabel:SetText(txtStatus)
-
-            -- Bắn thông báo góc màn hình Hub khi phát hiện có vật phẩm spawn
-            if isFistPresent and not notifiedSpawnFist then
-                notifiedSpawnFist = true
-                Library:Notify({ Title = "Banana Hub", Description = "🚨 Fist of Darkness (Key Râu Đen) đang có trên Server!", Duration = 5 })
-            elseif not isFistPresent then
-                notifiedSpawnFist = false
-            end
-
-            if isChalicePresent and not notifiedSpawnChalice then
-                notifiedSpawnChalice = true
-                Library:Notify({ Title = "Banana Hub", Description = "🚨 God's Chalice (Chén Thánh) đang có trên Server!", Duration = 5 })
-            elseif not isChalicePresent then
-                notifiedSpawnChalice = false
-            end
-
-            -- 2. ĐẾM NGƯỢC THỜI GIAN THEO TỪNG GIÂY (Mỗi 4 tiếng từ lúc mở Server)
-            -- Lấy thời gian server đã hoạt động (tính bằng giây)
-            local serverTime = workspace.DistributedGameTime
-            local spawnInterval = 14400 -- 4 tiếng = 14400 giây
-
-            -- Tính thời gian còn lại cho lượt spawn kế tiếp trong rương
-            local timeLeftFist = spawnInterval - (serverTime % spawnInterval)
-            local timeLeftChalice = spawnInterval - (serverTime % spawnInterval)
-
-            -- Hàm format giây thành chuỗi thời gian dạng hh:mm:ss
-            local function formatTime(seconds)
-                local hours = math.floor(seconds / 3600)
-                local minutes = math.floor((seconds % 3600) / 60)
-                local secs = math.floor(seconds % 60)
-                return string.format("%02d:%02d:%02d", hours, minutes, secs)
-            end
-
-            -- Hiển thị thời gian đếm ngược cụ thể lên UI
-            FistCountdownLabel:SetText("Key Râu Đen (Rương): ⏳ Lượt tới sau: " .. formatTime(timeLeftFist))
-            ChaliceCountdownLabel:SetText("Chén Thánh (Rương): ⏳ Lượt tới sau: " .. formatTime(timeLeftChalice))
         end)
-        
-        -- Chờ đúng 1 giây để lặp lại cập nhật độ chính xác cao nhất (Real-time)
-        task.wait(1)
     end
 end)
 
