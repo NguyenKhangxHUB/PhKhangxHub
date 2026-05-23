@@ -4779,51 +4779,164 @@ end)
 
 MeterialFarm = AutoModeFarm:AddLeftGroupbox("Farming Meterial")
 
--- ====================================================================
--- DANH SÁCH NGUYÊN LIỆU & NPC KHU VỰC (Dựa theo dữ liệu của bạn)
--- ====================================================================
-local MaterialData = {}
+-- [[ CẤU HÌNH & BIẾN TOÀN CỤC ]]
+getgenv().Config = {
+    FarmMaterial = false,
+    SelectedMaterial = "", -- Tên nguyên liệu người chơi chọn
+    TweenSpeed = 250 -- Tốc độ di chuyển Tween
+}
 
-if game.PlaceId == 2753915549 then -- [ SEA 1 ]
-    MaterialData = {
-        ["Leather"] = {"Pirate", "Brute", "Mercenary"},
-        ["Scrap Metal"] = {"Pirate", "Brute", "Mercenary", "Military Soldier"},
-        ["Angel Wings"] = {"God's Guard", "Shanda", "Royal Squad"},
-        ["Magma Ore"] = {"Military Spy", "Military Soldier", "Magma Admiral"},
-        ["Fish Tail"] = {"Fishman Warrior", "Fishman Commando"},
-        ["Mystic Droplet"] = {"Sky Bandit", "Dark Master", "Shanda", "Royal Soldier"}
-    }
-elseif game.PlaceId == 4442272183 then -- [ SEA 2 ]
-    MaterialData = {
-        ["Leather"] = {"Swan Pirate", "Marine Lieutenant", "Snow Trooper"},
-        ["Scrap Metal"] = {"Factory Staff", "Lab Subordinate", "Swan Pirate"},
-        ["Magma Ore"] = {"Magma Ninja", "Lava Pirate"},
-        ["Fish Tail"] = {"Fishman Warrior", "Fishman Raider", "Fishman Captain"},
-        ["Mystic Droplet"] = {"Marine Commodore", "Marine Rear Admiral", "Sea Soldier", "Water Fighter"},
-        ["Angel Wings"] = {"Arctic Warrior", "Snow Lurker"},
-        ["Radioactive Material"] = {"Factory Staff", "Core"},
-        ["Ectoplasm"] = {"Ship Deckhand", "Ship Engineer", "Ship Steward", "Ship Officer", "Zombie", "Vampire"},
-        ["Vampire Fang"] = {"Vampire"}
-    }
-elseif game.PlaceId == 7449423635 then -- [ SEA 3 ]
-    MaterialData = {
-        ["Leather"] = {"Pirate Millionaire", "Pistol Billionaire", "Jungle Pirate"},
-        ["Scrap Metal"] = {"Pirate Millionaire", "Pistol Billionaire"},
-        ["Fish Tail"] = {"Fishman Raider", "Fishman Captain", "Shark Warrior"},
-        ["Mystic Droplet"] = {"Forest Pirate", "Mythological Pirate"},
-        ["Dragon Scale"] = {"Dragon Crew Warrior", "Dragon Crew Archer"},
-        ["Mini Tusk"] = {"Jungle Pirate", "Musketeer Pirate"},
-        ["Conjured Cocoa"] = {"Chocolate Bar Battler", "Cocoa Warrior", "Chocolate Warrior", "Sweet Thief"},
-        ["Demonic Wisp"] = {"Demonic Soul"}
-    }
+local Players = game:GetService("Players")
+local Player = Players.LocalPlayer
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+
+-- [[ BẢNG TRA CỨU NGUYÊN LIỆU & NPC ]]
+-- Dựa trên thông tin các nguyên liệu phổ biến trong Blox Fruits
+local MaterialData = {
+    ["Fish Tail"] = { "Fishman Warrior", "Fishman Commando" },
+    ["Magma Ore"] = { "Military Soldier", "Military Spy" },
+    ["Scrap Metal"] = { "Pirate Millionaire", "Brute", "Factory Staff" },
+    ["Angel Wings"] = { "Gods Guard", "Shanda" },
+    ["Mysterous Droplet"] = { "Water Zombie", "Sea Soldier" },
+    ["Dragon Scale"] = { "Dragon Crew Warrior", "Dragon Crew Archer" },
+    ["Mini Tusk"] = { "Mythological Pirate" },
+    ["Vampire Tooth"] = { "Vampire" },
+    ["Ectoplasm"] = { "Ship Officer", "Ship Engineer", "Ship Steward" },
+    ["Cocoa"] = { "Cocoa Warrior", "Chocolate Bar Battler" }
+}
+
+-- [[ HÀM DI CHUYỂN TWEEN MƯỢT MÀ ]]
+local CurrentTween
+local function TweenTo(targetCFrame)
+    local character = Player.Character
+    if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+    local hrp = character.HumanoidRootPart
+
+    -- Tính toán thời gian dựa trên khoảng cách để tốc độ luôn đều
+    local distance = (hrp.Position - targetCFrame.Position).Magnitude
+    local duration = distance / getgenv().Config.TweenSpeed
+
+    if duration < 0.1 then duration = 0.1 end
+
+    -- Tắt va chạm và trọng lực tạm thời để tránh bị kẹt địa hình
+    if character:FindFirstChild("Humanoid") then
+        character.Humanoid:ChangeState(11) -- Tắt vật lý rơi tự do
+    end
+
+    if CurrentTween then CurrentTween:Cancel() end
+
+    CurrentTween = TweenService:Create(hrp, TweenInfo.new(duration, Enum.EasingStyle.Linear), {CFrame = targetCFrame})
+    CurrentTween:Play()
+    CurrentTween.Completed:Wait()
 end
 
--- Tự động trích xuất danh sách tên nguyên liệu để đưa vào Dropdown UI
-local MaterialList = {}
-for matName, _ in pairs(MaterialData) do
-    table.insert(MaterialList, matName)
+-- [[ HÀM TÌM NPC PHÙ HỢP GẦN NHẤT ]]
+local function GetTargetNPC()
+    local allowedNPCs = MaterialData[getgenv().Config.SelectedMaterial]
+    if not allowedNPCs then return nil end
+
+    -- Tìm quái còn sống trong Workspace.Enemies
+    if game:GetService("Workspace"):FindFirstChild("Enemies") then
+        for _, npc in pairs(game:GetService("Workspace").Enemies:GetChildren()) do
+            if table.find(allowedNPCs, npc.Name) and npc:FindFirstChild("Humanoid") and npc.Humanoid.Health > 0 and npc:FindFirstChild("HumanoidRootPart") then
+                return npc
+            end
+        end
+    end
+    
+    -- Nếu không có quái spawn sẵn, tìm vị trí Spawner của quái đó để lại đứng đợi
+    if game:GetService("Workspace"):FindFirstChild("_WorldOrigin") and game:GetService("Workspace")._WorldOrigin:FindFirstChild("EnemySpawns") then
+        for _, spawn in pairs(game:GetService("Workspace")._WorldOrigin.EnemySpawns:GetChildren()) do
+            if table.find(allowedNPCs, spawn.Name) then
+                return spawn -- Trả về cục Spawn để di chuyển tới đợi
+            end
+        end
+    end
+    return nil
 end
-table.sort(MaterialList) -- Sắp xếp tên theo thứ tự chữ cái A-Z cho đẹp mắt
+
+-- [[ HÀM GOM QUÁI (BRING MOBS) - KHÔNG LỖI - KHÔNG GIẬT ]]
+local function BringMobs(targetNPC, farmCFrame)
+    local allowedNPCs = MaterialData[getgenv().Config.SelectedMaterial]
+    if not allowedNPCs then return end
+
+    for _, npc in pairs(game:GetService("Workspace").Enemies:GetChildren()) do
+        if table.find(allowedNPCs, npc.Name) and npc:FindFirstChild("HumanoidRootPart") and npc:FindFirstChild("Humanoid") and npc.Humanoid.Health > 0 then
+            -- Chỉ gom những con quái trong phạm vi gần (tránh kéo quái quá xa gây lỗi anti-cheat)
+            if (npc.HumanoidRootPart.Position - targetNPC.HumanoidRootPart.Position).Magnitude < 350 then
+                npc.Humanoid:ChangeState(11) -- Tắt vật lý của quái để gom mượt hơn
+                npc.HumanoidRootPart.CanCollide = false
+                
+                -- Đưa quái về vị trí đứng farm (dưới chân người chơi một chút)
+                npc.HumanoidRootPart.CFrame = farmCFrame * CFrame.new(0, -10, 0)
+                
+                -- Tắt bớt tính toán gốc để quái đứng im không đánh trả
+                if npc.HumanoidRootPart:FindFirstChild("BodyVelocity") then
+                    npc.HumanoidRootPart.BodyVelocity:Destroy()
+                end
+            end
+        end
+    end
+end
+
+-- [[ VÒNG LẶP AUTO FARM CHÍNH ]]
+task.spawn(function()
+    while true do
+        task.wait()
+        if getgenv().Config.FarmMaterial and getgenv().Config.SelectedMaterial ~= "" then
+            pcall(function()
+                local target = GetTargetNPC()
+                local character = Player.Character
+                if target and character and character:FindFirstChild("HumanoidRootPart") then
+                    local hrp = character.HumanoidRootPart
+                    
+                    -- KIỂM TRA LÀ NPC (QUÁI SỐNG) HAY CHỈ LÀ CỤC SPAWN ĐỢI QUÁI
+                    if target:IsA("Model") and target:FindFirstChild("HumanoidRootPart") then
+                        -- Vị trí đứng trên đầu quái 12-15 studs (Tránh quái đánh trúng, không rung lắc)
+                        local FarmCFrame = target.HumanoidRootPart.CFrame * CFrame.new(0, 13, 0) * CFrame.Angles(math.rad(-90), 0, 0)
+                        
+                        -- Nếu ở quá xa (>60 studs) thì dùng Tween di chuyển tới
+                        if (hrp.Position - target.HumanoidRootPart.Position).Magnitude > 60 then
+                            TweenTo(FarmCFrame)
+                        else
+                            -- Nếu đã ở gần, khóa chặt vị trí bằng cách gán CFrame trực tiếp (Chống rung/giật tuyệt đối)
+                            hrp.CFrame = FarmCFrame
+                            hrp.Velocity = Vector3.new(0, 0, 0) -- Xóa gia tốc để không bị nảy hình
+                            
+                            -- Gọi hàm gom quái lại một điểm
+                            BringMobs(target, FarmCFrame)
+                            
+                            -- KÍCH HOẠT ĐÁNH (Nhấp chuột/Click)
+                            local VirtualUser = game:GetService("VirtualUser")
+                            VirtualUser:CaptureController()
+                            VirtualUser:ClickButton1(Vector2.new(850, 520)) -- Giả lập click chuột giữa màn hình
+                        end
+                    else
+                        -- Nếu chỉ là điểm Spawn (quái chưa ra), di chuyển đến đó và đứng đợi
+                        if (hrp.Position - target.Position).Magnitude > 10 then
+                            TweenTo(target.CFrame * CFrame.new(0, 15, 0))
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- [[ TỰ ĐỘNG BẬT THThÊM ANTI-KICK / KHÔNG BỊ RỚT XUỐNG KHI TWEEN ]]
+RunService.Stepped:Connect(function()
+    if getgenv().Config.FarmMaterial then
+        local character = Player.Character
+        if character then
+            for _, part in pairs(character:GetChildren()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = false -- Tắt va chạm nhân vật để di chuyển xuyên vật thể mượt mà
+                end
+            end
+        end
+    end
+end)
 
 MeterialFarm:AddDropdown("SelectMethodFarm", {
     Title = "Select Meterial",
