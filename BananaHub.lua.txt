@@ -3907,6 +3907,93 @@ SetAutoFarm:AddToggle("BringMob", {
         _B = Value
     end
 })
+-- ============================================================
+-- BRING MOB — bring CẢ mob farm + mob phụ về _lockedBringPos mỗi 0.1s
+-- Không bring nếu có player khác trong phạm vi 500 stud quanh player
+-- ============================================================
+spawn(function()
+    while task.wait(0.1) do
+        pcall(function()
+            -- Đồng bộ getgenv với _G
+            getgenv().IsFarming     = _G.StartFarm
+            getgenv().MaxBringCount = _G.BringCount or 2
+            getgenv().BringMob      = _G.AutoBring
+
+            -- Guard
+            if not getgenv().BringMob  then return end
+            if not getgenv().IsFarming then return end
+
+            local targetMob = getgenv().CurrentTargetMob
+            if not targetMob or not targetMob.Parent then return end
+
+            -- Phải có vị trí đã chốt (tức là tracking đã teleport ít nhất 1 lần)
+            local bringCF = _lockedBringPos
+            if not bringCF then return end
+
+            local myChar = Player.Character
+            if not myChar then return end
+            local myHRP = myChar:FindFirstChild("HumanoidRootPart")
+            if not myHRP then return end
+
+            -- ── CHECK PLAYER KHÁC trong 500 stud — nếu có thì KHÔNG bring ──
+            for _, otherPlayer in ipairs(Players:GetPlayers()) do
+                if otherPlayer == Player then continue end  -- bỏ qua bản thân
+                local otherChar = otherPlayer.Character
+                if not otherChar then continue end
+                local otherHRP = otherChar:FindFirstChild("HumanoidRootPart")
+                if not otherHRP then continue end
+                local distToOther = (otherHRP.Position - myHRP.Position).Magnitude
+                if distToOther <= 500 then
+                    return  -- có player khác gần → bỏ bring lần này
+                end
+            end
+
+            local mobName  = targetMob.Name
+            --   BringCount = 2 → bring thêm 1 (tổng 2 con dưới chân)
+            --   BringCount = 3 → bring thêm 2 (tổng 3 con)
+            local maxExtra = math.max(0, (getgenv().MaxBringCount or 2) - 1)
+
+            -- ── Tìm mob phụ cùng loại, KHÔNG giới hạn khoảng cách ──────
+            -- Collect tất cả mob cùng tên, sort theo khoảng cách gần nhất, lấy maxExtra con
+            local allSame = {}
+            for _, enemy in ipairs(workspace.Enemies:GetChildren()) do
+                if enemy == targetMob then continue end
+                local humanoid = enemy:FindFirstChild("Humanoid")
+                local rootPart = enemy:FindFirstChild("HumanoidRootPart")
+                if humanoid and rootPart and humanoid.Health > 0 and rootPart.Parent then
+                    if enemy.Name == mobName then
+                        local dist = (rootPart.Position - myHRP.Position).Magnitude
+                        -- Chỉ bring mob phụ trong phạm vi 300 stud tính từ player
+                        if dist <= 300 then
+                            table.insert(allSame, { rp = rootPart, dist = dist })
+                        end
+                    end
+                end
+            end
+            -- Sort gần → xa
+            table.sort(allSame, function(a, b) return a.dist < b.dist end)
+
+            local candidates = {}
+            for i = 1, math.min(maxExtra, #allSame) do
+                table.insert(candidates, allSame[i].rp)
+            end
+
+            -- ── Bring mob farm (luôn bring, kể cả khi không có mob phụ) ─
+            local farmHRP = targetMob:FindFirstChild("HumanoidRootPart")
+            local farmHum = targetMob:FindFirstChild("Humanoid")
+            if farmHRP and farmHum and farmHum.Health > 0 then
+                farmHRP.CFrame = bringCF
+                sethiddenproperty(Player, "SimulationRadius", math.huge)
+            end
+
+            -- ── Bring mob phụ (gần nhất, không giới hạn khoảng cách) ───
+            for _, rp in ipairs(candidates) do
+                rp.CFrame = bringCF
+                sethiddenproperty(Player, "SimulationRadius", math.huge)
+            end
+        end)
+    end
+end)
 
 SetAutoFarm:AddToggle("ObservationOpen", {
     Title = "Teleport Y if low hearth",
@@ -9352,62 +9439,88 @@ spawn(function()
     end
   end
 end)
-VolcanoFarm:AddLabel("[ Săn Núi Lửa ]") -- Tiêu đề chức năng nổi bật giống ảnh ví dụ
-VolcanoFarm:AddToggle("RemoveVolcanoLavaToggle", {
-    Title = "Xóa Lava & Lửa (No Damage)",
+--// REMOVE VOLCANO LAVA
+_G.RemoveVolcanoLava = false
+
+Tabs.Prehistoric:AddToggle("RemoveVolcanoLava", {
+    Title = "Remove Volcano Lava",
     Default = false,
     Callback = function(Value)
-        getgenv().RemoveVolcanoLava = Value
-        if Value then
-            Library:Notify({
-                Title = "Banana Hub",
-                Description = "Đã dập tắt toàn bộ lửa đỏ và xóa Lava! Không bị mất máu.",
-                Duration = 4
-            })
-        end
+        _G.RemoveVolcanoLava = Value
+
+        task.spawn(function()
+            while _G.RemoveVolcanoLava do
+                task.wait(0.5)
+
+                pcall(function()
+
+                    -- Xoá lava trong workspace
+                    for _,v in pairs(workspace:GetDescendants()) do
+                        local name = string.lower(v.Name)
+
+                        -- Xoá part lava
+                        if v:IsA("BasePart") then
+                            if string.find(name,"lava")
+                            or string.find(name,"magma")
+                            or string.find(name,"volcano")
+                            or string.find(name,"fire") then
+
+                                v.Transparency = 1
+                                v.CanCollide = false
+                                v.Material = Enum.Material.SmoothPlastic
+
+                                -- xoá damage touch
+                                local touch = v:FindFirstChildOfClass("TouchTransmitter")
+                                if touch then
+                                    touch:Destroy()
+                                end
+
+                                -- xoá script gây damage
+                                for _,x in pairs(v:GetDescendants()) do
+                                    if x:IsA("Script")
+                                    or x:IsA("LocalScript") then
+                                        x:Destroy()
+                                    end
+                                end
+                            end
+                        end
+
+                        -- Xoá hiệu ứng lava
+                        if v:IsA("Fire")
+                        or v:IsA("ParticleEmitter")
+                        or v:IsA("Smoke")
+                        or v:IsA("Sparkles")
+                        or v:IsA("Trail") then
+
+                            local pname = ""
+
+                            pcall(function()
+                                pname = string.lower(v.Parent.Name)
+                            end)
+
+                            if string.find(pname,"lava")
+                            or string.find(pname,"magma")
+                            or string.find(pname,"volcano")
+                            or string.find(pname,"fire") then
+                                v:Destroy()
+                            end
+                        end
+                    end
+
+                    -- chống mất máu lava
+                    if game.Players.LocalPlayer.Character then
+                        for _,v in pairs(game.Players.LocalPlayer.Character:GetDescendants()) do
+                            if v:IsA("Fire") then
+                                v:Destroy()
+                            end
+                        end
+                    end
+
+                end)
+            end
+        end)
     end
 })
-
--- ====================================================================
--- LOGIC XOÁ LAVA, DẬP LỬA ĐỎ & BẤT TỬ DUNG NHAM ĐƯỢC GỘP CHUNG TẠI ĐÂY
--- ====================================================================
-if not getgenv().LavaLogicLoaded then
-    getgenv().LavaLogicLoaded = true -- Tránh bị lặp vòng lặp khi tắt/bật lại script
-    
-    local RunService = game:GetService("RunService")
-    RunService.Heartbeat:Connect(function()
-        if getgenv().RemoveVolcanoLava then
-            pcall(function()
-                -- 1. Quét sạch các mảnh dung nham gây sát thương trên bản đồ
-                for _, v in pairs(game.Workspace:GetDescendants()) do
-                    if v:IsA("BasePart") then
-                        local nameLower = v.Name:lower()
-                        if nameLower:match("lava") or nameLower:match("magma") or nameLower:match("damage") or nameLower == "damagepart" then
-                            v:Destroy()
-                        end
-                    -- 2. Dập tắt tận gốc toàn bộ hiệu ứng lửa đỏ bốc lên, không chừa một đốm nào
-                    elseif v:IsA("ParticleEmitter") or v:IsA("Fire") then
-                        local nameLower = v.Name:lower()
-                        if nameLower:match("fire") or nameLower:match("lava") or nameLower:match("magma") or nameLower:match("burn") or nameLower:match("eruption") then
-                            v.Enabled = false
-                            v:Destroy()
-                        end
-                    end
-                end
-                
-                -- 3. Bẻ gãy các cổng va chạm (TouchTransmitter) nhận lệnh trừ máu từ nham thạch
-                for _, v in pairs(game.Workspace:GetDescendants()) do
-                    if v:IsA("TouchTransmitter") and v.Parent then
-                        local partName = v.Parent.Name:lower()
-                        if partName:match("lava") or partName:match("magma") or partName:match("damage") or partName:match("fire") then
-                            v:Destroy() -- Triệt tiêu hoàn toàn khả năng gây mất máu
-                        end
-                    end
-                end
-            end)
-        end
-    end)
-end
 
 VolcanoFarm:AddToggle("EventVolcanoStart", {
     Title = "Auto Event Prehistoric Island",
