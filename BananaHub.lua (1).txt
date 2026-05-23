@@ -3211,6 +3211,93 @@ task.spawn(function()
     end
 end)
 
+-- ========== CHỨC NĂNG TRẠNG THÁI & ĐẾM NGƯỢC SPAWN ITEM ==========
+-- Khởi tạo Label trên giao diện (sử dụng thư viện UI hiện tại của bạn)
+-- Thay 'TrialRace' bằng Tab UI bạn muốn hiển thị (Ví dụ: Status, Main, Server...)
+local ItemStatusLabel = TrialRace:AddLabel("Vật phẩm Server: ⏳ Đang quét...")
+local FistCountdownLabel = TrialRace:AddLabel("Key Râu Đen (Rương): ⏳ Cần 04:00:00")
+local ChaliceCountdownLabel = TrialRace:AddLabel("Chén Thánh (Rương): ⏳ Cần 04:00:00")
+
+-- Biến lưu cấu trúc trạng thái thông báo
+local notifiedSpawnFist = false
+local notifiedSpawnChalice = false
+
+task.spawn(function()
+    while true do
+        pcall(function()
+            -- 1. KIỂM TRA TRẠNG THÁI HIỆN TẠI (Vật phẩm đã xuất hiện chưa)
+            local isFistPresent = false
+            local isChalicePresent = false
+
+            -- Kiểm tra trong Túi đồ (Backpack) hoặc trên tay của tất cả người chơi
+            for _, player in ipairs(game:GetService("Players"):GetPlayers()) do
+                if player.Character then
+                    if player.Character:FindFirstChild("Fist of Darkness") or (player:FindFirstChild("Backpack") and player.Backpack:FindFirstChild("Fist of Darkness")) then
+                        isFistPresent = true
+                    end
+                    if player.Character:FindFirstChild("God's Chalice") or (player:FindFirstChild("Backpack") and player.Backpack:FindFirstChild("God's Chalice")) then
+                        isChalicePresent = true
+                    end
+                end
+            end
+
+            -- Kiểm tra xem vật phẩm có đang nằm rơi tự do trên sàn Map (Workspace) không
+            for _, object in ipairs(game:GetService("Workspace"):GetChildren()) do
+                if object.Name == "Fist of Darkness" then
+                    isFistPresent = true
+                elseif object.Name == "God's Chalice" then
+                    isChalicePresent = true
+                end
+            end
+
+            -- Cập nhật dòng trạng thái tổng quan nhanh
+            local txtStatus = "Vật phẩm Server:"
+            txtStatus = txtStatus .. (isFistPresent and " ⬛ [Fist: ✅]" or " ⬛ [Fist: ❌]")
+            txtStatus = txtStatus .. (isChalicePresent and " 🏆 [Chalice: ✅]" or " 🏆 [Chalice: ❌]")
+            ItemStatusLabel:SetText(txtStatus)
+
+            -- Bắn thông báo góc màn hình Hub khi phát hiện có vật phẩm spawn
+            if isFistPresent and not notifiedSpawnFist then
+                notifiedSpawnFist = true
+                Library:Notify({ Title = "Banana Hub", Description = "🚨 Fist of Darkness (Key Râu Đen) đang có trên Server!", Duration = 5 })
+            elseif not isFistPresent then
+                notifiedSpawnFist = false
+            end
+
+            if isChalicePresent and not notifiedSpawnChalice then
+                notifiedSpawnChalice = true
+                Library:Notify({ Title = "Banana Hub", Description = "🚨 God's Chalice (Chén Thánh) đang có trên Server!", Duration = 5 })
+            elseif not isChalicePresent then
+                notifiedSpawnChalice = false
+            end
+
+            -- 2. ĐẾM NGƯỢC THỜI GIAN THEO TỪNG GIÂY (Mỗi 4 tiếng từ lúc mở Server)
+            -- Lấy thời gian server đã hoạt động (tính bằng giây)
+            local serverTime = workspace.DistributedGameTime
+            local spawnInterval = 14400 -- 4 tiếng = 14400 giây
+
+            -- Tính thời gian còn lại cho lượt spawn kế tiếp trong rương
+            local timeLeftFist = spawnInterval - (serverTime % spawnInterval)
+            local timeLeftChalice = spawnInterval - (serverTime % spawnInterval)
+
+            -- Hàm format giây thành chuỗi thời gian dạng hh:mm:ss
+            local function formatTime(seconds)
+                local hours = math.floor(seconds / 3600)
+                local minutes = math.floor((seconds % 3600) / 60)
+                local secs = math.floor(seconds % 60)
+                return string.format("%02d:%02d:%02d", hours, minutes, secs)
+            end
+
+            -- Hiển thị thời gian đếm ngược cụ thể lên UI
+            FistCountdownLabel:SetText("Key Râu Đen (Rương): ⏳ Lượt tới sau: " .. formatTime(timeLeftFist))
+            ChaliceCountdownLabel:SetText("Chén Thánh (Rương): ⏳ Lượt tới sau: " .. formatTime(timeLeftChalice))
+        end)
+        
+        -- Chờ đúng 1 giây để lặp lại cập nhật độ chính xác cao nhất (Real-time)
+        task.wait(1)
+    end
+end)
+
 Miragecheck = Status:AddLabel("Mirage Island:  ")
 
 lastMirageStatus = ""
@@ -3241,78 +3328,6 @@ spawn(function()
             if status ~= lastKitsuneStatus then
                 Kitsunecheck:SetText("Kitsune Island: " .. status)
                 lastKitsuneStatus = status
-            end
-        end)
-    end
-end)
--- ========================================================
--- GỘP FULL CHỨC NĂNG: TRẠNG THÁI SPAWN CHÉN & KEY RÂU ĐEN
--- (VỊ TRÍ: TAB STATUS & SERVER)
--- ========================================================
-
--- 1. GIAO DIỆN UI TRONG TAB STATUS & SERVER
--- Tạo một nhóm riêng biệt (Groupbox) nằm bên trong Tab Status & Server của bạn
-local ItemStatusSection = StatusAndServer:AddLeftGroupbox("Item Spawn Status")
-
--- Khởi tạo các dòng văn bản (Labels) hiển thị thông tin thời gian thực
-local ChaliceLabel = ItemStatusSection:AddLabel("God's Chalice: Checking...")
-local FistLabel = ItemStatusSection:AddLabel("Fist of Darkness: Checking...")
-local ServerTimeLabel = ItemStatusSection:AddLabel("Server Age: 00:00:00")
-
-
--- 2. LOGIC VÒNG LẶP QUÉT VÀ TÍNH TOÁN THỜI GIAN THỰC
-spawn(function()
-    while task.wait(1) do -- Cập nhật mỗi giây một lần để đảm bảo đồng hồ đếm ngược chạy mượt mà
-        pcall(function()
-            local chaliceSpawned = false
-            local fistSpawned = false
-            
-            -- Quét kiểm tra sự tồn tại thực tế của vật phẩm trong Workspace (rớt trên đất hoặc người chơi đang cầm)
-            for _, item in pairs(workspace:GetChildren()) do
-                if item.Name == "God's Chalice" or (item:IsA("Tool") and item.Name == "God's Chalice") then
-                    chaliceSpawned = true
-                elseif item.Name == "Fist of Darkness" or (item:IsA("Tool") and item.Name == "Fist of Darkness") then
-                    fistSpawned = true
-                end
-            end
-            
-            -- Quét thêm trong thư mục chứa item của game (nếu có hệ thống lưu riêng biệt)
-            if workspace:FindFirstChild("ItemSpawns") then
-                for _, item in pairs(workspace.ItemSpawns:GetChildren()) do
-                    if item.Name == "God's Chalice" then chaliceSpawned = true
-                    elseif item.Name == "Fist of Darkness" then fistSpawned = true end
-                end
-            end
-
-            -- Lấy thời gian máy chủ hoạt động (tính bằng giây)
-            local serverTimeInSeconds = math.floor(workspace.DistributedGameTime)
-            local hours = math.floor(serverTimeInSeconds / 3600)
-            local minutes = math.floor((serverTimeInSeconds % 3600) / 60)
-            local seconds = serverTimeInSeconds % 60
-            
-            -- Đồng bộ hiển thị thời gian Server Age (Giờ:Phút:Giây)
-            ServerTimeLabel:SetText(string.format("Server Age: %02d:%02d:%02d", hours, minutes, seconds))
-
-            -- Xử lý hiển thị đếm ngược cho Chén Thánh (God's Chalice) - Mặc định spawn rương mỗi 4 tiếng (14400 giây)
-            if chaliceSpawned then
-                ChaliceLabel:SetText("God's Chalice: ⭐ ĐANG XUẤT HIỆN!")
-            else
-                local chaliceInterval = 14400
-                local timeUntilNextChalice = chaliceInterval - (serverTimeInSeconds % chaliceInterval)
-                local c_minutes = math.floor(timeUntilNextChalice / 60)
-                local c_seconds = timeUntilNextChalice % 60
-                ChaliceLabel:SetText(string.format("God's Chalice: ⏳ Spawn sau ~%dph %02ds", c_minutes, c_seconds))
-            end
-
-            -- Xử lý hiển thị đếm ngược cho Key Râu Đen (Fist of Darkness) - Mặc định spawn rương mỗi 4 tiếng (14400 giây)
-            if fistSpawned then
-                FistLabel:SetText("Fist of Darkness: 💀 ĐANG XUẤT HIỆN!")
-            else
-                local fistInterval = 14400
-                local timeUntilNextFist = fistInterval - (serverTimeInSeconds % fistInterval)
-                local f_minutes = math.floor(timeUntilNextFist / 60)
-                local f_seconds = timeUntilNextFist % 60
-                FistLabel:SetText(string.format("Fist of Darkness: ⏳ Spawn sau ~%dph %02ds", f_minutes, f_seconds))
             end
         end)
     end
@@ -4452,124 +4467,75 @@ spawn(function()
 end)
 
 -- Farm Katakuri
--- Bật chức năng farm
-getgenv().AutoFarmKatakuriV1 = true 
-_G.SelectWeapon = _G.SelectWeapon or "Melee" -- Vũ khí sử dụng (Melee, Sword, Blox Fruit)
-
--- Tốc độ Tween lấy mặc định của Hub hoặc bạn có thể tự chỉnh tại đây
-getgenv().TweenSpeed = getgenv().TweenSpeed or 300 
-
--- Danh sách 4 quái mục tiêu theo yêu cầu
-local TargetMonsters = {
-    "Cookie Crafter",
-    "Cake Guard",
-    "Baking Staff",
-    "Head Baker"
-}
-
--- Vị trí trung tâm Đảo Bánh để đứng chờ/bay lơ lửng khi quái chưa spawn
-local CakeIslandCenter = CFrame.new(-1932, 250, -12500)
-
--- Hàm kiểm tra Model quái còn sống hay không
-local function isMonsterAlive(model)
-    return model and model:FindFirstChild("Humanoid") and model.Humanoid.Health > 0 and model:FindFirstChild("HumanoidRootPart")
-end
-
--- Hàm tìm quái mục tiêu trong Workspace
-local function getTargetMonster()
-    for _, enemy in pairs(workspace.Enemies:GetChildren()) do
-        if table.find(TargetMonsters, enemy.Name) and isMonsterAlive(enemy) then
-            return enemy
-        end
-    end
-    return nil
-end
-
--- Vòng lặp điều khiển tiến trình Farm chính
 spawn(function()
-    while task.wait(0.1) do
-        if getgenv().AutoFarmKatakuriV1 then
+    while task.wait(1) do
+        if _G.StartFarm and _G.MethodSelect == "Farm Katakuri" then
             pcall(function()
                 local player = game.Players.LocalPlayer
                 local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+                local questUI = player.PlayerGui:FindFirstChild("Main") and 
+                                player.PlayerGui.Main:FindFirstChild("Quest")
+                local enemies = workspace.Enemies
+                local bigMirror = workspace.Map.CakeLoaf.BigMirror
+                
                 if not root then return end
+                if not bigMirror:FindFirstChild("Other") then
+                    _tp(CFrame.new(-2077, 252, -12373))
+                end        
                 
-                -- Đọc số lượng quái đã diệt trên Server từ hệ thống của game
-                local killCount = game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("CakePrinceProgress")
-                local currentKills = tonumber(killCount) or 0
-                
-                -- Kiểm tra xem Boss Katakuri v1 (Cake Prince) có xuất hiện không
-                local boss = workspace.Enemies:FindFirstChild("Cake Prince")
-                
-                if boss and isMonsterAlive(boss) then
-                    -- BƯỚC 4: Nếu Boss xuất hiện, dùng tween chạy thẳng vào cửa sau lưng NPC và diệt boss
-                    -- Đứng TRÊN ĐẦU BOSS (CFrame * CFrame.new(0, 30, 0)) quái không đánh trúng
-                    _tp(boss.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0)) 
-                    
-                    if _B then 
-                        PosMon = boss.HumanoidRootPart.Position
-                        BringEnemy() -- Gom quái nếu tính năng bật
-                    end
-                    
-                    -- Tự động Click đánh thường
-                    EquipWeapon(_G.SelectWeapon)
-                    game:GetService("VirtualUser"):CaptureController()
-                    game:GetService("VirtualUser"):Button1Down(Vector2.new(1280, 720))
-                    
-                elseif currentKills >= 500 then
-                    -- BƯỚC 3: Đạt đủ 500 quái, di chuyển tween lại gần NPC triệu hồi (Big Mirror)
-                    local npcPosition = CFrame.new(-2077, 252, -12373)
-                    _tp(npcPosition)
-                    
-                    -- Khi đã tới vị trí NPC, tiến hành gọi Remote triệu hồi Katakuri v1
-                    if (root.Position - npcPosition.Position).Magnitude <= 15 then
-                        game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("CakePrinceSpawn")
-                        task.wait(1)
-                    end
-                    
-                else
-                    -- BƯỚC 1 & 2: Di chuyển tween tới Đảo Bánh để tự động farm 4 loại quái chỉ định
-                    local monster = getTargetMonster()
-                    
-                    if monster then
-                        -- CHỈ ĐỨNG TRÊN ĐẦU QUÁI (quái không động đến nhân vật, không đánh trúng)
-                        _tp(monster.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
-                        
-                        if _B then
-                            PosMon = monster.HumanoidRootPart.Position
-                            BringEnemy() -- Khóa vị trí quái bằng tính năng của Hub
-                        end
-                        
-                        -- Thực hiện tấn công thường
-                        EquipWeapon(_G.SelectWeapon)
-                        game:GetService("VirtualUser"):CaptureController()
-                        game:GetService("VirtualUser"):Button1Down(Vector2.new(1280, 720))
+                if bigMirror.Other.Transparency == 0 or enemies:FindFirstChild("Cake Prince") then
+                    local v = GetConnectionEnemies("Cake Prince")
+                    if v then
+                        repeat 
+                            wait() 
+                            Attack.Kill2(v, _G.StartFarm)  -- Sửa: dùng _G.StartFarm thay vì _G.Auto_Cake_Prince
+                        until not _G.StartFarm or not v.Parent or v.Humanoid.Health <= 0
                     else
-                        -- Khi đánh xong hết quái, nhân vật dùng tween di chuyển ra trung tâm đảo và BAY LƠ LỬNG trên không
-                        _tp(CakeIslandCenter)
-                        
-                        -- Triệt tiêu lực rơi tự do để nhân vật đứng yên trên không chờ quái spawn lại
-                        if root.Velocity.Magnitude > 0 then
-                            root.Velocity = Vector3.new(0, 0, 0)
+                        if bigMirror.Other.Transparency == 0 and (CFrame.new(-1990.67, 4533, -14973.67).Position - root.Position).Magnitude >= 2000 then
+                            _tp(CFrame.new(-2151.82, 149.32, -12404.91))
                         end
+                    end
+                else
+                    local CakePrince = {"Cookie Crafter","Cake Guard","Baking Staff","Head Baker"}
+                    local v = GetConnectionEnemies(CakePrince)
+                    if v then
+                        if _G.AcceptQuestC and questUI and not questUI.Visible then
+                            local questPos = CFrame.new(-1927.92, 37.8, -12842.54)
+                            _tp(questPos)
+                            
+                            local attempts = 0
+                            while attempts < 50 and (questPos.Position - root.Position).Magnitude > 50 do
+                                wait(0.2)
+                                attempts = attempts + 1
+                            end
+                            
+                            local randomQuest = math.random(1, 4)
+                            local questData = {
+                                [1] = {"StartQuest", "CakeQuest2", 2},
+                                [2] = {"StartQuest", "CakeQuest2", 1},
+                                [3] = {"StartQuest", "CakeQuest1", 1},
+                                [4] = {"StartQuest", "CakeQuest1", 2}
+                            }                    
+                            
+                            pcall(function()
+                                game.ReplicatedStorage.Remotes.CommF_:InvokeServer(unpack(questData[randomQuest]))
+                            end)
+                        end
+                        
+                        repeat 
+                            wait() 
+                            Attack.Kill(v, _G.StartFarm)  -- Sửa: dùng _G.StartFarm
+                        until not _G.StartFarm or not v or not v.Parent or 
+                              (v.Humanoid and v.Humanoid.Health <= 0) or 
+                              bigMirror.Other.Transparency == 0 or 
+                              (_G.AcceptQuestC and questUI and not questUI.Visible)
+                    else
+                        _tp(CFrame.new(-2077, 252, -12373))
                     end
                 end
             end)
         end
     end
-end)
-
--- Vòng lặp phụ NoClip liên tục giúp nhân vật không bị kẹt địa hình hoặc vật cản khi Tween di chuyển trên đầu quái
-spawn(function()
-    game:GetService("RunService").Stepped:Connect(function()
-        if getgenv().AutoFarmKatakuriV1 and game.Players.LocalPlayer.Character then
-            for _, part in pairs(game.Players.LocalPlayer.Character:GetDescendants()) do
-                if part:IsA("BasePart") then
-                    part.CanCollide = false
-                end
-            end
-        end
-    end)
 end)
 
 -- Farm Tyrant of the Skies
@@ -5413,6 +5379,33 @@ spawn(function()
     end
 end)
 
+SoulReaperBoss:AddToggle("SoulReaperHop", {
+    Title = "Auto Soul Reaper [ Hop Server ]",
+    Default = false,
+    Callback = function(Value)
+        _G.SoulHopR = Value
+        if not _G.AutoHytHallow then
+            Library:Notify({
+                Title = "Night Slayer Hub",
+                Description = "Open Auto Soul Reaper Plz!",
+                Duration = 3
+            })
+        end
+    end
+})
+
+spawn(function()
+    while wait(Sec) do
+        if _G.AutoHytHallow and _G.SoulHopR then
+            pcall(function()
+                if not GetConnectionEnemies("Soul Reaper") then
+                    Hop()
+                end
+            end)
+        end
+    end
+end)
+
 DoughKingBoss = Stack:AddLeftGroupbox("Boss Dough King")
 
 DoughKingBoss:AddToggle("DoughKingNormal", {
@@ -5441,9 +5434,36 @@ spawn(function()
     end
 end)
 
+DoughKingBoss:AddToggle("DoughKingHop", {
+    Title = "Auto Dough King [ Hop Server ]",
+    Default = false,
+    Callback = function(Value)
+        _G.DoughKingHop = Value
+        if not _G.AutoMiror then 
+            Library:Notify({
+                Title = "Night Slayer Hub",
+                Description = "Open Auto Dough King Plz!",
+                Duration = 3
+            })
+        end
+    end
+})
+
+spawn(function()
+    while wait(Sec) do
+        if _G.AutoMiror and _G.DoughKingHop then
+            pcall(function()
+                if not GetConnectionEnemies("Dough King") then
+                    Hop()
+                end
+            end)
+        end
+    end
+end)
+
 DarkbeardBoss = Stack:AddLeftGroupbox("Boss Darkbeard")
 DarkbeardBoss:AddToggle("DarkBreadNormal", {
-    Title = "Auto DarkBeard",
+    Title = "Auto Darkbread",
     Default = false,
     Callback = function(Value)
         _G.Auto_Def_DarkCoat = Value
@@ -5464,6 +5484,34 @@ spawn(function()
                             Attack.Kill(v, _G.Auto_Def_DarkCoat)
                         until _G.Auto_Def_DarkCoat == false or not v.Parent or v.Humanoid.Health <= 0  -- Sửa: Health
                     end
+                end
+            end)
+        end
+    end
+end)
+
+DarkbeardBoss:AddToggle("DarkBreadHop", {
+    Title = "Auto Darkbread [ Hop Server ]",
+    Default = false,
+    Callback = function(Value)
+        _G.DarkbreadHop = Value
+        if not _G.Auto_Def_DarkCoat then 
+            Library:Notify({
+                Title = "Night Slayer Hub",
+                Description = "Open Auto Darkbread Plz!",
+                Duration = 3
+            })
+        end
+    end
+})
+
+spawn(function()
+    local waitTime = 0.1  -- Hoặc giá trị bạn muốn
+    while wait(waitTime) do  -- Sửa: wait(waitTime) thay vì wait(Sec)
+        if _G.Auto_Def_DarkCoat and _G.DarkbreadHop then
+            pcall(function()
+                if not workspace.Enemies:FindFirstChild("Darkbeard") then
+                    Hop()
                 end
             end)
         end
@@ -7227,129 +7275,313 @@ SettingsSea = Sea:AddLeftGroupbox("Setting")
 
 SettingsSea:AddDropdown("SelectZone", {
     Title = "Select Zone",
-    Values = {"Zone 1", "Zone 2", "Zone 3", "Zone 4", "Zone 5", "Zone 6", "Zone Infinite",},
+    Values = {"Zone 1", "Zone 2", "Zone 3", "Zone 4", "Zone 5", "Zone 6",},
     Default = nil,
     Multi = true,
     Callback = function(Value)
         _G.DangerSc = Value
     end
 })
--- ========================================================
--- CHỈ KHỞI TẠO DROPDOWN SELECT SEA EVENT (KHÔNG THÊM GÌ KHÁC)
--- ========================================================
 
-SettingsSea = Sea:AddLeftGroupbox("Setting") -- Tạo nhóm cài đặt trong Tab Sea của bạn
-
-SettingsSea:AddDropdown("SelectSeaEvent", { 
-    Title = "Select Sea Event", 
-    Values = {"Piranha", "Shark", "Terror Shark", "Sea Beast"}, -- Danh sách quái theo yêu cầu
-    Default = nil, 
-    Multi = true, -- Cho phép tích chọn một hoặc nhiều loại quái cùng lúc
-    Callback = function(Value) 
-        _G.SelectSeaEvent = Value -- Gán danh sách được chọn vào biến hệ thống
-    end 
-})
-
-SettingsSea = Sea:AddLeftGroupbox("Setting") -- Tạo nhóm cài đặt trong Tab Sea của bạn
-
--- Chỉ giữ lại duy nhất nút Toggle này theo yêu cầu của bạn
-SettingsSea:AddToggle("AutoOutTheBoat", {
-    Title = "Auto Out the Boat",
-    Default = false,
+SettingsSea:AddDropdown("SelectSeaEvent", {
+    Title = "Select Sea Events",
+    Values = {"Zone 1", "Zone 2", "Zone 3", "Zone 4", "Zone 5", "Zone 6",},
+    Default = nil,
+    Multi = true,
     Callback = function(Value)
-        _G.AutoOutTheBoat = Value
+        _G.SelectSeaEvent = Value
     end
 })
 
--- ========================================================
--- CHỈ KHỞI TẠO DROPDOWN SELECT BOAT (KHÔNG THÊM GÌ KHÁC)
--- ========================================================
-
-SettingsSea = Sea:AddLeftGroupbox("Setting") -- Tạo nhóm cài đặt trong Tab Sea của bạn
-
-SettingsSea:AddDropdown("SelectBoat", { 
-    Title = "Select Boat", 
-    Values = {
-        "Dinghy",
-        "Sloop",
-        "Pirate Canoe",
-        "Brigand",
-        "Junk",
-        "Big Brigand / Big Brigade",
-        "Grand Brigade",
-        "Miracle",
-        "The Sentinel",
-        "Lantern",
-        "Guardian",
-        "Beast Hunter"
-    }, -- Danh sách tất cả các loại thuyền theo đúng yêu cầu
-    Default = nil, 
-    Multi = false, -- Chọn false để xác định chính xác 1 loại thuyền bạn muốn mua hoặc sử dụng
-    Callback = function(Value) 
-        _G.SelectBoatValue = Value -- Gán tên thuyền được chọn vào biến hệ thống
-    end 
+SettingsSea:AddDropdown("SelectBoat", {
+    Title = "Select Boat",
+    Values = {"Guardian", "PirateGrandBrigade", "MarineGrandBrigade", "PirateBrigade", "MarineBrigade", "PirateSloop", "MarineSloop", "Beast Hunter"},
+    Default = nil,
+    Multi = true,
+    Callback = function(Value)
+        _G.SelectSeaEvent = Value
+    end
 })
 
--- ========================================================
--- CHỈ GỘP CHỨC NĂNG: SEA EVENT RADAR / CHECK (KHÔNG THÊM GÌ KHÁC)
--- ========================================================
-
--- 1. GIAO DIỆN UI HIỂN THỊ TRẠNG THÁI (LABELS)
-local CheckSeaSection = Sea:AddRightGroupbox("Sea Event Radar / Check") -- Tạo nhóm Radar trong Tab Sea của bạn
-
-local PiranhaLabel = CheckSeaSection:AddLabel("Piranha: Checking...")
-local SharkLabel = CheckSeaSection:AddLabel("Shark: Checking...")
-local TerrorSharkLabel = CheckSeaSection:AddLabel("Terror Shark: Checking...")
-local SeaBeastLabel = CheckSeaSection:AddLabel("Sea Beast: Checking...")
-
--- 2. LOGIC VÒNG LẶP QUÉT QUÁI XUNG QUANH THUYỀN (BÁN KÍNH 800 STUDS)
 spawn(function()
-    while task.wait(0.5) do -- Quét chu kỳ mỗi 0.5 giây để tránh gây lag game
+    while wait() do
         pcall(function()
-            -- Đặt trạng thái mặc định ban đầu là chưa tìm thấy
-            local piranhaFound = false
-            local sharkFound = false
-            local terrorFound = false
-            local seabeastFound = false
+            local selected = _G.SelectSeaEvent
             
-            -- Định vị thuyền của bạn bằng hàm CheckBoat có sẵn trong file gốc
-            local MyBoat = CheckBoat and CheckBoat() or workspace.Boats:FindFirstChild(game.Players.LocalPlayer.Name .. "Boat")
-            
-            if MyBoat and MyBoat:FindFirstChild("PrimaryPart") then
-                local BoatPosition = MyBoat.PrimaryPart.Position
-                local MaxRadarDistance = 800 -- Phạm vi khoảng cách xung quanh thuyền
-                
-                -- Duyệt tìm tất cả các quái vật xuất hiện trong Workspace Enemies
-                for _, enemy in pairs(workspace.Enemies:GetChildren()) do
-                    if enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 and enemy:FindFirstChild("HumanoidRootPart") then
-                        
-                        -- Tính khoảng cách từ thực thể quái vật đến Thuyền của bạn
-                        local distanceToBoat = (enemy.HumanoidRootPart.Position - BoatPosition).Magnitude
-                        
-                        -- Nếu quái nằm trong phạm vi bán kính radar xung quanh thuyền
-                        if distanceToBoat <= MaxRadarDistance then
-                            if enemy.Name == "Piranha" then
-                                piranhaFound = true
-                            elseif enemy.Name == "Shark" then
-                                sharkFound = true
-                            elseif enemy.Name == "Terrorshark" then
-                                terrorFound = true
-                            elseif enemy.Name == "Sea Beast" then
-                                seabeastFound = true
+            -- Shark
+            if selected == "Shark" then
+                local a = {"Shark"}
+                if CheckShark() then
+                    for b, c in pairs(workspace.Enemies:GetChildren()) do
+                        if table.find(a, c.Name) then
+                            if Attack.Alive(c) then
+                                repeat
+                                    task.wait()
+                                    Attack.Kill(c, true)
+                                until _G.SelectSeaEvent ~= "Shark" or not c.Parent or c.Humanoid.Health <= 0
                             end
                         end
                     end
                 end
+                
+            -- Piranha
+            elseif selected == "Piranha" then
+                local a = {"Piranha"}
+                if CheckPiranha() then
+                    for b, c in pairs(workspace.Enemies:GetChildren()) do
+                        if table.find(a, c.Name) then
+                            if Attack.Alive(c) then
+                                repeat
+                                    task.wait()
+                                    Attack.Kill(c, true)
+                                until _G.SelectSeaEvent ~= "Piranha" or not c.Parent or c.Humanoid.Health <= 0
+                            end
+                        end
+                    end
+                end
+                
+            -- Terror Shark
+            elseif selected == "Terror Shark" then
+                local a = {"Terrorshark"}
+                if CheckTerrorShark() then
+                    for b, c in pairs(workspace.Enemies:GetChildren()) do
+                        if table.find(a, c.Name) then
+                            if Attack.Alive(c) then
+                                repeat
+                                    task.wait()
+                                    Attack.KillSea(c, true)
+                                until _G.SelectSeaEvent ~= "Terror Shark" or not c.Parent or c.Humanoid.Health <= 0
+                            end
+                        end
+                    end
+                end
+                
+            -- Fish Crew Member
+            elseif selected == "Fish Crew Member" then
+                local a = {"Fish Crew Member"}
+                if CheckFishCrew() then
+                    for b, c in pairs(workspace.Enemies:GetChildren()) do
+                        if table.find(a, c.Name) then
+                            if Attack.Alive(c) then
+                                repeat
+                                    task.wait()
+                                    Attack.Kill(c, true)
+                                until _G.SelectSeaEvent ~= "Fish Crew Member" or not c.Parent or c.Humanoid.Health <= 0
+                            end
+                        end
+                    end
+                end
+                
+            -- Haunted Crew Member
+            elseif selected == "Haunted Crew Member" then
+                local a = {"Haunted Crew Member"}
+                if CheckHauntedCrew() then
+                    for b, c in pairs(workspace.Enemies:GetChildren()) do
+                        if table.find(a, c.Name) then
+                            if Attack.Alive(c) then
+                                repeat
+                                    task.wait()
+                                    Attack.Kill(c, true)
+                                until _G.SelectSeaEvent ~= "Haunted Crew Member" or not c.Parent or c.Humanoid.Health <= 0
+                            end
+                        end
+                    end
+                end
+                
+            -- Pirate Grand Brigade
+            elseif selected == "Pirate Grand Brigade" then
+                if CheckPirateGrandBrigade() then
+                    for a, b in pairs(workspace.Enemies:GetChildren()) do
+                        if b:FindFirstChild("Health") and b.Health.Value > 0 and b:FindFirstChild("VehicleSeat") then
+                            repeat
+                                task.wait()
+                                spawn(function()
+                                    if b.Name == "PirateBrigade" then
+                                        _tp(b.Engine.CFrame * CFrame.new(0, -30, -10))
+                                    elseif b.Name == "PirateGrandBrigade" then
+                                        _tp(b.Engine.CFrame * CFrame.new(0, -50, -50))
+                                    end
+                                end)
+                                if plr:DistanceFromCharacter(b.Engine.CFrame.Position) <= 150 then
+                                    AitSeaSkill_Custom = b.Engine.CFrame
+                                    MousePos = AitSeaSkill_Custom.Position
+                                    if CheckF() then
+                                        weaponSc("Blox Fruit")
+                                        Useskills("Blox Fruit", "Z")
+                                        Useskills("Blox Fruit", "X")
+                                        Useskills("Blox Fruit", "C")
+                                    else
+                                        Useskills("Melee", "Z")
+                                        Useskills("Melee", "X")
+                                        Useskills("Melee", "C")
+                                        wait(.1)
+                                        Useskills("Sword", "Z")
+                                        Useskills("Sword", "X")
+                                        wait(.1)
+                                        Useskills("Blox Fruit", "Z")
+                                        Useskills("Blox Fruit", "X")
+                                        Useskills("Blox Fruit", "C")
+                                        wait(.1)
+                                        Useskills("Gun", "Z")
+                                        Useskills("Gun", "X")
+                                    end
+                                end
+                            until _G.SelectSeaEvent ~= "Pirate Grand Brigade" or not b:FindFirstChild("VehicleSeat") or b.Health.Value <= 0
+                        end
+                    end
+                end
+                
+            -- Fish Boat
+            elseif selected == "Fish Boat" then
+                if CheckEnemiesBoat() then
+                    for a, b in pairs(workspace.Enemies:GetChildren()) do
+                        if b:FindFirstChild("Health") and b.Health.Value > 0 and b:FindFirstChild("VehicleSeat") then
+                            repeat
+                                task.wait()
+                                spawn(function()
+                                    if b.Name == "FishBoat" then
+                                        _tp(b.Engine.CFrame * CFrame.new(0, -50, -25))
+                                    end
+                                end)
+                                if plr:DistanceFromCharacter(b.Engine.CFrame.Position) <= 150 then
+                                    AitSeaSkill_Custom = b.Engine.CFrame
+                                    MousePos = AitSeaSkill_Custom.Position
+                                    if CheckF() then
+                                        weaponSc("Blox Fruit")
+                                        Useskills("Blox Fruit", "Z")
+                                        Useskills("Blox Fruit", "X")
+                                        Useskills("Blox Fruit", "C")
+                                    else
+                                        Useskills("Melee", "Z")
+                                        Useskills("Melee", "X")
+                                        Useskills("Melee", "C")
+                                        wait(.1)
+                                        Useskills("Sword", "Z")
+                                        Useskills("Sword", "X")
+                                        wait(.1)
+                                        Useskills("Blox Fruit", "Z")
+                                        Useskills("Blox Fruit", "X")
+                                        Useskills("Blox Fruit", "C")
+                                        wait(.1)
+                                        Useskills("Gun", "Z")
+                                        Useskills("Gun", "X")
+                                    end
+                                end
+                            until _G.SelectSeaEvent ~= "Fish Boat" or not b:FindFirstChild("VehicleSeat") or b.Health.Value <= 0
+                        end
+                    end
+                end
+                
+            -- Sea Beast
+            elseif selected == "Sea Beast" then
+                if workspace.SeaBeasts:FindFirstChild("SeaBeast1") then
+                    for a, b in pairs(workspace.SeaBeasts:GetChildren()) do
+                        if b:FindFirstChild("HumanoidRootPart") and b:FindFirstChild("Health") and b.Health.Value > 0 then
+                            repeat
+                                task.wait()
+                                spawn(function()
+                                    _tp(CFrame.new(b.HumanoidRootPart.Position.X, game:GetService("Workspace").Map["WaterBase-Plane"].Position.Y + 200, b.HumanoidRootPart.Position.Z))
+                                end)
+                                if plr:DistanceFromCharacter(b.HumanoidRootPart.CFrame.Position) <= 500 then
+                                    AitSeaSkill_Custom = b.HumanoidRootPart.CFrame
+                                    MousePos = AitSeaSkill_Custom.Position
+                                    if CheckF() then
+                                        weaponSc("Blox Fruit")
+                                        Useskills("Blox Fruit", "Z")
+                                        Useskills("Blox Fruit", "X")
+                                        Useskills("Blox Fruit", "C")
+                                    else
+                                        Useskills("Melee", "Z")
+                                        Useskills("Melee", "X")
+                                        Useskills("Melee", "C")
+                                        wait(.1)
+                                        Useskills("Sword", "Z")
+                                        Useskills("Sword", "X")
+                                        wait(.1)
+                                        Useskills("Blox Fruit", "Z")
+                                        Useskills("Blox Fruit", "X")
+                                        Useskills("Blox Fruit", "C")
+                                        wait(.1)
+                                        Useskills("Gun", "Z")
+                                        Useskills("Gun", "X")
+                                    end
+                                end
+                            until _G.SelectSeaEvent ~= "Sea Beast" or not b:FindFirstChild("HumanoidRootPart") or not b.Parent or b.Health.Value <= 0
+                        end
+                    end
+                end
+                
+            -- Leviathan
+            elseif selected == "Leviathan" then
+                if workspace.SeaBeasts:FindFirstChild("Leviathan") then
+                    for a, b in pairs(workspace.SeaBeasts:GetChildren()) do
+                        if b:FindFirstChild("HumanoidRootPart") and b:FindFirstChild("Leviathan Segment") and b:FindFirstChild("Health") and b.Health.Value > 0 then
+                            repeat
+                                task.wait()
+                                spawn(function()
+                                    _tp(CFrame.new(b.HumanoidRootPart.Position.X, game:GetService("Workspace").Map["WaterBase-Plane"].Position.Y + 200, b.HumanoidRootPart.Position.Z))
+                                end)
+                                if plr:DistanceFromCharacter(b.HumanoidRootPart.CFrame.Position) <= 500 then
+                                    MousePos = b:FindFirstChild("Leviathan Segment").Position
+                                    if CheckF() then
+                                        weaponSc("Blox Fruit")
+                                        Useskills("Blox Fruit", "Z")
+                                        Useskills("Blox Fruit", "X")
+                                        Useskills("Blox Fruit", "C")
+                                    else
+                                        Useskills("Melee", "Z")
+                                        Useskills("Melee", "X")
+                                        Useskills("Melee", "C")
+                                        wait(.1)
+                                        Useskills("Sword", "Z")
+                                        Useskills("Sword", "X")
+                                        wait(.1)
+                                        Useskills("Blox Fruit", "Z")
+                                        Useskills("Blox Fruit", "X")
+                                        Useskills("Blox Fruit", "C")
+                                        wait(.1)
+                                        Useskills("Gun", "Z")
+                                        Useskills("Gun", "X")
+                                    end
+                                end
+                            until _G.SelectSeaEvent ~= "Leviathan" or not b:FindFirstChild("HumanoidRootPart") or not b.Parent or b.Health.Value <= 0
+                        end
+                    end
+                end
             end
-            
-            -- CẬP NHẬT CHỮ VÀ TRẠNG THÁI TRỰC TIẾP LÊN BẢNG UI CHỮ
-            if piranhaFound then PiranhaLabel:SetText("Piranha:     [ ĐANG XUẤT HIỆN ]") else PiranhaLabel:SetText("Piranha:     ❌ Không có") end
-            if sharkFound then SharkLabel:SetText("Shark:       [ ĐANG XUẤT HIỆN ]") else SharkLabel:SetText("Shark:       ❌ Không có") end
-            if terrorFound then TerrorSharkLabel:SetText("Terror Shark: [ CẢNH BÁO NGUY HIỂM ]") else TerrorSharkLabel:SetText("Terror Shark: ❌ Không có") end
-            if seabeastFound then SeaBeastLabel:SetText("Sea Beast:   [ CẢNH BÁO NGUY HIỂM ]") else SeaBeastLabel:SetText("Sea Beast:   ❌ Không có") end
         end)
     end
 end)
+
+SettingsSea:AddToggle("NoClipRocks", {
+    Title = "Auto Penetrate Rocks When Boat Runs",
+    Default = true,
+    Callback = function(Value)
+        getgenv().GoThroughRocks = Value
+    end
+})
+
+spawn(function()
+    while task.wait(1) do
+    if getgenv().GoThroughRocks or getgenv().SailBoat then
+    for _, boat in ipairs(game:GetService("Workspace").Boats:GetChildren()) do
+    for _, part in ipairs(boat:GetDescendants()) do
+    if part:IsA("BasePart") then
+    part.CanCollide = false
+    end
+    end
+    end
+    else
+        for _, boat in ipairs(game:GetService("Workspace").Boats:GetChildren()) do
+    for _, part in ipairs(boat:GetDescendants()) do
+    if part:IsA("BasePart") then
+    part.CanCollide = true
+    end
+    end
+    end
+    end
+    end
+    end)
 
 SettingsSea:AddToggle("SeaFarm", {
     Title = "Auto Sea Event",
