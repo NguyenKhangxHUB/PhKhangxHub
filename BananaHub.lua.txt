@@ -4230,6 +4230,112 @@ SelectMethodFarm:AddSlider({
         _G.Safemode = Value
     end
 })
+SelectMethodFarm:AddToggle("HopKataV1", {
+    Title = "Ignore Attack Katakuri",
+    Default = false,
+    Callback = function(Value)
+        _G.Auto_Cake_Prince = Value
+    end
+})
+-- ====================================================================
+-- CHỨC NĂNG: IGNORE ATTACK KATAKURI (GỘP CHUNG TIÊU ĐỀ & LOGIC)
+-- ====================================================================
+SetAutoFarm:AddLabel("[ Săn Boss Đặc Biệt ]") -- Tiêu đề nhóm chức năng nổi bật
+SetAutoFarm:AddToggle("IgnoreAttackKatakuriToggle", {
+    Title = "Ignore attack katakuri",
+    Default = false,
+    Callback = function(Value)
+        getgenv().IgnoreAttackKatakuri = Value
+        if Value then
+            Library:Notify({
+                Title = "Banana Hub",
+                Description = "Đang kiểm tra Katakuri V1 và tự động quét Server...",
+                Duration = 4
+            })
+        end
+    end
+})
+
+-- Vòng lặp xử lý logic tự động tìm Server và tự động đánh Katakuri V1 (Chạy ngầm tối ưu)
+task.spawn(function()
+    while task.wait(1) do
+        if getgenv().IgnoreAttackKatakuri then
+            pcall(function()
+                local bossName = "Cake Prince" -- Tên kỹ thuật của Katakuri V1 trong game Blox Fruits
+                local katakuriFound = nil
+                
+                -- 1. Kiểm tra xem Katakuri V1 có trong Server hiện tại hay không
+                for _, v in pairs(game.Workspace.Enemies:GetChildren()) do
+                    if v.Name == bossName and v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 then
+                        katakuriFound = v
+                        break
+                    end
+                end
+                
+                if not katakuriFound then
+                    for _, v in pairs(game.ReplicatedStorage:GetChildren()) do
+                        if v.Name == bossName and v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 then
+                            katakuriFound = v
+                            break
+                        end
+                    end
+                end
+                
+                -- 2. LOGIC TỰ ĐỘNG ĐÁNH KHI THẤY BOSS
+                if katakuriFound then
+                    -- Gom Boss/Quái lại gần nếu cần
+                    if not katakuriFound:GetAttribute("Locked") then 
+                        katakuriFound:SetAttribute("Locked", katakuriFound.HumanoidRootPart.CFrame) 
+                    end
+                    PosMon = katakuriFound:GetAttribute("Locked").Position
+                    BringEnemy()
+                    
+                    -- Tự động cầm vũ khí được chọn để farm
+                    if _G.SelectWeapon then
+                        EquipWeapon(_G.SelectWeapon)
+                    else
+                        -- Nếu chưa chọn vũ khí, tự động dùng Melee để đánh
+                        weaponSc("Melee")
+                    end
+                    
+                    -- Di chuyển nhân vật ra phía sau/trên đầu Boss để né đòn (Ignore attack)
+                    local character = game.Players.LocalPlayer.Character
+                    if character and character:FindFirstChild("HumanoidRootPart") then
+                        character.HumanoidRootPart.CFrame = katakuriFound.HumanoidRootPart.CFrame * CFrame.new(0, 25, 0) * CFrame.Angles(math.rad(-90), 0, 0)
+                    end
+                    
+                    -- Click chuột tự động tấn công liên tục
+                    local VirtualUser = game:GetService("VirtualUser")
+                    VirtualUser:CaptureController()
+                    VirtualUser:ClickButton1(Vector2.new(850, 520))
+                    
+                else
+                    -- 3. LOGIC TỰ ĐỘNG NHẢY SERVER (HOP SERVER) NẾU KHÔNG CÓ BOSS
+                    Library:Notify({
+                        Title = "Banana Hub",
+                        Description = "Không tìm thấy Katakuri V1! Đang tự động chuyển Server khác...",
+                        Duration = 3
+                    })
+                    
+                    task.wait(2) -- Chờ thông báo hiển thị xong rồi chuyển server
+                    
+                    local HttpService = game:GetService("HttpService")
+                    local TeleportService = game:GetService("TeleportService")
+                    local PlaceId = game.PlaceId
+                    
+                    -- Lấy danh sách server trống ngẫu nhiên từ API Roblox
+                    local serverList = HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"))
+                    for _, server in pairs(serverList.data) do
+                        if server.playing < server.maxPlayers and server.id ~= game.JobId then
+                            TeleportService:TeleportToPlaceInstance(PlaceId, server.id, game.Players.LocalPlayer)
+                            break
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
 
 SelectMethodFarm:AddToggle("HopKataV1", {
     Title = "Hop Find Katakuri",
@@ -9439,88 +9545,76 @@ spawn(function()
     end
   end
 end)
---// REMOVE VOLCANO LAVA
-_G.RemoveVolcanoLava = false
-
-Tabs.Prehistoric:AddToggle("RemoveVolcanoLava", {
-    Title = "Remove Volcano Lava",
+VolcanoFarm:AddLabel("[ Săn Núi Lửa ]") -- Tiêu đề chức năng nổi bật giống ảnh ví dụ
+VolcanoFarm:AddToggle("RemoveVolcanoLavaToggle", {
+    Title = "Xóa Lava & Lửa (No Damage)",
     Default = false,
     Callback = function(Value)
-        _G.RemoveVolcanoLava = Value
-
-        task.spawn(function()
-            while _G.RemoveVolcanoLava do
-                task.wait(0.5)
-
-                pcall(function()
-
-                    -- Xoá lava trong workspace
-                    for _,v in pairs(workspace:GetDescendants()) do
-                        local name = string.lower(v.Name)
-
-                        -- Xoá part lava
-                        if v:IsA("BasePart") then
-                            if string.find(name,"lava")
-                            or string.find(name,"magma")
-                            or string.find(name,"volcano")
-                            or string.find(name,"fire") then
-
-                                v.Transparency = 1
-                                v.CanCollide = false
-                                v.Material = Enum.Material.SmoothPlastic
-
-                                -- xoá damage touch
-                                local touch = v:FindFirstChildOfClass("TouchTransmitter")
-                                if touch then
-                                    touch:Destroy()
-                                end
-
-                                -- xoá script gây damage
-                                for _,x in pairs(v:GetDescendants()) do
-                                    if x:IsA("Script")
-                                    or x:IsA("LocalScript") then
-                                        x:Destroy()
-                                    end
-                                end
-                            end
+        getgenv().RemoveVolcanoLava = Value
+        
+        if Value then
+            Library:Notify({
+                Title = "Banana Hub",
+                Description = "Đã dập tắt lửa đỏ và xóa Lava! Mượt 100%, không lag máy.",
+                Duration = 4
+            })
+            
+            -- [LOGIC TỐI ƯU] Chỉ quét 1 lần duy nhất khi vừa BẬT chức năng để dọn sạch Map ngay lập tức
+            pcall(function()
+                for _, v in pairs(game.Workspace:GetDescendants()) do
+                    if v:IsA("BasePart") then
+                        local nameLower = v.Name:lower()
+                        if nameLower:match("lava") or nameLower:match("magma") or nameLower == "damagepart" then
+                            v:Destroy()
                         end
-
-                        -- Xoá hiệu ứng lava
-                        if v:IsA("Fire")
-                        or v:IsA("ParticleEmitter")
-                        or v:IsA("Smoke")
-                        or v:IsA("Sparkles")
-                        or v:IsA("Trail") then
-
-                            local pname = ""
-
-                            pcall(function()
-                                pname = string.lower(v.Parent.Name)
-                            end)
-
-                            if string.find(pname,"lava")
-                            or string.find(pname,"magma")
-                            or string.find(pname,"volcano")
-                            or string.find(pname,"fire") then
-                                v:Destroy()
-                            end
+                    elseif v:IsA("ParticleEmitter") or v:IsA("Fire") then
+                        local nameLower = v.Name:lower()
+                        if nameLower:match("fire") or nameLower:match("lava") or nameLower:match("magma") or nameLower:match("burn") or nameLower:match("eruption") then
+                            v.Enabled = false
+                            v:Destroy()
+                        end
+                    elseif v:IsA("TouchTransmitter") and v.Parent then
+                        local partName = v.Parent.Name:lower()
+                        if partName:match("lava") or partName:match("magma") or partName:match("damage") or partName:match("fire") then
+                            v:Destroy()
                         end
                     end
-
-                    -- chống mất máu lava
-                    if game.Players.LocalPlayer.Character then
-                        for _,v in pairs(game.Players.LocalPlayer.Character:GetDescendants()) do
-                            if v:IsA("Fire") then
-                                v:Destroy()
-                            end
-                        end
-                    end
-
-                end)
-            end
-        end)
+                end
+            end)
+        end
     end
-})
+end)
+
+-- [LOGIC ĐÓN LÕNG VẬT THỂ MỚI] Gộp chung tại đây, không dùng vòng lặp, chạy cực nhẹ
+if not getgenv().LavaListenerLoaded then
+    getgenv().LavaListenerLoaded = true
+    
+    game.Workspace.DescendantAdded:Connect(function(v)
+        if getgenv().RemoveVolcanoLava then
+            pcall(function()
+                -- Nếu đảo núi lửa phun trào tạo ra lửa/lava mới, xóa nó ngay lập tức
+                if v:IsA("BasePart") then
+                    local nameLower = v.Name:lower()
+                    if nameLower:match("lava") or nameLower:match("magma") or nameLower == "damagepart" then
+                        task.wait() -- Chờ 1 nhịp siêu nhỏ tránh xung đột luồng game
+                        v:Destroy()
+                    end
+                elseif v:IsA("ParticleEmitter") or v:IsA("Fire") then
+                    local nameLower = v.Name:lower()
+                    if nameLower:match("fire") or nameLower:match("lava") or nameLower:match("magma") or nameLower:match("burn") or nameLower:match("eruption") then
+                        v.Enabled = false
+                        v:Destroy()
+                    end
+                elseif v:IsA("TouchTransmitter") and v.Parent then
+                    local partName = v.Parent.Name:lower()
+                    if partName:match("lava") or partName:match("magma") or partName:match("damage") or partName:match("fire") then
+                        v:Destroy() -- Bẻ gãy kết nối chạm trừ máu
+                    end
+                end
+            end)
+        end
+    end)
+end
 
 VolcanoFarm:AddToggle("EventVolcanoStart", {
     Title = "Auto Event Prehistoric Island",
