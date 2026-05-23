@@ -4230,13 +4230,6 @@ SelectMethodFarm:AddSlider({
         _G.Safemode = Value
     end
 })
-SelectMethodFarm:AddToggle("HopKataV1", {
-    Title = "Ignore Attack Katakuri",
-    Default = false,
-    Callback = function(Value)
-        _G.Auto_Cake_Prince = Value
-    end
-})
 -- ====================================================================
 -- CHỨC NĂNG: IGNORE ATTACK KATAKURI (GỘP CHUNG TIÊU ĐỀ & LOGIC)
 -- ====================================================================
