@@ -2695,7 +2695,7 @@ Library = loadstring(game:HttpGet("https://pastefy.app/vgSGtrbP/raw"))()
 
 Window = Library:CreateWindow({
     Title = "Banana Cat Hub",
-    Subtitle = "- Blox Fruit",
+    Subtitle = "- Ades Chô",
     Image = "rbxassetid://130947856929902"
 })
 
@@ -2703,7 +2703,7 @@ wait(1)
 
 Library:Notify({
     Title = "Ui Library",
-    Description = "The UI automatically hides once executed.\nPress the button at the bottom-left of the screen to show the GUI.",
+    Description = "The UI Ades Chô Hub automatically hides once executed.\nPress the button at the bottom-left of the screen to show the GUI.",
     Duration = 3
 })
 
@@ -4380,74 +4380,125 @@ spawn(function()
 end)
 
 -- Farm Katakuri
-		_G.Auto_Cake_Prince = Y;
-	end,
-});
+-- Bật chức năng farm
+getgenv().AutoFarmKatakuriV1 = true 
+_G.SelectWeapon = _G.SelectWeapon or "Melee" -- Vũ khí sử dụng (Melee, Sword, Blox Fruit)
+
+-- Tốc độ Tween lấy mặc định của Hub hoặc bạn có thể tự chỉnh tại đây
+getgenv().TweenSpeed = getgenv().TweenSpeed or 300 
+
+-- Danh sách 4 quái mục tiêu theo yêu cầu
+local TargetMonsters = {
+    "Cookie Crafter",
+    "Cake Guard",
+    "Baking Staff",
+    "Head Baker"
+}
+
+-- Vị trí trung tâm Đảo Bánh để đứng chờ/bay lơ lửng khi quái chưa spawn
+local CakeIslandCenter = CFrame.new(-1932, 250, -12500)
+
+-- Hàm kiểm tra Model quái còn sống hay không
+local function isMonsterAlive(model)
+    return model and model:FindFirstChild("Humanoid") and model.Humanoid.Health > 0 and model:FindFirstChild("HumanoidRootPart")
+end
+
+-- Hàm tìm quái mục tiêu trong Workspace
+local function getTargetMonster()
+    for _, enemy in pairs(workspace.Enemies:GetChildren()) do
+        if table.find(TargetMonsters, enemy.Name) and isMonsterAlive(enemy) then
+            return enemy
+        end
+    end
+    return nil
+end
+
+-- Vòng lặp điều khiển tiến trình Farm chính
 spawn(function()
-	while wait() do
-		if _G.Auto_Cake_Prince then
-			pcall(function()
-				local Y = game.Players.LocalPlayer;
-				local d = Y.Character and Y.Character:FindFirstChild("HumanoidRootPart");
-				local R = Y.PlayerGui.Main.Quest;
-				local Q = workspace.Enemies;
-				local r = workspace.Map.CakeLoaf.BigMirror;
-				if not d then
-					return;
-				end;
-				if not r:FindFirstChild("Other") then
-					_tp(CFrame.new(-2077, 252, -12373));
-				end;
-				if r.Other.Transparency == 0 or Q:FindFirstChild("Cake Prince") then
-					local Y = GetConnectionEnemies("Cake Prince");
-					if Y then
-						repeat
-							wait();
-							f.Kill2(Y, _G.Auto_Cake_Prince);
-						until not _G.Auto_Cake_Prince or not Y.Parent or Y.Humanoid.Health <= 0;
-					else
-						if r.Other.Transparency == 0 and ((CFrame.new(-1990.67, 4533, -14973.67)).Position - d.Position).Magnitude >= 2000 then
-							_tp(CFrame.new(-2151.82, 149.32, -12404.91));
-						end;
-					end;
-				else
-					local Y = {
-							"Cookie Crafter",
-							"Cake Guard",
-							"Baking Staff",
-							"Head Baker",
-						};
-					local Q = GetConnectionEnemies(Y);
-					if Q then
-						if _G.AcceptQuestC and not R.Visible then
-							local Y = CFrame.new(-1927.92, 37.8, -12842.54);
-							_tp(Y);
-							while (Y.Position - d.Position).Magnitude > 50 do
-								wait(.2);
-							end;
-							local R = math.random(1, 4);
-							local Q = {
-									[1] = { "StartQuest", "CakeQuest2", 2 },
-									[2] = { "StartQuest", "CakeQuest2", 1 },
-									[3] = { "StartQuest", "CakeQuest1", 1 },
-									[4] = { "StartQuest", "CakeQuest1", 2 },
-								};
-							local r, a = pcall(function()
-									return game.ReplicatedStorage.Remotes.CommF_:InvokeServer(unpack(Q[R]));
-								end);
-						end;
-						repeat
-							wait();
-							f.Kill(Q, _G.Auto_Cake_Prince);
-						until not _G.Auto_Cake_Prince or Q.Humanoid.Health <= 0 or r.Other.Transparency == 0 or _G.AcceptQuestC and not R.Visible;
-					else
-						_tp(CFrame.new(-2077, 252, -12373));
-					end;
-				end;
-			end);
-		end;
-	end;
-end);
+    while task.wait(0.1) do
+        if getgenv().AutoFarmKatakuriV1 then
+            pcall(function()
+                local player = game.Players.LocalPlayer
+                local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+                if not root then return end
+                
+                -- Đọc số lượng quái đã diệt trên Server từ hệ thống của game
+                local killCount = game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("CakePrinceProgress")
+                local currentKills = tonumber(killCount) or 0
+                
+                -- Kiểm tra xem Boss Katakuri v1 (Cake Prince) có xuất hiện không
+                local boss = workspace.Enemies:FindFirstChild("Cake Prince")
+                
+                if boss and isMonsterAlive(boss) then
+                    -- BƯỚC 4: Nếu Boss xuất hiện, dùng tween chạy thẳng vào cửa sau lưng NPC và diệt boss
+                    -- Đứng TRÊN ĐẦU BOSS (CFrame * CFrame.new(0, 30, 0)) quái không đánh trúng
+                    _tp(boss.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0)) 
+                    
+                    if _B then 
+                        PosMon = boss.HumanoidRootPart.Position
+                        BringEnemy() -- Gom quái nếu tính năng bật
+                    end
+                    
+                    -- Tự động Click đánh thường
+                    EquipWeapon(_G.SelectWeapon)
+                    game:GetService("VirtualUser"):CaptureController()
+                    game:GetService("VirtualUser"):Button1Down(Vector2.new(1280, 720))
+                    
+                elseif currentKills >= 500 then
+                    -- BƯỚC 3: Đạt đủ 500 quái, di chuyển tween lại gần NPC triệu hồi (Big Mirror)
+                    local npcPosition = CFrame.new(-2077, 252, -12373)
+                    _tp(npcPosition)
+                    
+                    -- Khi đã tới vị trí NPC, tiến hành gọi Remote triệu hồi Katakuri v1
+                    if (root.Position - npcPosition.Position).Magnitude <= 15 then
+                        game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("CakePrinceSpawn")
+                        task.wait(1)
+                    end
+                    
+                else
+                    -- BƯỚC 1 & 2: Di chuyển tween tới Đảo Bánh để tự động farm 4 loại quái chỉ định
+                    local monster = getTargetMonster()
+                    
+                    if monster then
+                        -- CHỈ ĐỨNG TRÊN ĐẦU QUÁI (quái không động đến nhân vật, không đánh trúng)
+                        _tp(monster.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+                        
+                        if _B then
+                            PosMon = monster.HumanoidRootPart.Position
+                            BringEnemy() -- Khóa vị trí quái bằng tính năng của Hub
+                        end
+                        
+                        -- Thực hiện tấn công thường
+                        EquipWeapon(_G.SelectWeapon)
+                        game:GetService("VirtualUser"):CaptureController()
+                        game:GetService("VirtualUser"):Button1Down(Vector2.new(1280, 720))
+                    else
+                        -- Khi đánh xong hết quái, nhân vật dùng tween di chuyển ra trung tâm đảo và BAY LƠ LỬNG trên không
+                        _tp(CakeIslandCenter)
+                        
+                        -- Triệt tiêu lực rơi tự do để nhân vật đứng yên trên không chờ quái spawn lại
+                        if root.Velocity.Magnitude > 0 then
+                            root.Velocity = Vector3.new(0, 0, 0)
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- Vòng lặp phụ NoClip liên tục giúp nhân vật không bị kẹt địa hình hoặc vật cản khi Tween di chuyển trên đầu quái
+spawn(function()
+    game:GetService("RunService").Stepped:Connect(function()
+        if getgenv().AutoFarmKatakuriV1 and game.Players.LocalPlayer.Character then
+            for _, part in pairs(game.Players.LocalPlayer.Character:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = false
+                end
+            end
+        end
+    end)
+end)
 
 -- Farm Tyrant of the Skies
 spawn(function()
@@ -4695,8 +4746,8 @@ end)
 MeterialFarm = AutoModeFarm:AddLeftGroupbox("Farming Meterial")
 
 if World1 then MaterialList = {"Leather + Scrap Metal", "Angel Wings", "Magma Ore", "Fish Tail"}
-elseif World2 then MaterialList = {"Leather + Scrap Metal", "Radioactive Material", "Ectoplasm", "Mystic Droplet", "Magma Ore", "Vampire Fang"}
-elseif World3 then MaterialList = {"Scrap Metal", "Demonic Wisp", "Conjured Cocoa", "Dragon Scale", "Gunpowder", "Fish Tail", "Mini Tusk"}
+if World2 then MaterialList = {"Leather + Scrap Metal", "Radioactive Material", "Ectoplasm", "Mystic Droplet", "Magma Ore", "Vampire Fang"}
+if World3 then MaterialList = {"Scrap Metal", "Demonic Wisp", "Conjured Cocoa", "Dragon Scale", "Gunpowder", "Fish Tail", "Mini Tusk"}
 end
 
 MeterialFarm:AddDropdown("SelectMethodFarm", {
@@ -4715,8 +4766,8 @@ MeterialFarm:AddToggle("MeterialStart", {
         _G.AutoMaterial = Value 
         if not _G.StartFarm then
             Library:Notify({
-                Title = "Night Slayer Hub",
-                Description = "Open Start Farm Plz!",
+                Title = "Ades Chô Hub",
+                Description = "Open Start Farm Nguyên liệu!",
                 Duration = 3
             })
         end
@@ -5290,33 +5341,6 @@ spawn(function()
     end
 end)
 
-SoulReaperBoss:AddToggle("SoulReaperHop", {
-    Title = "Auto Soul Reaper [ Hop Server ]",
-    Default = false,
-    Callback = function(Value)
-        _G.SoulHopR = Value
-        if not _G.AutoHytHallow then
-            Library:Notify({
-                Title = "Night Slayer Hub",
-                Description = "Open Auto Soul Reaper Plz!",
-                Duration = 3
-            })
-        end
-    end
-})
-
-spawn(function()
-    while wait(Sec) do
-        if _G.AutoHytHallow and _G.SoulHopR then
-            pcall(function()
-                if not GetConnectionEnemies("Soul Reaper") then
-                    Hop()
-                end
-            end)
-        end
-    end
-end)
-
 DoughKingBoss = Stack:AddLeftGroupbox("Boss Dough King")
 
 DoughKingBoss:AddToggle("DoughKingNormal", {
@@ -5345,36 +5369,9 @@ spawn(function()
     end
 end)
 
-DoughKingBoss:AddToggle("DoughKingHop", {
-    Title = "Auto Dough King [ Hop Server ]",
-    Default = false,
-    Callback = function(Value)
-        _G.DoughKingHop = Value
-        if not _G.AutoMiror then 
-            Library:Notify({
-                Title = "Night Slayer Hub",
-                Description = "Open Auto Dough King Plz!",
-                Duration = 3
-            })
-        end
-    end
-})
-
-spawn(function()
-    while wait(Sec) do
-        if _G.AutoMiror and _G.DoughKingHop then
-            pcall(function()
-                if not GetConnectionEnemies("Dough King") then
-                    Hop()
-                end
-            end)
-        end
-    end
-end)
-
 DarkbeardBoss = Stack:AddLeftGroupbox("Boss Darkbeard")
 DarkbeardBoss:AddToggle("DarkBreadNormal", {
-    Title = "Auto Darkbread",
+    Title = "Auto DarkBeard",
     Default = false,
     Callback = function(Value)
         _G.Auto_Def_DarkCoat = Value
@@ -5395,34 +5392,6 @@ spawn(function()
                             Attack.Kill(v, _G.Auto_Def_DarkCoat)
                         until _G.Auto_Def_DarkCoat == false or not v.Parent or v.Humanoid.Health <= 0  -- Sửa: Health
                     end
-                end
-            end)
-        end
-    end
-end)
-
-DarkbeardBoss:AddToggle("DarkBreadHop", {
-    Title = "Auto Darkbread [ Hop Server ]",
-    Default = false,
-    Callback = function(Value)
-        _G.DarkbreadHop = Value
-        if not _G.Auto_Def_DarkCoat then 
-            Library:Notify({
-                Title = "Night Slayer Hub",
-                Description = "Open Auto Darkbread Plz!",
-                Duration = 3
-            })
-        end
-    end
-})
-
-spawn(function()
-    local waitTime = 0.1  -- Hoặc giá trị bạn muốn
-    while wait(waitTime) do  -- Sửa: wait(waitTime) thay vì wait(Sec)
-        if _G.Auto_Def_DarkCoat and _G.DarkbreadHop then
-            pcall(function()
-                if not workspace.Enemies:FindFirstChild("Darkbeard") then
-                    Hop()
                 end
             end)
         end
@@ -6606,7 +6575,7 @@ spawn(function()
     while wait(Sec) do
       if _G.Raiding then  
         if plr.PlayerGui.Main.TopHUDList.RaidTimer.Visible == true then          
-          local islands = {"Island5","Island 4", "Island 3", "Island 2", "Island 1"}
+          local islands = {"Island 1","Island 2", "Island 3", "Island 4", "Island 5"}
           for _, island in ipairs(islands) do
           local location = game:GetService("Workspace")["_WorldOrigin"].Locations:FindFirstChild(island)
             if location then
@@ -6627,6 +6596,93 @@ spawn(function()
       end
     end
   end)
+end)
+-- Thêm Toggle hoặc biến kích hoạt vào giao diện của bạn
+-- Giả sử sử dụng thư viện UI hiện tại của bạn:
+local RaidGroup = FRD:AddLeftGroupbox("Auto Start Raid") -- Thêm vào Tab Fruit and Raid có sẵn
+
+RaidGroup:AddToggle("AutoStartRaidToggle", {
+    Title = "Auto Start Raid",
+    Default = false,
+    Callback = function(Value)
+        _G.AutoStartRaid = Value
+    end
+})
+
+-- Luồng logic xử lý tự động Raid
+spawn(function()
+    while wait(1) do
+        if _G.AutoStartRaid then
+            pcall(function()
+                -- Tọa độ Pháo đài trên biển (Castle on the Sea) ở Third Sea
+                local CastleOnTheSeaCFrame = CFrame.new(-5004.72, 314.56, -3148.12) 
+                
+                -- Tọa độ phòng thí nghiệm Raid (Kế bên cục tròn màu xanh lá để mua chip)
+                local RaidLabCFrame = CFrame.new(-5026.12, 314.56, -3134.22)
+                
+                -- Tọa độ nút bấm màu xanh dương để bắt đầu bắt đầu Raid (Raid Summon Button)
+                local RaidButtonCFrame = CFrame.new(-5026.54, 317.44, -3133.05)
+
+                local player = game:GetService("Players").LocalPlayer
+                local rootPart = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+                
+                if rootPart then
+                    -- BƯỚC 1: Tween tới Pháo đài trên biển nếu đang ở quá xa (Khoảng cách > 500)
+                    if (rootPart.Position - CastleOnTheSeaCFrame.Position).Magnitude > 500 then
+                        _tp(CastleOnTheSeaCFrame)
+                        wait(2)
+                    -- BƯỚC 2: Di chuyển vào sát cục tròn xanh lá trong phòng điều khiển Raid
+                    elseif (rootPart.Position - RaidLabCFrame.Position).Magnitude > 10 then
+                        _tp(RaidLabCFrame)
+                        wait(1)
+                    else
+                        -- BƯỚC 3: TỰ ĐỘNG BẮT ĐẦU RAID
+                        
+                        -- Kiểm tra xem trong người đã có Chip Raid chưa (Sử dụng hàm GetBP có sẵn trong file)
+                        local hasChip = false
+                        for _, v in pairs(player.Backpack:GetChildren()) do
+                            if string.find(v.Name, "Microchip") or string.find(v.Name, "Chip") then
+                                hasChip = true
+                                break
+                            end
+                        end
+                        for _, v in pairs(player.Character:GetChildren()) do
+                            if string.find(v.Name, "Microchip") or string.find(v.Name, "Chip") then
+                                hasChip = true
+                                break
+                            end
+                        end
+                        
+                        -- Nếu chưa có chip, tự động gửi lệnh InvokeServer để mua chip Raid thường
+                        if not hasChip then
+                            -- Gửi lệnh mua chip Raid (Sử dụng hệ thống Remote CommF_ có sẵn trong script)
+                            game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("Raids", "BuyChip", "Flame") -- Mặc định mua chip Flame để test, bạn có thể đổi hệ quả sang loại khác
+                            wait(1)
+                        else
+                            -- Nếu đã có chip, tiến hành ấn nút bắt đầu Raid
+                            -- Tìm ClickDetector của nút bấm Start Raid tại Castle on the Sea
+                            local RaidButton = workspace:FindFirstChild("Map") 
+                                and workspace.Map:FindFirstChild("CastleOnTheSea") 
+                                and workspace.Map.CastleOnTheSea:FindFirstChild("RaidSummon") -- Đường dẫn cấu trúc Map tùy thuộc vào bản cập nhật game, hoặc dùng ClickDetector trực tiếp:
+                            
+                            -- Cách 1: Click bằng ClickDetector nếu tìm thấy thực thể trong Workspace
+                            local clickDetector = workspace:FindFirstChild("Button", true) or workspace:FindFirstChild("ClickDetector", true)
+                            
+                            -- Cách 2 (Tối ưu & Phổ biến): Sử dụng FireClickDetector trực tiếp vào nút bấm tại khu vực tọa độ
+                            for _, v in pairs(workspace:GetDescendants()) do
+                                if v:IsA("ClickDetector") and v.Parent and (v.Parent.Position - RaidButtonCFrame.Position).Magnitude < 15 then
+                                    fireclickdetector(v)
+                                    break
+                                end
+                            end
+                            
+                            wait(2) -- Chờ hệ thống dịch chuyển vào phòng Raid
+                        end
+                    end
+                end
+            end)
+        end
+    end
 end)
 
 RaidOpen:AddToggle("AwakenFruits", {
