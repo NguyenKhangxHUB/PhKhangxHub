@@ -4380,11 +4380,14 @@ spawn(function()
 end)
 
 -- Farm Katakuri
--- Khởi tạo các cấu hình biến toàn cục cho chức năng farm
-getgenv().AutoFarmKatakuriV1 = true -- Chuyển thành false nếu muốn tắt
+-- Bật chức năng farm
+getgenv().AutoFarmKatakuriV1 = true 
 _G.SelectWeapon = _G.SelectWeapon or "Melee" -- Vũ khí sử dụng (Melee, Sword, Blox Fruit)
 
--- Danh sách quái cần farm theo yêu cầu của bạn
+-- Tốc độ Tween lấy mặc định của Hub hoặc bạn có thể tự chỉnh tại đây
+getgenv().TweenSpeed = getgenv().TweenSpeed or 300 
+
+-- Danh sách 4 quái mục tiêu theo yêu cầu
 local TargetMonsters = {
     "Cookie Crafter",
     "Cake Guard",
@@ -4392,15 +4395,15 @@ local TargetMonsters = {
     "Head Baker"
 }
 
--- Vị trí trung tâm Đảo Bánh để đứng chờ quái spawn
+-- Vị trí trung tâm Đảo Bánh để đứng chờ/bay lơ lửng khi quái chưa spawn
 local CakeIslandCenter = CFrame.new(-1932, 250, -12500)
 
--- Hàm kiểm tra xem Model quái còn sống hay không
+-- Hàm kiểm tra Model quái còn sống hay không
 local function isMonsterAlive(model)
     return model and model:FindFirstChild("Humanoid") and model.Humanoid.Health > 0 and model:FindFirstChild("HumanoidRootPart")
 end
 
--- Hàm tìm quái mục tiêu trong Workspace dựa trên danh sách chỉ định
+-- Hàm tìm quái mục tiêu trong Workspace
 local function getTargetMonster()
     for _, enemy in pairs(workspace.Enemies:GetChildren()) do
         if table.find(TargetMonsters, enemy.Name) and isMonsterAlive(enemy) then
@@ -4410,71 +4413,70 @@ local function getTargetMonster()
     return nil
 end
 
--- Vòng lặp Farm chính điều khiển toàn bộ tiến trình
+-- Vòng lặp điều khiển tiến trình Farm chính
 spawn(function()
-    while task.wait(0.5) do
+    while task.wait(0.1) do
         if getgenv().AutoFarmKatakuriV1 then
             pcall(function()
                 local player = game.Players.LocalPlayer
                 local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
                 if not root then return end
                 
-                -- Lấy số lượng quái đã diệt trên máy chủ từ hệ thống game (Katakuri Progression)
+                -- Đọc số lượng quái đã diệt trên Server từ hệ thống của game
                 local killCount = game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("CakePrinceProgress")
-                -- Nếu phản hồi trả về dạng chuỗi hoặc số, chúng ta lọc lấy số lượng quái hiện tại
                 local currentKills = tonumber(killCount) or 0
                 
-                -- Kiểm tra xem Boss Katakuri v1 (Cake Prince) có đang xuất hiện không
+                -- Kiểm tra xem Boss Katakuri v1 (Cake Prince) có xuất hiện không
                 local boss = workspace.Enemies:FindFirstChild("Cake Prince")
                 
                 if boss and isMonsterAlive(boss) then
-                    -- BƯỚC 4: Nếu Boss Katakuri V1 xuất hiện, lập tức vào phòng sau lưng NPC và tiêu diệt
-                    root.CFrame = boss.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0) -- Đứng trên đầu boss không cho đánh trúng
+                    -- BƯỚC 4: Nếu Boss xuất hiện, dùng tween chạy thẳng vào cửa sau lưng NPC và diệt boss
+                    -- Đứng TRÊN ĐẦU BOSS (CFrame * CFrame.new(0, 30, 0)) quái không đánh trúng
+                    _tp(boss.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0)) 
                     
-                    -- Gom boss (nếu cần) và tự động xả skill
                     if _B then 
                         PosMon = boss.HumanoidRootPart.Position
-                        BringEnemy() 
+                        BringEnemy() -- Gom quái nếu tính năng bật
                     end
                     
-                    -- Kích hoạt công cụ click tấn công tự động
+                    -- Tự động Click đánh thường
                     EquipWeapon(_G.SelectWeapon)
                     game:GetService("VirtualUser"):CaptureController()
                     game:GetService("VirtualUser"):Button1Down(Vector2.new(1280, 720))
                     
                 elseif currentKills >= 500 then
-                    -- BƯỚC 3: Nếu đã đủ 500 quái, di chuyển tới NPC Big Mirror để tiến hành triệu hồi Katakuri v1
-                    local bigMirror = workspace.Map.CakeLoaf.BigMirror
-                    _tp(CFrame.new(-2077, 252, -12373)) -- Vị trí trước gương NPC triệu hồi
-                    task.wait(0.5)
+                    -- BƯỚC 3: Đạt đủ 500 quái, di chuyển tween lại gần NPC triệu hồi (Big Mirror)
+                    local npcPosition = CFrame.new(-2077, 252, -12373)
+                    _tp(npcPosition)
                     
-                    -- Gửi lệnh triệu hồi tới máy chủ qua hệ thống Remote của game
-                    game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("CakePrinceSpawn")
-                    task.wait(1)
+                    -- Khi đã tới vị trí NPC, tiến hành gọi Remote triệu hồi Katakuri v1
+                    if (root.Position - npcPosition.Position).Magnitude <= 15 then
+                        game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("CakePrinceSpawn")
+                        task.wait(1)
+                    end
                     
                 else
-                    -- BƯỚC 1 & 2: Tiến hành đi đến đảo bánh và farm 4 loại quái chỉ định
+                    -- BƯỚC 1 & 2: Di chuyển tween tới Đảo Bánh để tự động farm 4 loại quái chỉ định
                     local monster = getTargetMonster()
                     
                     if monster then
-                        -- Triển khai cơ chế đứng farm AN TOÀN TRÊN ĐẦU QUÁI (quái không đánh trúng)
-                        root.CFrame = monster.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0)
+                        -- CHỈ ĐỨNG TRÊN ĐẦU QUÁI (quái không động đến nhân vật, không đánh trúng)
+                        _tp(monster.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
                         
-                        -- Chống quái đánh trả bằng cách khóa vị trí và vô hiệu hóa chuyển động của quái (BringEnemy từ Hub)
                         if _B then
                             PosMon = monster.HumanoidRootPart.Position
-                            BringEnemy()
+                            BringEnemy() -- Khóa vị trí quái bằng tính năng của Hub
                         end
                         
-                        -- Tự động trang bị vũ khí và đánh thường liên tục
+                        -- Thực hiện tấn công thường
                         EquipWeapon(_G.SelectWeapon)
                         game:GetService("VirtualUser"):CaptureController()
                         game:GetService("VirtualUser"):Button1Down(Vector2.new(1280, 720))
                     else
-                        -- Khi không có quái spawn, nhân vật sẽ bay lơ lửng an toàn trên không trung quanh đảo chờ quái hồi sinh
+                        -- Khi đánh xong hết quái, nhân vật dùng tween di chuyển ra trung tâm đảo và BAY LƠ LỬNG trên không
                         _tp(CakeIslandCenter)
                         
-                        -- Giữ nhân vật lơ lửng không bị rơi xuống biển/đất
+                        -- Triệt tiêu lực rơi tự do để nhân vật đứng yên trên không chờ quái spawn lại
                         if root.Velocity.Magnitude > 0 then
                             root.Velocity = Vector3.new(0, 0, 0)
                         end
@@ -4485,7 +4487,7 @@ spawn(function()
     end
 end)
 
--- Tạo một vòng lặp phụ NoClip liên tục chạy song song để tránh nhân vật bị kẹt địa hình khi di chuyển trên đầu quái
+-- Vòng lặp phụ NoClip liên tục giúp nhân vật không bị kẹt địa hình hoặc vật cản khi Tween di chuyển trên đầu quái
 spawn(function()
     game:GetService("RunService").Stepped:Connect(function()
         if getgenv().AutoFarmKatakuriV1 and game.Players.LocalPlayer.Character then
