@@ -4395,6 +4395,9 @@ local TargetMonsters = {
     "Head Baker"
 }
 
+-- Biến lưu trữ loại quái đang được chọn để farm tập trung
+local currentTargetName = nil
+
 -- Vị trí trung tâm Đảo Bánh để đứng chờ/bay lơ lửng khi quái chưa spawn
 local CakeIslandCenter = CFrame.new(-1932, 250, -12500)
 
@@ -4403,13 +4406,45 @@ local function isMonsterAlive(model)
     return model and model:FindFirstChild("Humanoid") and model.Humanoid.Health > 0 and model:FindFirstChild("HumanoidRootPart")
 end
 
--- Hàm tìm quái mục tiêu trong Workspace
-local function getTargetMonster()
+-- Hàm đếm xem trong Workspace còn bao nhiêu con quái thuộc loại `monsterName` đang sống
+local function countMonstersAliveByName(monsterName)
+    local count = 0
+    if not workspace:FindFirstChild("Enemies") then return 0 end
     for _, enemy in pairs(workspace.Enemies:GetChildren()) do
-        if table.find(TargetMonsters, enemy.Name) and isMonsterAlive(enemy) then
-            return enemy
+        if enemy.Name == monsterName and isMonsterAlive(enemy) then
+            count = count + 1
         end
     end
+    return count
+end
+
+-- Hàm tìm quái mục tiêu (Có cơ chế khóa bãi quái)
+local function getTargetMonster()
+    if not workspace:FindFirstChild("Enemies") then return nil end
+    
+    -- 1. Nếu trước đó đã chọn một loại quái và bãi đó VẪN CÒN quái sống, tiếp tục farm loại đó
+    if currentTargetName and countMonstersAliveByName(currentTargetName) > 0 then
+        for _, enemy in pairs(workspace.Enemies:GetChildren()) do
+            if enemy.Name == currentTargetName and isMonsterAlive(enemy) then
+                return enemy
+            end
+        end
+    end
+    
+    -- 2. Nếu chưa chọn bãi hoặc bãi cũ đã BỊ DIỆT SẠCH, tìm một bãi mới bất kỳ trong danh sách có quái đang sống
+    for _, name in pairs(TargetMonsters) do
+        if countMonstersAliveByName(name) > 0 then
+            currentTargetName = name -- Khóa mục tiêu vào bãi quái mới này
+            for _, enemy in pairs(workspace.Enemies:GetChildren()) do
+                if enemy.Name == currentTargetName and isMonsterAlive(enemy) then
+                    return enemy
+                end
+            end
+        end
+    end
+    
+    -- 3. Nếu toàn bộ map không còn con quái nào thuộc 4 loại trên sống
+    currentTargetName = nil
     return nil
 end
 
@@ -4427,11 +4462,10 @@ spawn(function()
                 local currentKills = tonumber(killCount) or 0
                 
                 -- Kiểm tra xem Boss Katakuri v1 (Cake Prince) có xuất hiện không
-                local boss = workspace.Enemies:FindFirstChild("Cake Prince")
+                local boss = workspace:FindFirstChild("Enemies") and workspace.Enemies:FindFirstChild("Cake Prince")
                 
                 if boss and isMonsterAlive(boss) then
-                    -- BƯỚC 4: Nếu Boss xuất hiện, dùng tween chạy thẳng vào cửa sau lưng NPC và diệt boss
-                    -- Đứng TRÊN ĐẦU BOSS (CFrame * CFrame.new(0, 30, 0)) quái không đánh trúng
+                    -- BƯỚC 4: Nếu Boss xuất hiện, ưu tiên diệt boss trước
                     _tp(boss.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0)) 
                     
                     if _B then 
@@ -4473,7 +4507,7 @@ spawn(function()
                         game:GetService("VirtualUser"):CaptureController()
                         game:GetService("VirtualUser"):Button1Down(Vector2.new(1280, 720))
                     else
-                        -- Khi đánh xong hết quái, nhân vật dùng tween di chuyển ra trung tâm đảo và BAY LƠ LỬNG trên không
+                        -- Khi đánh xong sạch toàn bộ các bãi quái (đang chờ hồi), bay lơ lửng ở trung tâm
                         _tp(CakeIslandCenter)
                         
                         -- Triệt tiêu lực rơi tự do để nhân vật đứng yên trên không chờ quái spawn lại
@@ -5341,33 +5375,6 @@ spawn(function()
     end
 end)
 
-SoulReaperBoss:AddToggle("SoulReaperHop", {
-    Title = "Auto Soul Reaper [ Hop Server ]",
-    Default = false,
-    Callback = function(Value)
-        _G.SoulHopR = Value
-        if not _G.AutoHytHallow then
-            Library:Notify({
-                Title = "Night Slayer Hub",
-                Description = "Open Auto Soul Reaper Plz!",
-                Duration = 3
-            })
-        end
-    end
-})
-
-spawn(function()
-    while wait(Sec) do
-        if _G.AutoHytHallow and _G.SoulHopR then
-            pcall(function()
-                if not GetConnectionEnemies("Soul Reaper") then
-                    Hop()
-                end
-            end)
-        end
-    end
-end)
-
 DoughKingBoss = Stack:AddLeftGroupbox("Boss Dough King")
 
 DoughKingBoss:AddToggle("DoughKingNormal", {
@@ -5390,33 +5397,6 @@ spawn(function()
                     until not _G.AutoMiror or not v.Parent or v.Humanoid.Health <= 0
                 else
                     _tp(CFrame.new(-1943.676513671875, 251.5095672607422, -12337.880859375)) 
-                end
-            end)
-        end
-    end
-end)
-
-DoughKingBoss:AddToggle("DoughKingHop", {
-    Title = "Auto Dough King [ Hop Server ]",
-    Default = false,
-    Callback = function(Value)
-        _G.DoughKingHop = Value
-        if not _G.AutoMiror then 
-            Library:Notify({
-                Title = "Night Slayer Hub",
-                Description = "Open Auto Dough King Plz!",
-                Duration = 3
-            })
-        end
-    end
-})
-
-spawn(function()
-    while wait(Sec) do
-        if _G.AutoMiror and _G.DoughKingHop then
-            pcall(function()
-                if not GetConnectionEnemies("Dough King") then
-                    Hop()
                 end
             end)
         end
@@ -5446,34 +5426,6 @@ spawn(function()
                             Attack.Kill(v, _G.Auto_Def_DarkCoat)
                         until _G.Auto_Def_DarkCoat == false or not v.Parent or v.Humanoid.Health <= 0  -- Sửa: Health
                     end
-                end
-            end)
-        end
-    end
-end)
-
-DarkbeardBoss:AddToggle("DarkBreadHop", {
-    Title = "Auto Darkbeard [ Hop Server ]",
-    Default = false,
-    Callback = function(Value)
-        _G.DarkbreadHop = Value
-        if not _G.Auto_Def_DarkCoat then 
-            Library:Notify({
-                Title = "Night Slayer Hub",
-                Description = "Open Auto Darkbread Plz!",
-                Duration = 3
-            })
-        end
-    end
-})
-
-spawn(function()
-    local waitTime = 0.1  -- Hoặc giá trị bạn muốn
-    while wait(waitTime) do  -- Sửa: wait(waitTime) thay vì wait(Sec)
-        if _G.Auto_Def_DarkCoat and _G.DarkbreadHop then
-            pcall(function()
-                if not workspace.Enemies:FindFirstChild("Darkbeard") then
-                    Hop()
                 end
             end)
         end
