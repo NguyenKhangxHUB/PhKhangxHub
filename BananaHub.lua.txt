@@ -119,7 +119,7 @@ local ClickState = 0
 local Num_self = 25
 
 -- Team mặc định
-getgenv().Team = getgenv().Team or "Pirates"
+getgenv().Team = getgenv().Team or "Marines"
 
 repeat 
     local start = plr.PlayerGui:WaitForChild("Main"):WaitForChild("Loading") 
@@ -2695,15 +2695,15 @@ Library = loadstring(game:HttpGet("https://pastefy.app/vgSGtrbP/raw"))()
 
 Window = Library:CreateWindow({
     Title = "Banana Cat Hub",
-    Subtitle = "- Blox Fruit",
+    Subtitle = "- Ades Chô",
     Image = "rbxassetid://130947856929902"
 })
 
 wait(1)
 
 Library:Notify({
-    Title = "Ui Library",
-    Description = "The UI automatically hides once executed.\nPress the button at the bottom-left of the screen to show the GUI.",
+    Title = "Ui Ades Chô Library",
+    Description = "The UI Ades Chô automatically hides once executed.\nPress the button at the bottom-left of the screen to show the GUI.",
     Duration = 3
 })
 
@@ -3861,7 +3861,7 @@ SetAutoFarm = Settings:AddLeftGroupbox("Setting Farm")
 
 SetAutoFarm:AddDropdown("SelectWeapon", {
     Title = "Select Weapon",
-    Values = {"Melee","Sword","Blox Fruit"},
+    Values = {"Melee","Sword","Fruit"},
     Default = nil,
     Callback = function(Value)
         _G.ChooseWP = Value
@@ -6631,65 +6631,6 @@ spawn(function()
   end)
 end)
 
---// AUTO BUY + START RAID CHIP
-_G.AutoBuyRaidChip = false
-_G.SelectRaidChip = "Flame"
-
-Tabs["Fruit and Raid,Dungeon"]:AddToggle("AutoBuyRaidChip", {
-    Title = "Auto Buy & Start Raid",
-    Default = false,
-    Callback = function(v)
-        _G.AutoBuyRaidChip = v
-    end
-})
-
-Tabs["Fruit and Raid,Dungeon"]:AddDropdown("SelectRaidChip", {
-    Title = "Select Raid Chip",
-    Values = {
-        "Flame","Ice","Quake","Light","Dark",
-        "Spider","Rumble","Magma","Buddha","Phoenix"
-    },
-    Multi = false,
-    Default = 1,
-    Callback = function(v)
-        _G.SelectRaidChip = v
-    end
-})
-
-task.spawn(function()
-    while task.wait(2) do
-        pcall(function()
-
-            if _G.AutoBuyRaidChip then
-
-                local plr = game.Players.LocalPlayer
-                local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
-
-                -- mua chip
-                game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer(
-                    "RaidsNpc",
-                    "Select",
-                    _G.SelectRaidChip
-                )
-
-                task.wait(0.5)
-
-                -- teleport tới chỗ raid
-                hrp.CFrame = CFrame.new(-6438, 250, -4501)
-
-                task.wait(1)
-
-                -- bắt đầu raid
-                game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer(
-                    "RaidsNpc",
-                    "Start"
-                )
-            end
-
-        end)
-    end
-end)
-
 RaidOpen:AddToggle("AwakenFruits", {
     Title = "Auto Awaken Fruit",
     Default = false,
@@ -9411,44 +9352,62 @@ spawn(function()
     end
   end
 end)
---// XÓA LAVA ĐẢO NÚI LỬA
-_G.RemoveVolcanoLava = false
-
-Tabs.Prehistoric:AddToggle("RemoveVolcanoLava", {
-    Title = "Xóa Lava Đảo Núi Lửa",
+VolcanoFarm:AddLabel("[ Săn Núi Lửa ]") -- Tiêu đề chức năng nổi bật giống ảnh ví dụ
+VolcanoFarm:AddToggle("RemoveVolcanoLavaToggle", {
+    Title = "Xóa Lava & Lửa (No Damage)",
     Default = false,
-    Callback = function(v)
-        _G.RemoveVolcanoLava = v
+    Callback = function(Value)
+        getgenv().RemoveVolcanoLava = Value
+        if Value then
+            Library:Notify({
+                Title = "Banana Hub",
+                Description = "Đã dập tắt toàn bộ lửa đỏ và xóa Lava! Không bị mất máu.",
+                Duration = 4
+            })
+        end
     end
 })
 
-task.spawn(function()
-    while task.wait(1) do
-        pcall(function()
-            if _G.RemoveVolcanoLava then
-                for _,v in pairs(workspace:GetDescendants()) do
+-- ====================================================================
+-- LOGIC XOÁ LAVA, DẬP LỬA ĐỎ & BẤT TỬ DUNG NHAM ĐƯỢC GỘP CHUNG TẠI ĐÂY
+-- ====================================================================
+if not getgenv().LavaLogicLoaded then
+    getgenv().LavaLogicLoaded = true -- Tránh bị lặp vòng lặp khi tắt/bật lại script
+    
+    local RunService = game:GetService("RunService")
+    RunService.Heartbeat:Connect(function()
+        if getgenv().RemoveVolcanoLava then
+            pcall(function()
+                -- 1. Quét sạch các mảnh dung nham gây sát thương trên bản đồ
+                for _, v in pairs(game.Workspace:GetDescendants()) do
                     if v:IsA("BasePart") then
-                        local name = string.lower(v.Name)
-
-                        if string.find(name,"lava")
-                        or string.find(name,"magma")
-                        or string.find(name,"volcano") then
-
-                            v.Transparency = 1
-                            v.CanCollide = false
-                            v.CanTouch = false
-
-                            local touch = v:FindFirstChildOfClass("TouchTransmitter")
-                            if touch then
-                                touch:Destroy()
-                            end
+                        local nameLower = v.Name:lower()
+                        if nameLower:match("lava") or nameLower:match("magma") or nameLower:match("damage") or nameLower == "damagepart" then
+                            v:Destroy()
+                        end
+                    -- 2. Dập tắt tận gốc toàn bộ hiệu ứng lửa đỏ bốc lên, không chừa một đốm nào
+                    elseif v:IsA("ParticleEmitter") or v:IsA("Fire") then
+                        local nameLower = v.Name:lower()
+                        if nameLower:match("fire") or nameLower:match("lava") or nameLower:match("magma") or nameLower:match("burn") or nameLower:match("eruption") then
+                            v.Enabled = false
+                            v:Destroy()
                         end
                     end
                 end
-            end
-        end)
-    end
-end)
+                
+                -- 3. Bẻ gãy các cổng va chạm (TouchTransmitter) nhận lệnh trừ máu từ nham thạch
+                for _, v in pairs(game.Workspace:GetDescendants()) do
+                    if v:IsA("TouchTransmitter") and v.Parent then
+                        local partName = v.Parent.Name:lower()
+                        if partName:match("lava") or partName:match("magma") or partName:match("damage") or partName:match("fire") then
+                            v:Destroy() -- Triệt tiêu hoàn toàn khả năng gây mất máu
+                        end
+                    end
+                end
+            end)
+        end
+    end)
+end
 
 VolcanoFarm:AddToggle("EventVolcanoStart", {
     Title = "Auto Event Prehistoric Island",
