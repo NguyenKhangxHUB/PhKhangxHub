@@ -4380,181 +4380,136 @@ spawn(function()
 end)
 
 -- Farm Katakuri
--- [[ KHỞI TẠO BIẾN & THAM CHIẾU TỪ BANANAHUB ]] --
-local Players = game:Service("Players")
-local Workspace = game:Service("Workspace")
-local TweenService = game:Service("TweenService")
+-- Chức năng cấu hình chung (Giữ nguyên cấu trúc của BananaHub)
+getgenv().AutoFarmKatakuriV1 = true  -- Bật/Tắt Farm
+getgenv().TweenSpeed = 320           -- Tốc độ bay tween mượt
+_[span_6](start_span)G.SelectWeapon = "Melee"            -- Vũ khí sử dụng (Melee / Sword / Blox Fruit)[span_6](end_span)
+_[span_7](start_span)B = true                            -- Kích hoạt Gom Quái (Bring Enemy)[span_7](end_span)
+
+-[span_8](start_span)[span_9](start_span)- Các dịch vụ và dữ liệu hệ thống kế thừa từ file mẫu[span_8](end_span)[span_9](end_span)
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local plr = Players.LocalPlayer
 
--- Kiểm tra nhân vật
-local Character = plr.Character or plr.CharacterAdded:Wait()
-local Root = Character:WaitForChild("HumanoidRootPart")
-
--- Cấu hình danh sách 4 NPC Katakuri theo đúng thứ tự level từ thấp đến cao
-local KatakuriNPCs = {
-    "Cookie Crafter", -- Lv. 2200
-    "Cake Guard",     -- Lv. 2225
-    "Baking Staff",   -- Lv. 2250
-    "Head Baker"      -- Lv. 2275
+-[span_10](start_span)- Danh sách 4 loại quái cần đánh theo yêu cầu[span_10](end_span)
+local KatakuriV1_Mobs = {
+    "Baking Staff",
+    "Head Baker",
+    "Cookie Crafter",
+    "Cake Guard"
 }
 
--[span_5](start_span)- Trích xuất tọa độ trung tâm bãi quái đảo Cake Island từ PosMsList trong file[span_5](end_span)
--- Tọa độ trung tâm để đứng đợi quái spawn (Lấy vị trí của Cookie Crafter làm mốc)
-local CakeIslandCenter = CFrame.new(-2021, 38, -12028)
+-[span_11](start_span)- Tọa độ cố định của các bãi quái tại Đảo Cake Island lấy từ dữ liệu hệ thống[span_11](end_span)
+local Mobs_Positions = {
+    ["Baking Staff"] = CFrame.new(-1932, 38, -12848),
+    ["Head Baker"] = CFrame.new(-1932, 38, -12848),
+    ["Cookie Crafter"] = CFrame.new(-2021, 38, -12028),
+    ["Cake Guard"] = CFrame.new(-2024, 38, -12026)
+}
 
--- Biến bật/tắt Farm và cấu hình an toàn
-_G.KatakuriFarmV1 = true
-_[span_6](start_span)[span_7](start_span)[span_8](start_span)G.SelectWeapon = _G.SelectWeapon or "Melee" -- Vũ khí mặc định (có thể đổi thành "Sword", "Blox Fruit")[span_6](end_span)[span_7](end_span)[span_8](end_span)
-[span_9](start_span)local FarmOffset = Vector3.new(0, 12, 0)     -- Đứng trên đầu quái 12 studs (Né đòn hoàn toàn, không lag)[span_9](end_span)
-[span_10](start_span)getgenv().TweenSpeed = 300                   -- Tốc độ di chuyển Tween mượt mà không giật[span_10](end_span)
-
--- [[ CÁC HÀM BỔ TRỢ HỖ TRỢ FARM ]] --
-
--[span_11](start_span)- Hàm di chuyển Tween mượt mà xuyên map (Kế thừa từ hàm _tp gốc của file)[span_11](end_span)
-local function TweenTo(targetCFrame)
-    local char = plr.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-    local rootPart = char.HumanoidRootPart
-    
-    local distance = (targetCFrame.Position - rootPart.Position).Magnitude
-    if distance < 5 then return end
-
-    -[span_12](start_span)- Tắt va chạm để tránh bị kẹt địa hình hay rung giật khi tween xuyên các đảo Sea 3[span_12](end_span)
-    for _, part in pairs(char:GetChildren()) do
-        if part:IsA("BasePart") then part.CanCollide = false end
+-[span_12](start_span)- Hàm kiểm tra xem người chơi đã ở Sea 3 chưa[span_12](end_span)
+local function CheckSea3()
+    if game.PlaceId == 7449423635 or game.PlaceId == 85211729168715 or game.PlaceId == 73902483975735 then
+        return true
     end
-
-    local tweenInfo = TweenInfo.new(distance / getgenv().TweenSpeed, Enum.EasingStyle.Linear)
-    local tween = TweenService:Create(rootPart, tweenInfo, {CFrame = targetCFrame})
-    tween:Play()
-    tween.Completed:Wait()
-
-    -- Triệt tiêu lực vật lý ngay sau khi di chuyển xong để chống lag/giật camera
-    if rootPart then rootPart.Velocity = Vector3.new(0,0,0) end
+    return false
 end
 
--[span_13](start_span)[span_14](start_span)- Hàm tìm NPC mục tiêu còn sống dựa vào thư mục Workspace.Enemies[span_13](end_span)[span_14](end_span)
-local function GetTargetNPC()
-    local enemiesFolder = Workspace:FindFirstChild("Enemies")
-    if not enemiesFolder then return nil end
+-[span_13](start_span)- Hàm NoClip giữ cho nhân vật không bị kẹt hay giật lag khi bay qua địa hình[span_13](end_span)
+task.spawn(function()
+    game:GetService("RunService").Stepped:Connect(function()
+        if getgenv().AutoFarmKatakuriV1 then
+            local char = plr.Character
+            if char then
+                for _, part in pairs(char:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = false
+                    end
+                end
+            end
+        end
+    end)
+end)
 
-    for _, npcName in ipairs(KatakuriNPCs) do
-        for _, npc in pairs(enemiesFolder:GetChildren()) do
-            if npc.Name == npcName and npc:FindFirstChild("Humanoid") and npc.Humanoid.Health > 0 and npc:FindFirstChild("HumanoidRootPart") then
-                return npc
+-[span_14](start_span)- Hàm tìm quái mục tiêu còn sống trong khu vực[span_14](end_span)
+local function GetTargetMob()
+    for _, mobName in ipairs(KatakuriV1_Mobs) do
+        -[span_15](start_span)- Kiểm tra quái trong Workspace trước[span_15](end_span)
+        for _, enemy in pairs(Workspace.Enemies:GetChildren()) do
+            if enemy.Name == mobName and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 and enemy:FindFirstChild("HumanoidRootPart") then
+                return enemy
+            end
+        end
+        -[span_16](start_span)- Kiểm tra trong ReplicatedStorage đề phòng quái chưa nạp kịp[span_16](end_span)
+        for _, enemy in pairs(ReplicatedStorage:GetChildren()) do
+            if enemy.Name == mobName and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 then
+                return enemy
             end
         end
     end
     return nil
 end
 
--[span_15](start_span)- Hàm Magnet (Gom quái): Gom toàn bộ bãi quái Lv 2200 (hoặc loại đang đánh) tụ lại 1 cục[span_15](end_span)
-local function BringAndGomEnemies(targetName, centralCFrame)
-    local enemiesFolder = Workspace:FindFirstChild("Enemies")
-    if not enemiesFolder then return end
-
-    for _, npc in pairs(enemiesFolder:GetChildren()) do
-        if npc.Name == targetName and npc:FindFirstChild("HumanoidRootPart") and npc:FindFirstChild("Humanoid") and npc.Humanoid.Health > 0 then
-            -[span_16](start_span)- Chỉ gom những con quái trong phạm vi gần bãi (khoảng cách 300 studs)[span_16](end_span)
-            if (npc.HumanoidRootPart.Position - centralCFrame.Position).Magnitude <= 300 then
-                npc.HumanoidRootPart.CFrame = centralCFrame
-                [span_17](start_span)npc.HumanoidRootPart.CanCollide = false -- Tắt va chạm của quái để chúng lồng vào nhau thành 1 cục[span_17](end_span)
-                [span_18](start_span)npc.Humanoid.WalkSpeed = 0              -- Làm bất động quái[span_18](end_span)
-                npc.Humanoid.JumpPower = 0
-                
-                -[span_19](start_span)- Xóa hoạt ảnh di chuyển để quái không bị đứng giật lùi[span_19](end_span)
-                if npc.Humanoid:FindFirstChild("Animator") then 
-                    npc.Humanoid.Animator:Destroy()
-                end
-            end
-        end
-    end
-    -[span_20](start_span)- Mở rộng bán kính mô phỏng để server cập nhật quái chính xác[span_20](end_span)
-    plr.SimulationRadius = math.huge
-end
-
--[span_21](start_span)- Hàm tự động trang bị vũ khí từ Backpack[span_21](end_span)
-local function EquipWeapon(weaponName)
-    local char = plr.Character
-    if not char then return end
-    
-    -- Nếu đã cầm vũ khí đúng loại trên tay thì bỏ qua
-    local currentTool = char:FindFirstChildOfClass("Tool")
-    if currentTool and (currentTool.Name == weaponName or currentTool.ToolTip == weaponName) then
-        return currentTool
-    end
-
-    -- Tìm trong Backpack để lấy ra
-    local backpack = plr:FindFirstChild("Backpack")
-    if backpack then
-        for _, tool in pairs(backpack:GetChildren()) do
-            if tool:IsA("Tool") and (tool.Name == weaponName or tool.ToolTip == weaponName) then
-                char.Humanoid:EquipTool(tool)
-                return tool
-            end
-        end
-    end
-    return currentTool
-end
-
--- Hàm tự động kích hoạt Click tấn công mượt mà
-local function AutoAttack()
-    local char = plr.Character
-    if not char then return end
-    
-    local tool = char:FindFirstChildOfClass("Tool")
-    if tool then
-        tool:Activate()
-    end
-end
-
--- [[ VÒNG LẶP FARM CHÍNH (MAIN LOOP) ]] --
+-- Vòng lặp Farm chính (Lặp đi lặp lại tự động)
 task.spawn(function()
-    while _G.KatakuriFarmV1 do
-        task.wait()
-        
-        pcall(function()
-            local char = plr.Character
-            local myRoot = char and char:FindFirstChild("HumanoidRootPart")
-            local myHumanoid = char and char:FindFirstChild("Humanoid")
-            
-            if myRoot and myHumanoid and myHumanoid.Health > 0 then
-                local targetNPC = GetTargetNPC()
-                
-                if targetNPC then
-                    -- THỦ TỤC 1: CÓ QUÁI XUẤT HIỆN
-                    local npcRoot = targetNPC.HumanoidRootPart
-                    local targetPos = npcRoot.Position
-                    
-                    -[span_22](start_span)- Liên tục gom toàn bộ quái cùng loại lại vị trí của con quái mục tiêu[span_22](end_span)
-                    BringAndGomEnemies(targetNPC.Name, npcRoot.CFrame)
-                    
-                    -[span_23](start_span)- Tự động trang bị vũ khí đã chọn[span_23](end_span)
-                    EquipWeapon(_G.SelectWeapon)
-                    
-                    -- Khóa vị trí của người chơi đứng im cố định trên đầu bãi quái
-                    -- Kết hợp CFrame.lookAt để hướng góc nhìn xuống quái, triệt tiêu hoàn toàn lực rung giật hình ảnh
-                    myRoot.CFrame = CFrame.lookAt(targetPos + FarmOffset, targetPos)
-                    myRoot.Velocity = Vector3.new(0, 0, 0)
-                    
-                    -- Thực hiện đòn đánh liên tục
-                    AutoAttack()
+    while task.wait(0.5) do
+        if getgenv().AutoFarmKatakuriV1 then
+            pcall(function()
+                -[span_17](start_span)- Bước 1: Kiểm tra thế giới Sea 3[span_17](end_span)
+                if not CheckSea3() then
+                    print("Bạn cần phải ở Sea 3 để chạy tính năng này!")
+                    return
+                end
+
+                local targetMob = GetTargetMob()
+
+                if targetMob then
+                    -[span_18](start_span)- Bước 2: Quái xuất hiện -> Di chuyển và gom quái đánh đứng trên đầu[span_18](end_span)
+                    repeat
+                        if not getgenv().AutoFarmKatakuriV1 then break end
+                        
+                        -[span_19](start_span)- Cấu hình khóa góc đứng trên đầu quái để chống rung giật lag[span_19](end_span)
+                        if targetMob:FindFirstChild("HumanoidRootPart") then
+                            -[span_20](start_span)[span_21](start_span)- Vị trí đứng cao hơn quái một chút để đảm bảo an toàn không rớt[span_20](end_span)[span_21](end_span)
+                            local farmCFrame = targetMob.HumanoidRootPart.CFrame * CFrame.new(0, 25, 0) * CFrame.Angles(0, math.rad(180), 0)
+                            
+                            -[span_22](start_span)[span_23](start_span)- Sử dụng hàm tween _tp tích hợp sẵn của bản Hack để di chuyển mượt[span_22](end_span)[span_23](end_span)
+                            _tp(farmCFrame)
+                            
+                            -[span_24](start_span)[span_25](start_span)- Trang bị vũ khí được chọn[span_24](end_span)[span_25](end_span)
+                            EquipWeapon(_G.SelectWeapon)
+                            
+                            -[span_26](start_span)[span_27](start_span)- Kích hoạt gom bãi quái xung quanh lại một điểm[span_26](end_span)[span_27](end_span)
+                            [span_28](start_span)PosMon = targetMob.HumanoidRootPart.Position[span_28](end_span)
+                            [span_29](start_span)BringEnemy()[span_29](end_span)
+                            
+                            -- Tự động nhấp chuột ảo / kích hoạt đòn đánh thường không gây tụt FPS
+                            game:GetService("VirtualUser"):CaptureController()
+                            game:GetService("VirtualUser"):ClickButton1(Vector2.new(851, 158))
+                        end
+                        task.wait()
+                    -[span_30](start_span)- Lặp cho tới khi quái chết hoàn toàn hoặc bãi quái bị xóa[span_30](end_span)
+                    until not targetMob or not targetMob.Parent or not targetMob:FindFirstChild("Humanoid") or targetMob.Humanoid.Health <= 0
                 else
-                    -- THỦ TỤC 2: HẾT QUÁI (ĐỢI SPAWN)
-                    -[span_24](start_span)[span_25](start_span)- Tự động di chuyển tween mượt mà về tâm đảo Cake Island đã định vị sẵn[span_24](end_span)[span_25](end_span)
-                    local distanceToCenter = (myRoot.Position - CakeIslandCenter.Position).Magnitude
-                    if distanceToCenter > 15 then
-                        TweenTo(CakeIslandCenter)
-                    else
-                        -- Khi đã ở tâm, khóa chặt tọa độ đứng chờ, triệt tiêu lực vật lý chống lag giật hình
-                        myRoot.CFrame = CakeIslandCenter
-                        myRoot.Velocity = Vector3.new(0, 0, 0)
+                    -[span_31](start_span)- Bước 3: Nếu quái chưa spawn, tự động tween đi tuần tra/đứng đợi tại các bãi quái theo thứ tự[span_31](end_span)
+                    for _, mobName in ipairs(KatakuriV1_Mobs) do
+                        local defaultPos = Mobs_Positions[mobName]
+                        if defaultPos then
+                            -[span_32](start_span)- Tween mượt tới điểm chờ của bãi quái đó[span_32](end_span)
+                            _tp(defaultPos * CFrame.new(0, 30, 0))
+                            task.wait(1) -- Chờ giây lát quét xem quái xuất hiện chưa
+                            
+                            -- Nếu trong lúc di chuyển tuần tra có quái xuất hiện thì dừng lại đánh ngay
+                            if GetTargetMob() then break end
+                        end
                     end
                 end
-            end
-        end)
+            end)
+        end
     end
 end)
+
 
 -- Farm Tyrant of the Skies
 spawn(function()
