@@ -4501,149 +4501,88 @@ spawn(function()
 end)
 
 -- Farm Tyrant of the Skies
-_G.AutoFarmTyrant = true
+--// TYRANT OF THE SKIES FARM
+--// SEA 3 ONLY
+
+getgenv().AutoFarmTyrant = true
 
 local TyrantMobs = {
-    {
-        Name = "Isle Outlaw",
-        Pos = CFrame.new(-10545, 332, -8750)
-    },
-    {
-        Name = "Island Boy",
-        Pos = CFrame.new(-10380, 330, -8400)
-    },
-    {
-        Name = "Sun-kissed Warrior",
-        Pos = CFrame.new(-10120, 335, -8100)
-    },
-    {
-        Name = "Isle Champion",
-        Pos = CFrame.new(-9800, 340, -7800)
-    },
-    {
-        Name = "Serpent Hunter",
-        Pos = CFrame.new(-9500, 345, -7450)
-    }
+    "Isle Outlaw [Lv. 2450]",
+    "Island Boy [Lv. 2475]",
+    "Sun-kissed Warrior [Lv. 2500]",
+    "Isle Champion [Lv. 2525]",
+    "Serpent Hunter [Lv. 2550]"
 }
 
-function GetAllTyrantMobs(Name)
-    local MobList = {}
+local TikiPos = CFrame.new(-16518, 105, -173)
 
+local function GetMob()
     for _,v in pairs(workspace.Enemies:GetChildren()) do
-        if v.Name == Name
-        and v:FindFirstChild("Humanoid")
-        and v:FindFirstChild("HumanoidRootPart")
-        and v.Humanoid.Health > 0 then
-            table.insert(MobList,v)
+        if table.find(TyrantMobs, v.Name) and v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") then
+            if v.Humanoid.Health > 0 then
+                return v
+            end
         end
     end
-
-    return MobList
+    return nil
 end
 
 spawn(function()
     while task.wait() do
         pcall(function()
 
-            if _G.AutoFarmTyrant then
+            if getgenv().AutoFarmTyrant and World3 then
 
+                local Character = plr.Character
+                local Root = Character:FindFirstChild("HumanoidRootPart")
+
+                -- bật tween hệ thống
                 shouldTween = true
-                _B = true
 
-                for _,MobData in pairs(TyrantMobs) do
+                -- tween tới tiki outpost nếu ở xa
+                if (Root.Position - TikiPos.Position).Magnitude > 300 then
+                    _tp(TikiPos)
+                    repeat task.wait()
+                    until (Root.Position - TikiPos.Position).Magnitude < 300
+                end
+
+                local Mob = GetMob()
+
+                if Mob then
 
                     repeat task.wait()
 
-                        local Mobs = GetAllTyrantMobs(MobData.Name)
+                        pcall(function()
 
-                        if #Mobs == 0 then
+                            EquipWeapon(_G.SelectWeapon)
 
-                            if (HumanoidRootPart.Position - MobData.Pos.Position).Magnitude > 250 then
-                                TeleportToTarget(MobData.Pos)
+                            Mob.HumanoidRootPart.CanCollide = false
+                            Mob.HumanoidRootPart.Size = Vector3.new(60,60,60)
+
+                            -- đứng trên đầu quái không rung
+                            local Pos = Mob.HumanoidRootPart.CFrame * CFrame.new(0,25,0)
+
+                            Root.CFrame = Pos
+
+                            -- chống rớt
+                            Root.Velocity = Vector3.new(0,0,0)
+
+                            -- khóa quái
+                            Mob.Humanoid.WalkSpeed = 0
+                            Mob.Humanoid.JumpPower = 0
+
+                            if Mob.Humanoid:FindFirstChild("Animator") then
+                                Mob.Humanoid.Animator:Destroy()
                             end
 
-                        else
+                        end)
 
-                            for _,Mob in pairs(Mobs) do
-
-                                repeat task.wait()
-
-                                    if not _G.AutoFarmTyrant then
-                                        break
-                                    end
-
-                                    if not Mob.Parent then
-                                        break
-                                    end
-
-                                    if Mob.Humanoid.Health <= 0 then
-                                        break
-                                    end
-
-                                    local HRP = Mob:FindFirstChild("HumanoidRootPart")
-
-                                    if HRP then
-
-                                        PosMon = HRP.Position
-
-                                        for _,Enemy in pairs(workspace.Enemies:GetChildren()) do
-                                            if Enemy.Name == MobData.Name
-                                            and Enemy:FindFirstChild("Humanoid")
-                                            and Enemy:FindFirstChild("HumanoidRootPart")
-                                            and Enemy.Humanoid.Health > 0 then
-
-                                                local EHRP = Enemy.HumanoidRootPart
-
-                                                EHRP.CanCollide = false
-                                                Enemy.Humanoid.WalkSpeed = 0
-                                                Enemy.Humanoid.JumpPower = 0
-
-                                                EHRP.Size = Vector3.new(60,60,60)
-
-                                                Enemy.HumanoidRootPart.CFrame =
-                                                    HRP.CFrame * CFrame.new(
-                                                        math.random(-5,5),
-                                                        math.random(0,3),
-                                                        math.random(-5,5)
-                                                    )
-
-                                                if Enemy.Humanoid:FindFirstChild("Animator") then
-                                                    Enemy.Humanoid.Animator:Destroy()
-                                                end
-                                            end
-                                        end
-
-                                        plr.SimulationRadius = math.huge
-
-                                        local TweenPos =
-                                            HRP.CFrame
-                                            * CFrame.new(0,30,0)
-                                            * CFrame.Angles(math.rad(-90),0,0)
-
-                                        _tp(TweenPos)
-
-                                        EquipWeapon(_G.SelectWeapon)
-
-                                        game:GetService("VirtualUser"):CaptureController()
-                                        game:GetService("VirtualUser"):Button1Down(Vector2.new(1280,672))
-
-                                    end
-
-                                until not Mob.Parent
-                                or Mob.Humanoid.Health <= 0
-                                or not _G.AutoFarmTyrant
-
-                            end
-
-                        end
-
-                    until #GetAllTyrantMobs(MobData.Name) > 0
-                    or not _G.AutoFarmTyrant
+                    until not getgenv().AutoFarmTyrant
+                    or not Mob.Parent
+                    or Mob.Humanoid.Health <= 0
 
                 end
-
             end
-
         end)
     end
 end)
@@ -4797,239 +4736,80 @@ end)
 
 MeterialFarm = AutoModeFarm:AddLeftGroupbox("Farming Meterial")
 
---// =========================
---// FARM MATERIAL SYSTEM
---// =========================
-
-_G.AutoFarmMaterial = false
-_G.SelectMaterial = ""
-
-local MaterialList = {
-
-    -- SEA 1
-    ["Magma Ore"] = {
-        Sea = 1,
-        Mob = {"Military Soldier","Military Spy"},
-        Pos = CFrame.new(-5815,84,8820)
-    },
-
-    ["Leather"] = {
-        Sea = 1,
-        Mob = {"Brute","Pirate","Desert Bandit","Mercenary"},
-        Pos = CFrame.new(-1145,15,4350)
-    },
-
-    ["Angel Wings"] = {
-        Sea = 1,
-        Mob = {"God's Guard","Shanda"},
-        Pos = CFrame.new(-4698,845,-1912)
-    },
-
-    ["Fish Tail"] = {
-        Sea = 1,
-        Mob = {"Fishman Warrior","Fishman Commando"},
-        Pos = CFrame.new(61163,19,1569)
-    },
-
-    -- SEA 2
-    ["Radioactive Material"] = {
-        Sea = 2,
-        Mob = {"Factory Staff"},
-        Pos = CFrame.new(295,73,-56)
-    },
-
-    ["Ectoplasm"] = {
-        Sea = 2,
-        Mob = {"Ship Deckhand","Ship Engineer","Ship Steward","Ship Officer"},
-        Pos = CFrame.new(923,125,32885)
-    },
-
-    ["Vampire Fang"] = {
-        Sea = 2,
-        Mob = {"Vampire"},
-        Pos = CFrame.new(-6033,7,-1317)
-    },
-
-    ["Mystic Droplet"] = {
-        Sea = 2,
-        Mob = {"Water Fighter","Sea Soldier"},
-        Pos = CFrame.new(-3385,239,-10542)
-    },
-
-    -- SEA 3
-    ["Conjured Cocoa"] = {
-        Sea = 3,
-        Mob = {"Chocolate Bar Battler","Cocoa Warrior"},
-        Pos = CFrame.new(231,25,-12200)
-    },
-
-    ["Dragon Scale"] = {
-        Sea = 3,
-        Mob = {"Dragon Crew Warrior","Dragon Crew Archer"},
-        Pos = CFrame.new(6594,383,139)
-    },
-
-    ["Demonic Wisp"] = {
-        Sea = 3,
-        Mob = {"Demonic Soul"},
-        Pos = CFrame.new(-9507,172,6158)
-    },
-
-    ["Gunpowder"] = {
-        Sea = 3,
-        Mob = {"Pistol Billionaire"},
-        Pos = CFrame.new(-469,74,5904)
-    },
-
-    ["Mini Tusk"] = {
-        Sea = 3,
-        Mob = {"Mythological Pirate"},
-        Pos = CFrame.new(-13545,470,-6912)
-    }
-}
-
-function CheckSeaMaterial(Sea)
-    local TableMaterial = {}
-
-    for Name,Data in pairs(MaterialList) do
-        if Data.Sea == Sea then
-            table.insert(TableMaterial,Name)
-        end
-    end
-
-    return TableMaterial
+if World1 then MaterialList = {"Leather + Scrap Metal", "Angel Wings", "Magma Ore", "Fish Tail"}
+elseif World2 then MaterialList = {"Leather + Scrap Metal", "Radioactive Material", "Ectoplasm", "Mystic Droplet", "Magma Ore", "Vampire Fang"}
+elseif World3 then MaterialList = {"Scrap Metal", "Demonic Wisp", "Conjured Cocoa", "Dragon Scale", "Gunpowder", "Fish Tail", "Mini Tusk"}
 end
 
-function GetMaterialMob(MobNames)
-    for _,v in pairs(workspace.Enemies:GetChildren()) do
-        if table.find(MobNames,v.Name)
-        and v:FindFirstChild("Humanoid")
-        and v:FindFirstChild("HumanoidRootPart")
-        and v.Humanoid.Health > 0 then
-            return v
-        end
-    end
-    return nil
-end
-
-spawn(function()
-    while task.wait() do
-        pcall(function()
-
-            if _G.AutoFarmMaterial
-            and MaterialList[_G.SelectMaterial] then
-
-                local Data = MaterialList[_G.SelectMaterial]
-
-                local Mob = GetMaterialMob(Data.Mob)
-
-                if not Mob then
-
-                    if (HumanoidRootPart.Position - Data.Pos.Position).Magnitude > 300 then
-                        TeleportToTarget(Data.Pos)
-                    end
-
-                else
-
-                    repeat task.wait()
-
-                        if not _G.AutoFarmMaterial then
-                            break
-                        end
-
-                        if not Mob.Parent then
-                            break
-                        end
-
-                        if Mob.Humanoid.Health <= 0 then
-                            break
-                        end
-
-                        local HRP = Mob.HumanoidRootPart
-
-                        PosMon = HRP.Position
-
-                        for _,Enemy in pairs(workspace.Enemies:GetChildren()) do
-                            if table.find(Data.Mob,Enemy.Name)
-                            and Enemy:FindFirstChild("Humanoid")
-                            and Enemy:FindFirstChild("HumanoidRootPart")
-                            and Enemy.Humanoid.Health > 0 then
-
-                                local EHRP = Enemy.HumanoidRootPart
-
-                                EHRP.CanCollide = false
-                                Enemy.Humanoid.WalkSpeed = 0
-                                Enemy.Humanoid.JumpPower = 0
-
-                                EHRP.Size = Vector3.new(60,60,60)
-
-                                Enemy.HumanoidRootPart.CFrame =
-                                    HRP.CFrame * CFrame.new(
-                                        math.random(-5,5),
-                                        math.random(0,3),
-                                        math.random(-5,5)
-                                    )
-
-                                if Enemy.Humanoid:FindFirstChild("Animator") then
-                                    Enemy.Humanoid.Animator:Destroy()
-                                end
-                            end
-                        end
-
-                        plr.SimulationRadius = math.huge
-
-                        local TweenPos =
-                            HRP.CFrame
-                            * CFrame.new(0,30,0)
-                            * CFrame.Angles(math.rad(-90),0,0)
-
-                        _tp(TweenPos)
-
-                        EquipWeapon(_G.SelectWeapon)
-
-                        game:GetService("VirtualUser"):CaptureController()
-                        game:GetService("VirtualUser"):Button1Down(Vector2.new(1280,672))
-
-                    until not Mob.Parent
-                    or Mob.Humanoid.Health <= 0
-                    or not _G.AutoFarmMaterial
-
-                end
-            end
-        end)
-    end
-end)
-
---// =========================
---// MATERIAL DROPDOWN
---// =========================
-
-local SeaMaterial = {}
-
-if Sea1 then
-    SeaMaterial = CheckSeaMaterial(1)
-elseif Sea2 then
-    SeaMaterial = CheckSeaMaterial(2)
-elseif Sea3 then
-    SeaMaterial = CheckSeaMaterial(3)
-end
-
-MaterialTab:AddDropdown({
-    Name = "Select Material",
-    Default = "",
-    Options = SeaMaterial,
+MeterialFarm:AddDropdown("SelectMethodFarm", {
+    Title = "Select Meterial",
+    Values = MaterialList,
+    Default = nil,
     Callback = function(Value)
-        _G.SelectMaterial = Value
+        _G.SelectMaterial = Value 
     end
 })
 
-MaterialTab:AddToggle({
-    Name = "Auto Farm Material",
+MeterialFarm:AddToggle("MeterialStart", {
+    Title = "Farm Meterial",
     Default = false,
     Callback = function(Value)
-        _G.AutoFarmMaterial = Value
+        _G.AutoMaterial = Value 
+        if not _G.StartFarm then
+            Library:Notify({
+                Title = "Night Slayer Hub",
+                Description = "Open Start Farm Plz!",
+                Duration = 3
+            })
+        end
     end
 })
+
+spawn(function()
+    local function processEnemy(v, EnemyName)
+        if v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") and v.Humanoid.Health > 0 then
+            if v.Name == EnemyName then 
+                repeat 
+                    wait() 
+                    Attack.Kill(v, _G.AutoMaterial)  -- Sửa: _G thay vì getgenv()
+                until not _G.AutoMaterial or not v.Parent or v.Humanoid.Health <= 0  -- Sửa: _G thay vì getgenv()
+            end
+        end
+    end
+    
+    local function handleEnemySpawns()
+        for _, v in pairs(game:GetService("Workspace")["_WorldOrigin"].EnemySpawns:GetChildren()) do
+            for _, EnemyName in ipairs(MMon) do
+                if string.find(v.Name, EnemyName) then
+                    local character = game.Players.LocalPlayer.Character
+                    local hrp = character and character:FindFirstChild("HumanoidRootPart")
+                    if hrp and (hrp.Position - v.Position).Magnitude >= 10 then
+                        _tp(v.CFrame * Pos)
+                    end
+                end
+            end
+        end
+    end
+    
+    while wait() do
+        if _G.AutoMaterial then  -- Sửa: _G thay vì getgenv()
+            pcall(function()
+                if _G.SelectMaterial then  -- Sửa: _G thay vì getgenv()
+                    MaterialMon(_G.SelectMaterial)  -- Sửa: _G thay vì getgenv()
+                    _tp(MPos) 
+                end
+                
+                for _, EnemyName in ipairs(MMon) do
+                    for _, v in pairs(workspace.Enemies:GetChildren()) do 
+                        processEnemy(v, EnemyName) 
+                    end
+                end
+                
+                handleEnemySpawns()
+            end)
+        end
+    end
+end)
 
 Stack = Window:AddTab("Stack Farming")
 
@@ -5690,6 +5470,242 @@ spawn(function()
         end
     end
 end)
+
+MeterialFarm = AutoModeFarm:AddLeftGroupbox("Farming Meterial")
+
+--// =========================
+--// FARM MATERIAL SYSTEM
+--// =========================
+
+_G.AutoFarmMaterial = false
+_G.SelectMaterial = ""
+
+local MaterialList = {
+
+    -- SEA 1
+    ["Magma Ore"] = {
+        Sea = 1,
+        Mob = {"Military Soldier","Military Spy"},
+        Pos = CFrame.new(-5815,84,8820)
+    },
+
+    ["Leather"] = {
+        Sea = 1,
+        Mob = {"Brute","Pirate","Desert Bandit","Mercenary"},
+        Pos = CFrame.new(-1145,15,4350)
+    },
+
+    ["Angel Wings"] = {
+        Sea = 1,
+        Mob = {"God's Guard","Shanda"},
+        Pos = CFrame.new(-4698,845,-1912)
+    },
+
+    ["Fish Tail"] = {
+        Sea = 1,
+        Mob = {"Fishman Warrior","Fishman Commando"},
+        Pos = CFrame.new(61163,19,1569)
+    },
+
+    -- SEA 2
+    ["Radioactive Material"] = {
+        Sea = 2,
+        Mob = {"Factory Staff"},
+        Pos = CFrame.new(295,73,-56)
+    },
+
+    ["Ectoplasm"] = {
+        Sea = 2,
+        Mob = {"Ship Deckhand","Ship Engineer","Ship Steward","Ship Officer"},
+        Pos = CFrame.new(923,125,32885)
+    },
+
+    ["Vampire Fang"] = {
+        Sea = 2,
+        Mob = {"Vampire"},
+        Pos = CFrame.new(-6033,7,-1317)
+    },
+
+    ["Mystic Droplet"] = {
+        Sea = 2,
+        Mob = {"Water Fighter","Sea Soldier"},
+        Pos = CFrame.new(-3385,239,-10542)
+    },
+
+    -- SEA 3
+    ["Conjured Cocoa"] = {
+        Sea = 3,
+        Mob = {"Chocolate Bar Battler","Cocoa Warrior"},
+        Pos = CFrame.new(231,25,-12200)
+    },
+
+    ["Dragon Scale"] = {
+        Sea = 3,
+        Mob = {"Dragon Crew Warrior","Dragon Crew Archer"},
+        Pos = CFrame.new(6594,383,139)
+    },
+
+    ["Demonic Wisp"] = {
+        Sea = 3,
+        Mob = {"Demonic Soul"},
+        Pos = CFrame.new(-9507,172,6158)
+    },
+
+    ["Gunpowder"] = {
+        Sea = 3,
+        Mob = {"Pistol Billionaire"},
+        Pos = CFrame.new(-469,74,5904)
+    },
+
+    ["Mini Tusk"] = {
+        Sea = 3,
+        Mob = {"Mythological Pirate"},
+        Pos = CFrame.new(-13545,470,-6912)
+    }
+}
+
+function CheckSeaMaterial(Sea)
+    local TableMaterial = {}
+
+    for Name,Data in pairs(MaterialList) do
+        if Data.Sea == Sea then
+            table.insert(TableMaterial,Name)
+        end
+    end
+
+    return TableMaterial
+end
+
+function GetMaterialMob(MobNames)
+    for _,v in pairs(workspace.Enemies:GetChildren()) do
+        if table.find(MobNames,v.Name)
+        and v:FindFirstChild("Humanoid")
+        and v:FindFirstChild("HumanoidRootPart")
+        and v.Humanoid.Health > 0 then
+            return v
+        end
+    end
+    return nil
+end
+
+spawn(function()
+    while task.wait() do
+        pcall(function()
+
+            if _G.AutoFarmMaterial
+            and MaterialList[_G.SelectMaterial] then
+
+                local Data = MaterialList[_G.SelectMaterial]
+
+                local Mob = GetMaterialMob(Data.Mob)
+
+                if not Mob then
+
+                    if (HumanoidRootPart.Position - Data.Pos.Position).Magnitude > 300 then
+                        TeleportToTarget(Data.Pos)
+                    end
+
+                else
+
+                    repeat task.wait()
+
+                        if not _G.AutoFarmMaterial then
+                            break
+                        end
+
+                        if not Mob.Parent then
+                            break
+                        end
+
+                        if Mob.Humanoid.Health <= 0 then
+                            break
+                        end
+
+                        local HRP = Mob.HumanoidRootPart
+
+                        PosMon = HRP.Position
+
+                        for _,Enemy in pairs(workspace.Enemies:GetChildren()) do
+                            if table.find(Data.Mob,Enemy.Name)
+                            and Enemy:FindFirstChild("Humanoid")
+                            and Enemy:FindFirstChild("HumanoidRootPart")
+                            and Enemy.Humanoid.Health > 0 then
+
+                                local EHRP = Enemy.HumanoidRootPart
+
+                                EHRP.CanCollide = false
+                                Enemy.Humanoid.WalkSpeed = 0
+                                Enemy.Humanoid.JumpPower = 0
+
+                                EHRP.Size = Vector3.new(60,60,60)
+
+                                Enemy.HumanoidRootPart.CFrame =
+                                    HRP.CFrame * CFrame.new(
+                                        math.random(-5,5),
+                                        math.random(0,3),
+                                        math.random(-5,5)
+                                    )
+
+                                if Enemy.Humanoid:FindFirstChild("Animator") then
+                                    Enemy.Humanoid.Animator:Destroy()
+                                end
+                            end
+                        end
+
+                        plr.SimulationRadius = math.huge
+
+                        local TweenPos =
+                            HRP.CFrame
+                            * CFrame.new(0,30,0)
+                            * CFrame.Angles(math.rad(-90),0,0)
+
+                        _tp(TweenPos)
+
+                        EquipWeapon(_G.SelectWeapon)
+
+                        game:GetService("VirtualUser"):CaptureController()
+                        game:GetService("VirtualUser"):Button1Down(Vector2.new(1280,672))
+
+                    until not Mob.Parent
+                    or Mob.Humanoid.Health <= 0
+                    or not _G.AutoFarmMaterial
+
+                end
+            end
+        end)
+    end
+end)
+
+--// =========================
+--// MATERIAL DROPDOWN
+--// =========================
+
+local SeaMaterial = {}
+
+if Sea1 then
+    SeaMaterial = CheckSeaMaterial(1)
+elseif Sea2 then
+    SeaMaterial = CheckSeaMaterial(2)
+elseif Sea3 then
+    SeaMaterial = CheckSeaMaterial(3)
+end
+
+MaterialTab:AddDropdown({
+    Name = "Select Material",
+    Default = "",
+    Options = SeaMaterial,
+    Callback = function(Value)
+        _G.SelectMaterial = Value
+    end
+})
+
+MaterialTab:AddToggle({
+    Name = "Auto Farm Material",
+    Default = false,
+    Callback = function(Value)
+        _G.AutoFarmMaterial = Value
+    end
+})
 
 Other = Window:AddTab("Farming Other")
 
