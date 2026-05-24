@@ -4380,74 +4380,179 @@ spawn(function()
 end)
 
 -- Farm Katakuri
-spawn(function()
-    while task.wait(1) do
-        if _G.StartFarm and _G.MethodSelect == "Farm Katakuri" then
-            pcall(function()
-                local player = game.Players.LocalPlayer
-                local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-                local questUI = player.PlayerGui:FindFirstChild("Main") and 
-                                player.PlayerGui.Main:FindFirstChild("Quest")
-                local enemies = workspace.Enemies
-                local bigMirror = workspace.Map.CakeLoaf.BigMirror
+-- [[ KHỞI TẠO BIẾN & THAM CHIẾU TỪ BANANAHUB ]] --
+local Players = game:Service("Players")
+local Workspace = game:Service("Workspace")
+local TweenService = game:Service("TweenService")
+local plr = Players.LocalPlayer
+
+-- Kiểm tra nhân vật
+local Character = plr.Character or plr.CharacterAdded:Wait()
+local Root = Character:WaitForChild("HumanoidRootPart")
+
+-- Cấu hình danh sách 4 NPC Katakuri theo đúng thứ tự level từ thấp đến cao
+local KatakuriNPCs = {
+    "Cookie Crafter", -- Lv. 2200
+    "Cake Guard",     -- Lv. 2225
+    "Baking Staff",   -- Lv. 2250
+    "Head Baker"      -- Lv. 2275
+}
+
+-[span_5](start_span)- Trích xuất tọa độ trung tâm bãi quái đảo Cake Island từ PosMsList trong file[span_5](end_span)
+-- Tọa độ trung tâm để đứng đợi quái spawn (Lấy vị trí của Cookie Crafter làm mốc)
+local CakeIslandCenter = CFrame.new(-2021, 38, -12028)
+
+-- Biến bật/tắt Farm và cấu hình an toàn
+_G.KatakuriFarmV1 = true
+_[span_6](start_span)[span_7](start_span)[span_8](start_span)G.SelectWeapon = _G.SelectWeapon or "Melee" -- Vũ khí mặc định (có thể đổi thành "Sword", "Blox Fruit")[span_6](end_span)[span_7](end_span)[span_8](end_span)
+[span_9](start_span)local FarmOffset = Vector3.new(0, 12, 0)     -- Đứng trên đầu quái 12 studs (Né đòn hoàn toàn, không lag)[span_9](end_span)
+[span_10](start_span)getgenv().TweenSpeed = 300                   -- Tốc độ di chuyển Tween mượt mà không giật[span_10](end_span)
+
+-- [[ CÁC HÀM BỔ TRỢ HỖ TRỢ FARM ]] --
+
+-[span_11](start_span)- Hàm di chuyển Tween mượt mà xuyên map (Kế thừa từ hàm _tp gốc của file)[span_11](end_span)
+local function TweenTo(targetCFrame)
+    local char = plr.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    local rootPart = char.HumanoidRootPart
+    
+    local distance = (targetCFrame.Position - rootPart.Position).Magnitude
+    if distance < 5 then return end
+
+    -[span_12](start_span)- Tắt va chạm để tránh bị kẹt địa hình hay rung giật khi tween xuyên các đảo Sea 3[span_12](end_span)
+    for _, part in pairs(char:GetChildren()) do
+        if part:IsA("BasePart") then part.CanCollide = false end
+    end
+
+    local tweenInfo = TweenInfo.new(distance / getgenv().TweenSpeed, Enum.EasingStyle.Linear)
+    local tween = TweenService:Create(rootPart, tweenInfo, {CFrame = targetCFrame})
+    tween:Play()
+    tween.Completed:Wait()
+
+    -- Triệt tiêu lực vật lý ngay sau khi di chuyển xong để chống lag/giật camera
+    if rootPart then rootPart.Velocity = Vector3.new(0,0,0) end
+end
+
+-[span_13](start_span)[span_14](start_span)- Hàm tìm NPC mục tiêu còn sống dựa vào thư mục Workspace.Enemies[span_13](end_span)[span_14](end_span)
+local function GetTargetNPC()
+    local enemiesFolder = Workspace:FindFirstChild("Enemies")
+    if not enemiesFolder then return nil end
+
+    for _, npcName in ipairs(KatakuriNPCs) do
+        for _, npc in pairs(enemiesFolder:GetChildren()) do
+            if npc.Name == npcName and npc:FindFirstChild("Humanoid") and npc.Humanoid.Health > 0 and npc:FindFirstChild("HumanoidRootPart") then
+                return npc
+            end
+        end
+    end
+    return nil
+end
+
+-[span_15](start_span)- Hàm Magnet (Gom quái): Gom toàn bộ bãi quái Lv 2200 (hoặc loại đang đánh) tụ lại 1 cục[span_15](end_span)
+local function BringAndGomEnemies(targetName, centralCFrame)
+    local enemiesFolder = Workspace:FindFirstChild("Enemies")
+    if not enemiesFolder then return end
+
+    for _, npc in pairs(enemiesFolder:GetChildren()) do
+        if npc.Name == targetName and npc:FindFirstChild("HumanoidRootPart") and npc:FindFirstChild("Humanoid") and npc.Humanoid.Health > 0 then
+            -[span_16](start_span)- Chỉ gom những con quái trong phạm vi gần bãi (khoảng cách 300 studs)[span_16](end_span)
+            if (npc.HumanoidRootPart.Position - centralCFrame.Position).Magnitude <= 300 then
+                npc.HumanoidRootPart.CFrame = centralCFrame
+                [span_17](start_span)npc.HumanoidRootPart.CanCollide = false -- Tắt va chạm của quái để chúng lồng vào nhau thành 1 cục[span_17](end_span)
+                [span_18](start_span)npc.Humanoid.WalkSpeed = 0              -- Làm bất động quái[span_18](end_span)
+                npc.Humanoid.JumpPower = 0
                 
-                if not root then return end
-                if not bigMirror:FindFirstChild("Other") then
-                    _tp(CFrame.new(-2077, 252, -12373))
-                end        
+                -[span_19](start_span)- Xóa hoạt ảnh di chuyển để quái không bị đứng giật lùi[span_19](end_span)
+                if npc.Humanoid:FindFirstChild("Animator") then 
+                    npc.Humanoid.Animator:Destroy()
+                end
+            end
+        end
+    end
+    -[span_20](start_span)- Mở rộng bán kính mô phỏng để server cập nhật quái chính xác[span_20](end_span)
+    plr.SimulationRadius = math.huge
+end
+
+-[span_21](start_span)- Hàm tự động trang bị vũ khí từ Backpack[span_21](end_span)
+local function EquipWeapon(weaponName)
+    local char = plr.Character
+    if not char then return end
+    
+    -- Nếu đã cầm vũ khí đúng loại trên tay thì bỏ qua
+    local currentTool = char:FindFirstChildOfClass("Tool")
+    if currentTool and (currentTool.Name == weaponName or currentTool.ToolTip == weaponName) then
+        return currentTool
+    end
+
+    -- Tìm trong Backpack để lấy ra
+    local backpack = plr:FindFirstChild("Backpack")
+    if backpack then
+        for _, tool in pairs(backpack:GetChildren()) do
+            if tool:IsA("Tool") and (tool.Name == weaponName or tool.ToolTip == weaponName) then
+                char.Humanoid:EquipTool(tool)
+                return tool
+            end
+        end
+    end
+    return currentTool
+end
+
+-- Hàm tự động kích hoạt Click tấn công mượt mà
+local function AutoAttack()
+    local char = plr.Character
+    if not char then return end
+    
+    local tool = char:FindFirstChildOfClass("Tool")
+    if tool then
+        tool:Activate()
+    end
+end
+
+-- [[ VÒNG LẶP FARM CHÍNH (MAIN LOOP) ]] --
+task.spawn(function()
+    while _G.KatakuriFarmV1 do
+        task.wait()
+        
+        pcall(function()
+            local char = plr.Character
+            local myRoot = char and char:FindFirstChild("HumanoidRootPart")
+            local myHumanoid = char and char:FindFirstChild("Humanoid")
+            
+            if myRoot and myHumanoid and myHumanoid.Health > 0 then
+                local targetNPC = GetTargetNPC()
                 
-                if bigMirror.Other.Transparency == 0 or enemies:FindFirstChild("Cake Prince") then
-                    local v = GetConnectionEnemies("Cake Prince")
-                    if v then
-                        repeat 
-                            wait() 
-                            Attack.Kill2(v, _G.StartFarm)  -- Sửa: dùng _G.StartFarm thay vì _G.Auto_Cake_Prince
-                        until not _G.StartFarm or not v.Parent or v.Humanoid.Health <= 0
-                    else
-                        if bigMirror.Other.Transparency == 0 and (CFrame.new(-1990.67, 4533, -14973.67).Position - root.Position).Magnitude >= 2000 then
-                            _tp(CFrame.new(-2151.82, 149.32, -12404.91))
-                        end
-                    end
+                if targetNPC then
+                    -- THỦ TỤC 1: CÓ QUÁI XUẤT HIỆN
+                    local npcRoot = targetNPC.HumanoidRootPart
+                    local targetPos = npcRoot.Position
+                    
+                    -[span_22](start_span)- Liên tục gom toàn bộ quái cùng loại lại vị trí của con quái mục tiêu[span_22](end_span)
+                    BringAndGomEnemies(targetNPC.Name, npcRoot.CFrame)
+                    
+                    -[span_23](start_span)- Tự động trang bị vũ khí đã chọn[span_23](end_span)
+                    EquipWeapon(_G.SelectWeapon)
+                    
+                    -- Khóa vị trí của người chơi đứng im cố định trên đầu bãi quái
+                    -- Kết hợp CFrame.lookAt để hướng góc nhìn xuống quái, triệt tiêu hoàn toàn lực rung giật hình ảnh
+                    myRoot.CFrame = CFrame.lookAt(targetPos + FarmOffset, targetPos)
+                    myRoot.Velocity = Vector3.new(0, 0, 0)
+                    
+                    -- Thực hiện đòn đánh liên tục
+                    AutoAttack()
                 else
-                    local CakePrince = {"Cookie Crafter","Cake Guard","Baking Staff","Head Baker"}
-                    local v = GetConnectionEnemies(CakePrince)
-                    if v then
-                        if _G.AcceptQuestC and questUI and not questUI.Visible then
-                            local questPos = CFrame.new(-1927.92, 37.8, -12842.54)
-                            _tp(questPos)
-                            
-                            local attempts = 0
-                            while attempts < 50 and (questPos.Position - root.Position).Magnitude > 50 do
-                                wait(0.2)
-                                attempts = attempts + 1
-                            end
-                            
-                            local randomQuest = math.random(1, 4)
-                            local questData = {
-                                [1] = {"StartQuest", "CakeQuest2", 2},
-                                [2] = {"StartQuest", "CakeQuest2", 1},
-                                [3] = {"StartQuest", "CakeQuest1", 1},
-                                [4] = {"StartQuest", "CakeQuest1", 2}
-                            }                    
-                            
-                            pcall(function()
-                                game.ReplicatedStorage.Remotes.CommF_:InvokeServer(unpack(questData[randomQuest]))
-                            end)
-                        end
-                        
-                        repeat 
-                            wait() 
-                            Attack.Kill(v, _G.StartFarm)  -- Sửa: dùng _G.StartFarm
-                        until not _G.StartFarm or not v or not v.Parent or 
-                              (v.Humanoid and v.Humanoid.Health <= 0) or 
-                              bigMirror.Other.Transparency == 0 or 
-                              (_G.AcceptQuestC and questUI and not questUI.Visible)
+                    -- THỦ TỤC 2: HẾT QUÁI (ĐỢI SPAWN)
+                    -[span_24](start_span)[span_25](start_span)- Tự động di chuyển tween mượt mà về tâm đảo Cake Island đã định vị sẵn[span_24](end_span)[span_25](end_span)
+                    local distanceToCenter = (myRoot.Position - CakeIslandCenter.Position).Magnitude
+                    if distanceToCenter > 15 then
+                        TweenTo(CakeIslandCenter)
                     else
-                        _tp(CFrame.new(-2077, 252, -12373))
+                        -- Khi đã ở tâm, khóa chặt tọa độ đứng chờ, triệt tiêu lực vật lý chống lag giật hình
+                        myRoot.CFrame = CakeIslandCenter
+                        myRoot.Velocity = Vector3.new(0, 0, 0)
                     end
                 end
-            end)
-        end
+            end
+        end)
     end
 end)
 
@@ -4697,8 +4802,8 @@ end)
 MeterialFarm = AutoModeFarm:AddLeftGroupbox("Farming Meterial")
 
 if World1 then MaterialList = {"Leather + Scrap Metal", "Angel Wings", "Magma Ore", "Fish Tail"}
-if World2 then MaterialList = {"Leather + Scrap Metal", "Radioactive Material", "Ectoplasm", "Mystic Droplet", "Magma Ore", "Vampire Fang"}
-if World3 then MaterialList = {"Scrap Metal", "Demonic Wisp", "Conjured Cocoa", "Dragon Scale", "Gunpowder", "Fish Tail", "Mini Tusk"}
+elseif World2 then MaterialList = {"Leather + Scrap Metal", "Radioactive Material", "Ectoplasm", "Mystic Droplet", "Magma Ore", "Vampire Fang"}
+elseif World3 then MaterialList = {"Scrap Metal", "Demonic Wisp", "Conjured Cocoa", "Dragon Scale", "Gunpowder", "Fish Tail", "Mini Tusk"}
 end
 
 MeterialFarm:AddDropdown("SelectMethodFarm", {
