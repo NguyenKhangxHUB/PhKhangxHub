@@ -2695,7 +2695,7 @@ Library = loadstring(game:HttpGet("https://pastefy.app/vgSGtrbP/raw"))()
 
 Window = Library:CreateWindow({
     Title = "Banana Cat Hub",
-    Subtitle = "- Ades Chô",
+    Subtitle = "- Blox Fruit",
     Image = "rbxassetid://130947856929902"
 })
 
@@ -2703,7 +2703,7 @@ wait(1)
 
 Library:Notify({
     Title = "Ui Library",
-    Description = "The UI Ades Chô automatically hides once executed.\nPress the button at the bottom-left of the screen to show the GUI.",
+    Description = "The UI automatically hides once executed.\nPress the button at the bottom-left of the screen to show the GUI.",
     Duration = 3
 })
 
@@ -3208,89 +3208,6 @@ end
 task.spawn(function()
     while task.wait(1) do
         pcall(UpdateServerTime)
-    end
-end)
-
---// STATUS GOD CHALICE & FIST OF DARKNESS + TIMER
-
-local JoinTime = tick()
-
-local StatusLabel = Instance.new("TextLabel")
-StatusLabel.Size = UDim2.new(0, 350, 0, 65)
-StatusLabel.Position = UDim2.new(0.5, -175, 0, 120)
-StatusLabel.BackgroundTransparency = 0.25
-StatusLabel.BackgroundColor3 = Color3.fromRGB(20,20,20)
-StatusLabel.TextColor3 = Color3.fromRGB(255,255,255)
-StatusLabel.TextStrokeTransparency = 0
-StatusLabel.Font = Enum.Font.GothamBold
-StatusLabel.TextScaled = false
-StatusLabel.TextSize = 16
-StatusLabel.Parent = game.CoreGui
-
-local function formatTime(seconds)
-    local h = math.floor(seconds / 3600)
-    local m = math.floor((seconds % 3600) / 60)
-    local s = math.floor(seconds % 60)
-    return string.format("%02d:%02d:%02d", h, m, s)
-end
-
-spawn(function()
-    while task.wait(1) do
-        pcall(function()
-
-            local chalice = false
-            local fist = false
-
-            -- Check inventory
-            if game.Players.LocalPlayer.Backpack:FindFirstChild("God's Chalice")
-            or game.Players.LocalPlayer.Character:FindFirstChild("God's Chalice") then
-                chalice = true
-            end
-
-            if game.Players.LocalPlayer.Backpack:FindFirstChild("Fist of Darkness")
-            or game.Players.LocalPlayer.Character:FindFirstChild("Fist of Darkness") then
-                fist = true
-            end
-
-            -- Check workspace
-            for _,v in pairs(workspace:GetDescendants()) do
-                if v.Name == "God's Chalice" then
-                    chalice = true
-                end
-
-                if v.Name == "Fist of Darkness" then
-                    fist = true
-                end
-            end
-
-            -- Timer
-            local passed = tick() - JoinTime
-
-            local chaliceRemain = math.max(0, 4*3600 - passed)
-            local fistRemain = math.max(0, 4*3600 - passed)
-
-            local chaliceText = chalice
-                and "✅ Chén Thánh: ĐÃ SPAWN"
-                or "⏳ Chén Thánh: " .. formatTime(chaliceRemain)
-
-            local fistText = fist
-                and "✅ Key Râu Đen: ĐÃ SPAWN"
-                or "⏳ Key Râu Đen: " .. formatTime(fistRemain)
-
-            StatusLabel.Text =
-                chaliceText ..
-                "\n" ..
-                fistText ..
-                "\n🕒 Server Time: " .. formatTime(passed)
-
-            -- Color
-            if chalice or fist then
-                StatusLabel.BackgroundColor3 = Color3.fromRGB(0,120,0)
-            else
-                StatusLabel.BackgroundColor3 = Color3.fromRGB(120,0,0)
-            end
-
-        end)
     end
 end)
 
@@ -3990,6 +3907,93 @@ SetAutoFarm:AddToggle("BringMob", {
         _B = Value
     end
 })
+-- ============================================================
+-- BRING MOB — bring CẢ mob farm + mob phụ về _lockedBringPos mỗi 0.1s
+-- Không bring nếu có player khác trong phạm vi 500 stud quanh player
+-- ============================================================
+spawn(function()
+    while task.wait(0.1) do
+        pcall(function()
+            -- Đồng bộ getgenv với _G
+            getgenv().IsFarming     = _G.StartFarm
+            getgenv().MaxBringCount = _G.BringCount or 2
+            getgenv().BringMob      = _G.AutoBring
+
+            -- Guard
+            if not getgenv().BringMob  then return end
+            if not getgenv().IsFarming then return end
+
+            local targetMob = getgenv().CurrentTargetMob
+            if not targetMob or not targetMob.Parent then return end
+
+            -- Phải có vị trí đã chốt (tức là tracking đã teleport ít nhất 1 lần)
+            local bringCF = _lockedBringPos
+            if not bringCF then return end
+
+            local myChar = Player.Character
+            if not myChar then return end
+            local myHRP = myChar:FindFirstChild("HumanoidRootPart")
+            if not myHRP then return end
+
+            -- ── CHECK PLAYER KHÁC trong 500 stud — nếu có thì KHÔNG bring ──
+            for _, otherPlayer in ipairs(Players:GetPlayers()) do
+                if otherPlayer == Player then continue end  -- bỏ qua bản thân
+                local otherChar = otherPlayer.Character
+                if not otherChar then continue end
+                local otherHRP = otherChar:FindFirstChild("HumanoidRootPart")
+                if not otherHRP then continue end
+                local distToOther = (otherHRP.Position - myHRP.Position).Magnitude
+                if distToOther <= 500 then
+                    return  -- có player khác gần → bỏ bring lần này
+                end
+            end
+
+            local mobName  = targetMob.Name
+            --   BringCount = 2 → bring thêm 1 (tổng 2 con dưới chân)
+            --   BringCount = 3 → bring thêm 2 (tổng 3 con)
+            local maxExtra = math.max(0, (getgenv().MaxBringCount or 2) - 1)
+
+            -- ── Tìm mob phụ cùng loại, KHÔNG giới hạn khoảng cách ──────
+            -- Collect tất cả mob cùng tên, sort theo khoảng cách gần nhất, lấy maxExtra con
+            local allSame = {}
+            for _, enemy in ipairs(workspace.Enemies:GetChildren()) do
+                if enemy == targetMob then continue end
+                local humanoid = enemy:FindFirstChild("Humanoid")
+                local rootPart = enemy:FindFirstChild("HumanoidRootPart")
+                if humanoid and rootPart and humanoid.Health > 0 and rootPart.Parent then
+                    if enemy.Name == mobName then
+                        local dist = (rootPart.Position - myHRP.Position).Magnitude
+                        -- Chỉ bring mob phụ trong phạm vi 300 stud tính từ player
+                        if dist <= 300 then
+                            table.insert(allSame, { rp = rootPart, dist = dist })
+                        end
+                    end
+                end
+            end
+            -- Sort gần → xa
+            table.sort(allSame, function(a, b) return a.dist < b.dist end)
+
+            local candidates = {}
+            for i = 1, math.min(maxExtra, #allSame) do
+                table.insert(candidates, allSame[i].rp)
+            end
+
+            -- ── Bring mob farm (luôn bring, kể cả khi không có mob phụ) ─
+            local farmHRP = targetMob:FindFirstChild("HumanoidRootPart")
+            local farmHum = targetMob:FindFirstChild("Humanoid")
+            if farmHRP and farmHum and farmHum.Health > 0 then
+                farmHRP.CFrame = bringCF
+                sethiddenproperty(Player, "SimulationRadius", math.huge)
+            end
+
+            -- ── Bring mob phụ (gần nhất, không giới hạn khoảng cách) ───
+            for _, rp in ipairs(candidates) do
+                rp.CFrame = bringCF
+                sethiddenproperty(Player, "SimulationRadius", math.huge)
+            end
+        end)
+    end
+end)
 
 SetAutoFarm:AddToggle("ObservationOpen", {
     Title = "Teleport Y if low hearth",
@@ -4224,6 +4228,138 @@ SelectMethodFarm:AddSlider({
     Default = 300,
     Callback = function(Value)
         _G.Safemode = Value
+    end
+})
+
+SelectMethodFarm:AddToggle("SummonTyrantSkies", {
+    Title = "Summon Tyrant of the Skies",
+    Default = false,
+    Callback = function(Value)
+        getgenv().SummonTyrantSkies = Value
+        
+        if Value then
+            -- [[ LUỒNG CHẠY TỰ ĐỘNG CHỨC NĂNG ]] --
+            task.spawn(function()
+                -[span_4](start_span)- Cấu hình tọa độ chiếc Bình (Brazier) và tên quái/boss theo Sea 3[span_4](end_span)
+                local BrazierPosition = CFrame.new(-900, 150, -5000) 
+                [span_5](start_span)local TyrantBossName = "Tyrant of the Skies"[span_5](end_span)
+                [span_6](start_span)local RequiredMobName = "Dragon Crew Warrior"[span_6](end_span)
+                
+                -- Hàm kiểm tra đủ số lượng quái phụ chưa
+                local function CheckEnoughMobs()
+                    local count = 0
+                    [span_7](start_span)[span_8](start_span)local enemiesFolder = game:GetService("Workspace"):FindFirstChild("Enemies")[span_7](end_span)[span_8](end_span)
+                    if enemiesFolder then
+                        for _, enemy in pairs(enemiesFolder:GetChildren()) do
+                            if enemy.Name == RequiredMobName and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 then
+                                count = count + 1
+                            end
+                        end
+                    end
+                    return count > 0
+                end
+
+                -- Hàm tìm mục tiêu (Ưu tiên Boss -> Quái phụ) để đứng lên đầu né đòn
+                local function GetTargetModel()
+                    [span_9](start_span)[span_10](start_span)local enemiesFolder = game:GetService("Workspace"):FindFirstChild("Enemies")[span_9](end_span)[span_10](end_span)
+                    if not enemiesFolder then return nil end
+                    
+                    local boss = enemiesFolder:FindFirstChild(TyrantBossName)
+                    if boss and boss:FindFirstChild("Humanoid") and boss.Humanoid.Health > 0 and boss:FindFirstChild("HumanoidRootPart") then
+                        return boss
+                    end
+                    
+                    for _, enemy in pairs(enemiesFolder:GetChildren()) do
+                        if enemy.Name == RequiredMobName and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 and enemy:FindFirstChild("HumanoidRootPart") then
+                            return enemy
+                        end
+                    end
+                    return nil
+                end
+
+                -- Vòng lặp chính thực thi hành động liên tục
+                while getgenv().SummonTyrantSkies do
+                    task.wait(0.1)
+                    pcall(function()
+                        [span_11](start_span)[span_12](start_span)local character = plr.Character or plr.CharacterAdded:Wait()[span_11](end_span)[span_12](end_span)
+                        if not character or not character:FindFirstChild("HumanoidRootPart") or not character:FindFirstChild("Humanoid") then return end
+                        if character.Humanoid.Health <= 0 then return end
+                        [span_13](start_span)local rootPart = character.HumanoidRootPart[span_13](end_span)
+                        
+                        -- Kiểm tra xem Boss đã xuất hiện trên bản đồ chưa
+                        [span_14](start_span)[span_15](start_span)local enemiesFolder = game:GetService("Workspace"):FindFirstChild("Enemies")[span_14](end_span)[span_15](end_span)
+                        local bossExist = enemiesFolder and enemiesFolder:FindFirstChild(TyrantBossName) and enemiesFolder[TyrantBossName]:FindFirstChild("Humanoid") and enemiesFolder[TyrantBossName].Humanoid.Health > 0
+                        
+                        if not bossExist then
+                            -- GIAI ĐOẠN 1: CHƯA CÓ BOSS -> ĐẾN BÌNH TRIỆU HỒI
+                            if CheckEnoughMobs() then
+                                -- Tắt va chạm nhân vật để đi xuyên vật thể mượt mà, chống rung lắc
+                                for _, part in pairs(character:GetChildren()) do
+                                    if part:IsA("BasePart") then part.CanCollide = false end
+                                end
+                                
+                                -[span_16](start_span)[span_17](start_span)- Dịch chuyển mượt mà tới Bình bằng hàm _tp gốc của BananaHub[span_16](end_span)[span_17](end_span)
+                                if (BrazierPosition.Position - rootPart.Position).Magnitude > 5 then
+                                    _[span_18](start_span)[span_19](start_span)tp(BrazierPosition)[span_18](end_span)[span_19](end_span)
+                                else
+                                    -- Đã đến sát Bình -> Cố định vị trí chống lag giật
+                                    rootPart.Velocity = Vector3.new(0, 0, 0)
+                                    
+                                    -[span_20](start_span)[span_21](start_span)- Tự động lấy vũ khí đang chọn hoặc trang bị Súng (ví dụ: Skull Guitar)[span_20](end_span)[span_21](end_span)
+                                    if _G.SelectWeapon then
+                                        [span_22](start_span)[span_23](start_span)EquipWeapon(_G.SelectWeapon)[span_22](end_span)[span_23](end_span)
+                                    else
+                                        [span_24](start_span)weaponSc("Gun")[span_24](end_span)
+                                    end
+                                    
+                                    -[span_25](start_span)- Tự động click chuột trái (M1) vào bình thông qua VirtualInputManager[span_25](end_span)
+                                    [span_26](start_span)VirtualInputManager:SendMouseButtonEvent(rootPart.Position.X, rootPart.Position.Y, 0, true, game, 1)[span_26](end_span)
+                                    task.wait(0.05)
+                                    [span_27](start_span)VirtualInputManager:SendMouseButtonEvent(rootPart.Position.X, rootPart.Position.Y, 0, false, game, 1)[span_27](end_span)
+                                end
+                            else
+                                -[span_28](start_span)- Nếu chưa đủ quái phụ, treo máy trên cao an toàn chờ quái tự hồi sinh[span_28](end_span)
+                                _[span_29](start_span)tp(BrazierPosition * CFrame.new(0, 50, 0))[span_29](end_span)
+                            end
+                        else
+                            -- GIAI ĐOẠN 2: BOSS XUẤT HIỆN -> KHÓA VỊ TRÍ TRÊN ĐẦU NÉ ĐÒN HOÀN TOÀN
+                            local target = GetTargetModel()
+                            if target then
+                                -- Cấu hình đứng trên đầu mục tiêu chính xác 12 studs để né mọi loại sát thương
+                                local safeOffset = CFrame.new(0, 12, 0)
+                                local targetCFrame = target.HumanoidRootPart.CFrame * safeOffset
+                                
+                                -- Tắt va chạm để giữ vị trí tuyệt đối, không dính hitbox quái
+                                for _, part in pairs(character:GetChildren()) do
+                                    if part:IsA("BasePart") then part.CanCollide = false end
+                                end
+                                
+                                -- Đồng bộ vị trí ôm sát theo thời gian thực (Anti-lag)
+                                rootPart.CFrame = targetCFrame
+                                rootPart.Velocity = Vector3.new(0, 0, 0)
+                                
+                                -[span_30](start_span)[span_31](start_span)- Tự động cầm vũ khí chọn sẵn để farm[span_30](end_span)[span_31](end_span)
+                                if _G.SelectWeapon then
+                                    [span_32](start_span)[span_33](start_span)EquipWeapon(_G.SelectWeapon)[span_32](end_span)[span_33](end_span)
+                                else
+                                    [span_34](start_span)weaponSc("Gun")[span_34](end_span)
+                                end
+                            end
+                        end
+                    end)
+                end
+            end)
+        else
+            -- Khi tắt chức năng, trả lại trạng thái va chạm vật lý bình thường cho nhân vật
+            pcall(function()
+                [span_35](start_span)[span_36](start_span)local character = plr.Character[span_35](end_span)[span_36](end_span)
+                if character then
+                    for _, part in pairs(character:GetChildren()) do
+                        if part:IsA("BasePart") then part.CanCollide = true end
+                    end
+                end
+            end)
+        end
     end
 })
 
@@ -4463,219 +4599,385 @@ spawn(function()
 end)
 
 -- Farm Katakuri
--- Bật chức năng farm
-getgenv().AutoFarmKatakuriV1 = true 
-_G.SelectWeapon = _G.SelectWeapon or "Melee" -- Vũ khí sử dụng (Melee, Sword, Blox Fruit)
+-- [[ KHỞI TẠO BIẾN & THAM CHIẾU TỪ BANANAHUB ]] --
+local Players = game:Service("Players")
+local Workspace = game:Service("Workspace")
+local TweenService = game:Service("TweenService")
+local plr = Players.LocalPlayer
 
--- Tốc độ Tween lấy mặc định của Hub hoặc bạn có thể tự chỉnh tại đây
-getgenv().TweenSpeed = getgenv().TweenSpeed or 300 
+-- Kiểm tra nhân vật
+local Character = plr.Character or plr.CharacterAdded:Wait()
+local Root = Character:WaitForChild("HumanoidRootPart")
 
--- Danh sách 4 quái mục tiêu theo yêu cầu
-local TargetMonsters = {
-    "Cookie Crafter",
-    "Cake Guard",
-    "Baking Staff",
-    "Head Baker"
+-- Cấu hình danh sách 4 NPC Katakuri theo đúng thứ tự level từ thấp đến cao
+local KatakuriNPCs = {
+    "Cookie Crafter", -- Lv. 2200
+    "Cake Guard",     -- Lv. 2225
+    "Baking Staff",   -- Lv. 2250
+    "Head Baker"      -- Lv. 2275
 }
 
--- Vị trí trung tâm Đảo Bánh để đứng chờ/bay lơ lửng khi quái chưa spawn
-local CakeIslandCenter = CFrame.new(-1932, 250, -12500)
+-[span_5](start_span)- Trích xuất tọa độ trung tâm bãi quái đảo Cake Island từ PosMsList trong file[span_5](end_span)
+-- Tọa độ trung tâm để đứng đợi quái spawn (Lấy vị trí của Cookie Crafter làm mốc)
+local CakeIslandCenter = CFrame.new(-2021, 38, -12028)
 
--- Hàm kiểm tra Model quái còn sống hay không
-local function isMonsterAlive(model)
-    return model and model:FindFirstChild("Humanoid") and model.Humanoid.Health > 0 and model:FindFirstChild("HumanoidRootPart")
+-- Biến bật/tắt Farm và cấu hình an toàn
+_G.KatakuriFarmV1 = true
+_[span_6](start_span)[span_7](start_span)[span_8](start_span)G.SelectWeapon = _G.SelectWeapon or "Melee" -- Vũ khí mặc định (có thể đổi thành "Sword", "Blox Fruit")[span_6](end_span)[span_7](end_span)[span_8](end_span)
+[span_9](start_span)local FarmOffset = Vector3.new(0, 12, 0)     -- Đứng trên đầu quái 12 studs (Né đòn hoàn toàn, không lag)[span_9](end_span)
+[span_10](start_span)getgenv().TweenSpeed = 300                   -- Tốc độ di chuyển Tween mượt mà không giật[span_10](end_span)
+
+-- [[ CÁC HÀM BỔ TRỢ HỖ TRỢ FARM ]] --
+
+-[span_11](start_span)- Hàm di chuyển Tween mượt mà xuyên map (Kế thừa từ hàm _tp gốc của file)[span_11](end_span)
+local function TweenTo(targetCFrame)
+    local char = plr.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    local rootPart = char.HumanoidRootPart
+    
+    local distance = (targetCFrame.Position - rootPart.Position).Magnitude
+    if distance < 5 then return end
+
+    -[span_12](start_span)- Tắt va chạm để tránh bị kẹt địa hình hay rung giật khi tween xuyên các đảo Sea 3[span_12](end_span)
+    for _, part in pairs(char:GetChildren()) do
+        if part:IsA("BasePart") then part.CanCollide = false end
+    end
+
+    local tweenInfo = TweenInfo.new(distance / getgenv().TweenSpeed, Enum.EasingStyle.Linear)
+    local tween = TweenService:Create(rootPart, tweenInfo, {CFrame = targetCFrame})
+    tween:Play()
+    tween.Completed:Wait()
+
+    -- Triệt tiêu lực vật lý ngay sau khi di chuyển xong để chống lag/giật camera
+    if rootPart then rootPart.Velocity = Vector3.new(0,0,0) end
 end
 
--- Hàm tìm quái mục tiêu trong Workspace
-local function getTargetMonster()
-    for _, enemy in pairs(workspace.Enemies:GetChildren()) do
-        if table.find(TargetMonsters, enemy.Name) and isMonsterAlive(enemy) then
-            return enemy
+-[span_13](start_span)[span_14](start_span)- Hàm tìm NPC mục tiêu còn sống dựa vào thư mục Workspace.Enemies[span_13](end_span)[span_14](end_span)
+local function GetTargetNPC()
+    local enemiesFolder = Workspace:FindFirstChild("Enemies")
+    if not enemiesFolder then return nil end
+
+    for _, npcName in ipairs(KatakuriNPCs) do
+        for _, npc in pairs(enemiesFolder:GetChildren()) do
+            if npc.Name == npcName and npc:FindFirstChild("Humanoid") and npc.Humanoid.Health > 0 and npc:FindFirstChild("HumanoidRootPart") then
+                return npc
+            end
         end
     end
     return nil
 end
 
--- Vòng lặp điều khiển tiến trình Farm chính
-spawn(function()
-    while task.wait(0.1) do
-        if getgenv().AutoFarmKatakuriV1 then
-            pcall(function()
-                local player = game.Players.LocalPlayer
-                local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-                if not root then return end
-                
-                -- Đọc số lượng quái đã diệt trên Server từ hệ thống của game
-                local killCount = game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("CakePrinceProgress")
-                local currentKills = tonumber(killCount) or 0
-                
-                -- Kiểm tra xem Boss Katakuri v1 (Cake Prince) có xuất hiện không
-                local boss = workspace.Enemies:FindFirstChild("Cake Prince")
-                
-                if boss and isMonsterAlive(boss) then
-                    -- BƯỚC 4: Nếu Boss xuất hiện, dùng tween chạy thẳng vào cửa sau lưng NPC và diệt boss
-                    -- Đứng TRÊN ĐẦU BOSS (CFrame * CFrame.new(0, 30, 0)) quái không đánh trúng
-                    _tp(boss.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0)) 
-                    
-                    if _B then 
-                        PosMon = boss.HumanoidRootPart.Position
-                        BringEnemy() -- Gom quái nếu tính năng bật
-                    end
-                    
-                    -- Tự động Click đánh thường
-                    EquipWeapon(_G.SelectWeapon)
-                    game:GetService("VirtualUser"):CaptureController()
-                    game:GetService("VirtualUser"):Button1Down(Vector2.new(1280, 720))
-                    
-                elseif currentKills >= 500 then
-                    -- BƯỚC 3: Đạt đủ 500 quái, di chuyển tween lại gần NPC triệu hồi (Big Mirror)
-                    local npcPosition = CFrame.new(-2077, 252, -12373)
-                    _tp(npcPosition)
-                    
-                    -- Khi đã tới vị trí NPC, tiến hành gọi Remote triệu hồi Katakuri v1
-                    if (root.Position - npcPosition.Position).Magnitude <= 15 then
-                        game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("CakePrinceSpawn")
-                        task.wait(1)
-                    end
-                    
-                else
-                    -- BƯỚC 1 & 2: Di chuyển tween tới Đảo Bánh để tự động farm 4 loại quái chỉ định
-                    local monster = getTargetMonster()
-                    
-                    if monster then
-                        -- CHỈ ĐỨNG TRÊN ĐẦU QUÁI (quái không động đến nhân vật, không đánh trúng)
-                        _tp(monster.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
-                        
-                        if _B then
-                            PosMon = monster.HumanoidRootPart.Position
-                            BringEnemy() -- Khóa vị trí quái bằng tính năng của Hub
-                        end
-                        
-                        -- Thực hiện tấn công thường
-                        EquipWeapon(_G.SelectWeapon)
-                        game:GetService("VirtualUser"):CaptureController()
-                        game:GetService("VirtualUser"):Button1Down(Vector2.new(1280, 720))
-                    else
-                        -- Khi đánh xong hết quái, nhân vật dùng tween di chuyển ra trung tâm đảo và BAY LƠ LỬNG trên không
-                        _tp(CakeIslandCenter)
-                        
-                        -- Triệt tiêu lực rơi tự do để nhân vật đứng yên trên không chờ quái spawn lại
-                        if root.Velocity.Magnitude > 0 then
-                            root.Velocity = Vector3.new(0, 0, 0)
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
+-[span_15](start_span)- Hàm Magnet (Gom quái): Gom toàn bộ bãi quái Lv 2200 (hoặc loại đang đánh) tụ lại 1 cục[span_15](end_span)
+local function BringAndGomEnemies(targetName, centralCFrame)
+    local enemiesFolder = Workspace:FindFirstChild("Enemies")
+    if not enemiesFolder then return end
 
--- Vòng lặp phụ NoClip liên tục giúp nhân vật không bị kẹt địa hình hoặc vật cản khi Tween di chuyển trên đầu quái
-spawn(function()
-    game:GetService("RunService").Stepped:Connect(function()
-        if getgenv().AutoFarmKatakuriV1 and game.Players.LocalPlayer.Character then
-            for _, part in pairs(game.Players.LocalPlayer.Character:GetDescendants()) do
-                if part:IsA("BasePart") then
-                    part.CanCollide = false
+    for _, npc in pairs(enemiesFolder:GetChildren()) do
+        if npc.Name == targetName and npc:FindFirstChild("HumanoidRootPart") and npc:FindFirstChild("Humanoid") and npc.Humanoid.Health > 0 then
+            -[span_16](start_span)- Chỉ gom những con quái trong phạm vi gần bãi (khoảng cách 300 studs)[span_16](end_span)
+            if (npc.HumanoidRootPart.Position - centralCFrame.Position).Magnitude <= 300 then
+                npc.HumanoidRootPart.CFrame = centralCFrame
+                [span_17](start_span)npc.HumanoidRootPart.CanCollide = false -- Tắt va chạm của quái để chúng lồng vào nhau thành 1 cục[span_17](end_span)
+                [span_18](start_span)npc.Humanoid.WalkSpeed = 0              -- Làm bất động quái[span_18](end_span)
+                npc.Humanoid.JumpPower = 0
+                
+                -[span_19](start_span)- Xóa hoạt ảnh di chuyển để quái không bị đứng giật lùi[span_19](end_span)
+                if npc.Humanoid:FindFirstChild("Animator") then 
+                    npc.Humanoid.Animator:Destroy()
                 end
             end
         end
-    end)
+    end
+    -[span_20](start_span)- Mở rộng bán kính mô phỏng để server cập nhật quái chính xác[span_20](end_span)
+    plr.SimulationRadius = math.huge
+end
+
+-[span_21](start_span)- Hàm tự động trang bị vũ khí từ Backpack[span_21](end_span)
+local function EquipWeapon(weaponName)
+    local char = plr.Character
+    if not char then return end
+    
+    -- Nếu đã cầm vũ khí đúng loại trên tay thì bỏ qua
+    local currentTool = char:FindFirstChildOfClass("Tool")
+    if currentTool and (currentTool.Name == weaponName or currentTool.ToolTip == weaponName) then
+        return currentTool
+    end
+
+    -- Tìm trong Backpack để lấy ra
+    local backpack = plr:FindFirstChild("Backpack")
+    if backpack then
+        for _, tool in pairs(backpack:GetChildren()) do
+            if tool:IsA("Tool") and (tool.Name == weaponName or tool.ToolTip == weaponName) then
+                char.Humanoid:EquipTool(tool)
+                return tool
+            end
+        end
+    end
+    return currentTool
+end
+
+-- Hàm tự động kích hoạt Click tấn công mượt mà
+local function AutoAttack()
+    local char = plr.Character
+    if not char then return end
+    
+    local tool = char:FindFirstChildOfClass("Tool")
+    if tool then
+        tool:Activate()
+    end
+end
+
+-- [[ VÒNG LẶP FARM CHÍNH (MAIN LOOP) ]] --
+task.spawn(function()
+    while _G.KatakuriFarmV1 do
+        task.wait()
+        
+        pcall(function()
+            local char = plr.Character
+            local myRoot = char and char:FindFirstChild("HumanoidRootPart")
+            local myHumanoid = char and char:FindFirstChild("Humanoid")
+            
+            if myRoot and myHumanoid and myHumanoid.Health > 0 then
+                local targetNPC = GetTargetNPC()
+                
+                if targetNPC then
+                    -- THỦ TỤC 1: CÓ QUÁI XUẤT HIỆN
+                    local npcRoot = targetNPC.HumanoidRootPart
+                    local targetPos = npcRoot.Position
+                    
+                    -[span_22](start_span)- Liên tục gom toàn bộ quái cùng loại lại vị trí của con quái mục tiêu[span_22](end_span)
+                    BringAndGomEnemies(targetNPC.Name, npcRoot.CFrame)
+                    
+                    -[span_23](start_span)- Tự động trang bị vũ khí đã chọn[span_23](end_span)
+                    EquipWeapon(_G.SelectWeapon)
+                    
+                    -- Khóa vị trí của người chơi đứng im cố định trên đầu bãi quái
+                    -- Kết hợp CFrame.lookAt để hướng góc nhìn xuống quái, triệt tiêu hoàn toàn lực rung giật hình ảnh
+                    myRoot.CFrame = CFrame.lookAt(targetPos + FarmOffset, targetPos)
+                    myRoot.Velocity = Vector3.new(0, 0, 0)
+                    
+                    -- Thực hiện đòn đánh liên tục
+                    AutoAttack()
+                else
+                    -- THỦ TỤC 2: HẾT QUÁI (ĐỢI SPAWN)
+                    -[span_24](start_span)[span_25](start_span)- Tự động di chuyển tween mượt mà về tâm đảo Cake Island đã định vị sẵn[span_24](end_span)[span_25](end_span)
+                    local distanceToCenter = (myRoot.Position - CakeIslandCenter.Position).Magnitude
+                    if distanceToCenter > 15 then
+                        TweenTo(CakeIslandCenter)
+                    else
+                        -- Khi đã ở tâm, khóa chặt tọa độ đứng chờ, triệt tiêu lực vật lý chống lag giật hình
+                        myRoot.CFrame = CakeIslandCenter
+                        myRoot.Velocity = Vector3.new(0, 0, 0)
+                    end
+                end
+            end
+        end)
+    end
 end)
 
 -- Farm Tyrant of the Skies
-spawn(function()
-    while task.wait(1) do
-        if _G.StartFarm and _G.MethodSelect == "Farm Tyrant of the Skies" then
-            pcall(function()
-                local player = game.Players.LocalPlayer
-                if not (player and player.Character) then return end
-                local hrp = player.Character:FindFirstChild("HumanoidRootPart")
-                if not hrp then return end
+-- [[ KHỞI TẠO BIẾN & THAM CHIẾU TỪ BANANAHUB ]] --
+local Players = game:Service("Players")
+local Workspace = game:Service("Workspace")
+local TweenService = game:Service("TweenService")
+local plr = Players.LocalPlayer
 
-                local enemiesFolder = workspace:FindFirstChild("Enemies")
-                local bossPos = Vector3.new(-16268.287, 152.616, 1390.773)
-                
-                if (hrp.Position - bossPos).Magnitude > 5 then
-                    if _tp then 
-                        pcall(_tp, CFrame.new(bossPos))
-                    else
-                        pcall(function() 
-                            player.Character.HumanoidRootPart.CFrame = CFrame.new(bossPos) 
-                        end)
-                    end
-                    
-                    local attempts = 0
-                    repeat 
-                        wait() 
-                        attempts = attempts + 1
-                    until not _G.StartFarm or 
-                          (player.Character and player.Character:FindFirstChild("HumanoidRootPart") and 
-                          (player.Character.HumanoidRootPart.Position - bossPos).Magnitude <= 5) or
-                          attempts > 100
-                end
+-- Khởi tạo nhân vật và gốc tọa độ
+local Character = plr.Character or plr.CharacterAdded:Wait()
+local Root = Character:WaitForChild("HumanoidRootPart")
 
-                local boss = enemiesFolder and enemiesFolder:FindFirstChild("Tyrant of the Skies")
-                if boss and boss:FindFirstChild("Humanoid") and boss.Humanoid.Health > 0 then
-                    repeat
-                        if not _G.StartFarm then break end
-                        if AutoHaki then pcall(AutoHaki) end
-                        if SelectWeapon and EquipTool then pcall(EquipTool, SelectWeapon) end
-                        if Attack and Attack.Kill then
-                            pcall(function() Attack.Kill(boss, _G.StartFarm) end)
-                        end
-                        wait()
-                    until not _G.StartFarm or not boss.Parent or not boss:FindFirstChild("Humanoid") or boss.Humanoid.Health <= 0
-                    return
-                end
+-- Cấu hình danh sách 3 loại NPC tại Tiki Outpost để farm triệu hồi Boss
+local TyrantNPCs = {
+    "Isle Outlaw",
+    "Island Boy",
+    "Sun-kissed Warrior"
+}
 
-                local mobList = {"Serpent Hunter","Skull Slayer","Isle Champion","Sun-kissed Warrior"}
-                if enemiesFolder then
-                    for _, mobName in ipairs(mobList) do
-                        if not _G.StartFarm then break end
-                        for _, mob in ipairs(enemiesFolder:GetChildren()) do
-                            if not _G.StartFarm then break end
-                            if mob and mob.Name == mobName and mob:FindFirstChild("HumanoidRootPart") and 
-                               mob:FindFirstChild("Humanoid") and mob.Humanoid.Health > 0 then
-                               
-                                hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-                                if not hrp then break end
-                                
-                                if (hrp.Position - mob.HumanoidRootPart.Position).Magnitude > 5000 then
-                                    if _tp then 
-                                        pcall(_tp, mob.HumanoidRootPart.CFrame * CFrame.new(0,30,0))
-                                    else
-                                        pcall(function() 
-                                            player.Character.HumanoidRootPart.CFrame = mob.HumanoidRootPart.CFrame * CFrame.new(0,30,0) 
-                                        end)
-                                    end
-                                    
-                                    local t0 = tick()
-                                    repeat 
-                                        wait() 
-                                        hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart") 
-                                    until not _G.StartFarm or not hrp or 
-                                          (hrp.Position - mob.HumanoidRootPart.Position).Magnitude <= 6 or 
-                                          tick() - t0 > 8
-                                end
-                                
-                                repeat
-                                    if not _G.StartFarm then break end
-                                    if AutoHaki then pcall(AutoHaki) end
-                                    if SelectWeapon and EquipTool then pcall(EquipTool, SelectWeapon) end
-                                    if Attack and Attack.Kill then
-                                        pcall(function() Attack.Kill(mob, _G.StartFarm) end)
-                                    end
-                                    wait()
-                                until not _G.StartFarm or not mob.Parent or 
-                                      not mob:FindFirstChild("Humanoid") or 
-                                      mob.Humanoid.Health <= 0
-                            end
-                        end
-                    end
-                end
-            end)
+-- Định vị tọa độ của các bãi quái (Được trích xuất & tối ưu dựa trên cấu trúc map Tiki Outpost của Sea 3)
+local SpawnPositions = {
+    [span_5](start_span)["Isle Outlaw"]        = CFrame.new(-16538, 55, 1049), --[span_5](end_span)
+    [span_6](start_span)["Island Boy"]         = CFrame.new(-16347, 64, 984),  --[span_6](end_span)
+    [span_7](start_span)["Sun-kissed Warrior"] = CFrame.new(-16602, 130, 1087) --[span_7](end_span)
+}
+
+-- Vị trí trung tâm an toàn của đảo Tiki Outpost để đứng chờ khi bãi quái chưa hồi sinh
+[span_8](start_span)local TikiOutpostCenter = CFrame.new(-16541, 57, 1051) --[span_8](end_span)
+
+-- Cấu hình Farm hệ thống
+_G.AutoTyrantOfTheSkies = true
+_[span_9](start_span)G.SelectWeapon = _G.SelectWeapon or "Melee" -- Vũ khí dùng để farm (Melee, Sword, Blox Fruit)[span_9](end_span)
+local FarmOffset = Vector3.new(0, 12, 0)     -- Đứng trên đầu quái đúng 12 studs để chống quái đánh trúng
+[span_10](start_span)getgenv().TweenSpeed = 300                   -- Tốc độ di chuyển tween mượt mà xuyên đảo[span_10](end_span)
+
+-- [[ CÁC HÀM XỬ LÝ HỖ TRỢ CHỐNG LAG / GOM QUÁI ]] --
+
+-- Hàm di chuyển Tween mượt mà toàn diện xuyên Sea 3 (Kế thừa từ hàm TweenTo gốc của file)
+local function TweenTo(targetCFrame)
+    local char = plr.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    local rootPart = char.HumanoidRootPart
+    
+    local distance = (targetCFrame.Position - rootPart.Position).Magnitude
+    if distance < 5 then return end
+
+    -[span_11](start_span)- Tắt va chạm tạm thời để nhân vật bay xuyên địa hình không bị rung, khựng giật lắc[span_11](end_span)
+    for _, part in pairs(char:GetChildren()) do
+        if part:IsA("BasePart") then part.CanCollide = false end
+    end
+
+    [span_12](start_span)local tweenInfo = TweenInfo.new(distance / getgenv().TweenSpeed, Enum.EasingStyle.Linear)[span_12](end_span)
+    local tween = TweenService:Create(rootPart, tweenInfo, {CFrame = targetCFrame})
+    tween:Play()
+    tween.Completed:Wait()
+
+    -[span_13](start_span)- Đóng băng vận tốc ngay sau khi tới nơi để cố định góc nhìn và chống lag camera[span_13](end_span)
+    if rootPart then rootPart.Velocity = Vector3.new(0,0,0) end
+end
+
+-[span_14](start_span)- Hàm tìm NPC mục tiêu còn sống theo thứ tự ưu tiên bãi quái[span_14](end_span)
+local function GetTargetNPC()
+    local enemiesFolder = Workspace:FindFirstChild("Enemies")
+    if not enemiesFolder then return nil end
+
+    for _, npcName in ipairs(TyrantNPCs) do
+        for _, npc in pairs(enemiesFolder:GetChildren()) do
+            [span_15](start_span)if npc.Name == npcName and npc:FindFirstChild("Humanoid") and npc.Humanoid.Health > 0 and npc:FindFirstChild("HumanoidRootPart") then[span_15](end_span)
+                return npc
+            end
         end
+    end
+    return nil
+end
+
+-[span_16](start_span)- Hàm gom toàn bộ quái tại bãi hiện tại thành 1 cục duy nhất (Kế thừa từ hàm BringEnemy gốc)[span_16](end_span)
+local function BringAndGomEnemies(targetName, centralCFrame)
+    local enemiesFolder = Workspace:FindFirstChild("Enemies")
+    if not enemiesFolder then return end
+
+    for _, npc in pairs(enemiesFolder:GetChildren()) do
+        [span_17](start_span)if npc.Name == targetName and npc:FindFirstChild("HumanoidRootPart") and npc:FindFirstChild("Humanoid") and npc.Humanoid.Health > 0 then[span_17](end_span)
+            -[span_18](start_span)- Chỉ hút những con quái thuộc phạm vi 300 studs của bãi đó[span_18](end_span)
+            [span_19](start_span)if (npc.HumanoidRootPart.Position - centralCFrame.Position).Magnitude <= 300 then[span_19](end_span)
+                [span_20](start_span)npc.HumanoidRootPart.CFrame = centralCFrame -- Gom chung vào 1 tọa độ mốc[span_20](end_span)
+                npc.HumanoidRootPart.CanCollide = false     -- Tắt va chạm để quái gộp lồng vào nhau
+                [span_21](start_span)npc.Humanoid.WalkSpeed = 0                  -- Làm đóng băng quái không cho chạy[span_21](end_span)
+                [span_22](start_span)npc.Humanoid.JumpPower = 0                  -- Chống quái nhảy lên[span_22](end_span)
+                
+                -[span_23](start_span)- Phá hủy bộ hoạt ảnh di chuyển để tránh việc quái giật lùi lệch tâm[span_23](end_span)
+                if npc.Humanoid:FindFirstChild("Animator") then 
+                    [span_24](start_span)npc.Humanoid.Animator:Destroy() --[span_24](end_span)
+                end
+            end
+        end
+    end
+    [span_25](start_span)plr.SimulationRadius = math.huge -- Ép client nhận diện mượt mà khoảng cách xa[span_25](end_span)
+end
+
+-[span_26](start_span)- Hàm tự động trang bị vũ khí đã chọn[span_26](end_span)
+local function EquipWeapon(weaponName)
+    local char = plr.Character
+    if not char then return end
+    
+    local currentTool = char:FindFirstChildOfClass("Tool")
+    if currentTool and (currentTool.Name == weaponName or currentTool.ToolTip == weaponName) then
+        return
+    end
+
+    [span_27](start_span)local backpack = plr:FindFirstChild("Backpack")[span_27](end_span)
+    if backpack then
+        [span_28](start_span)for _, tool in pairs(backpack:GetChildren()) do[span_28](end_span)
+            if tool:IsA("Tool") and (tool.Name == weaponName or tool.ToolTip == weaponName) then
+                [span_29](start_span)char.Humanoid:EquipTool(tool)[span_29](end_span)
+                break
+            end
+        end
+    end
+end
+
+-- Hàm tự động kích hoạt Click/Attack liên tục từ Tool
+local function AutoAttack()
+    local char = plr.Character
+    local tool = char and char:FindFirstChildOfClass("Tool")
+    if tool then
+        tool:Activate()
+    end
+end
+
+-[span_30](start_span)- Hàm kiểm tra xem Boss "Tyrant of the Skies" đã xuất hiện hay chưa[span_30](end_span)
+local function IsBossSpawned()
+    local enemiesFolder = Workspace:FindFirstChild("Enemies")
+    [span_31](start_span)if enemiesFolder and enemiesFolder:FindFirstChild("Tyrant of the Skies") then[span_31](end_span)
+        local boss = enemiesFolder["Tyrant of the Skies"]
+        if boss:FindFirstChild("Humanoid") and boss.Humanoid.Health > 0 then
+            return boss
+        end
+    end
+    return nil
+end
+
+-- [[ VÒNG LẶP ĐIỀU KHIỂN CHÍNH (MAIN FARM LOOP) ]] --
+task.spawn(function()
+    while _G.AutoTyrantOfTheSkies do
+        task.wait()
+        
+        pcall(function()
+            local char = plr.Character
+            local myRoot = char and char:FindFirstChild("HumanoidRootPart")
+            local myHumanoid = char and char:FindFirstChild("Humanoid")
+            
+            if myRoot and myHumanoid and myHumanoid.Health > 0 then
+                
+                -[span_32](start_span)- KIỂM TRA ƯU TIÊN: Nếu Boss "Tyrant of the Skies" xuất hiện thì tập trung giết Boss[span_32](end_span)
+                local bossNPC = IsBossSpawned()
+                if bossNPC and bossNPC:FindFirstChild("HumanoidRootPart") then
+                    local bossRoot = bossNPC.HumanoidRootPart
+                    local bossPos = bossRoot.Position
+                    
+                    [span_33](start_span)EquipWeapon(_G.SelectWeapon)[span_33](end_span)
+                    
+                    -- Khóa vị trí trên đầu Boss, triệt tiêu vật lý và xả sát thương
+                    myRoot.CFrame = CFrame.lookAt(bossPos + FarmOffset, bossPos)
+                    myRoot.Velocity = Vector3.new(0, 0, 0)
+                    AutoAttack()
+                    
+                else
+                    -- TIẾN TRÌNH FARM QUÁI THƯỜNG ĐỂ TRIỆU HỒI
+                    local targetNPC = GetTargetNPC()
+                    
+                    if targetNPC then
+                        -- THỦ TỤC 1: CÓ QUÁI XUẤT HIỆN Ở CÁC BÃI
+                        local npcRoot = targetNPC.HumanoidRootPart
+                        local targetPos = npcRoot.Position
+                        
+                        -[span_34](start_span)- Liên tục gom toàn bộ quái cùng tên tại bãi đó thành 1 điểm[span_34](end_span)
+                        BringAndGomEnemies(targetNPC.Name, npcRoot.CFrame)
+                        
+                        -[span_35](start_span)- Tự động lấy vũ khí[span_35](end_span)
+                        [span_36](start_span)EquipWeapon(_G.SelectWeapon)[span_36](end_span)
+                        
+                        -- Khóa chặt CFrame người chơi đứng im trên đầu bãi quái (Không giật, không rung màn hình)
+                        -- CFrame.lookAt hướng góc nhìn vuông góc xuống bãi quái, triệt tiêu lực kéo vật lý
+                        myRoot.CFrame = CFrame.lookAt(targetPos + FarmOffset, targetPos)
+                        myRoot.Velocity = Vector3.new(0, 0, 0)
+                        
+                        -- Tấn công liên tục
+                        AutoAttack()
+                    else
+                        -- THỦ TỤC 2: TOÀN BỘ CÁC BÃI HẾT QUÁI (ĐANG CHỜ HỒI SINH)
+                        -[span_37](start_span)- Di chuyển tween mượt mà lùi về điểm tâm đảo Tiki Outpost để đứng chờ[span_37](end_span)
+                        local distanceToCenter = (myRoot.Position - TikiOutpostCenter.Position).Magnitude
+                        if distanceToCenter > 15 then
+                            [span_38](start_span)TweenTo(TikiOutpostCenter) --[span_38](end_span)
+                        else
+                            -- Giữ cơ thể cố định tại tâm đảo chống rung hình khi đợi quái hồi sinh
+                            myRoot.CFrame = TikiOutpostCenter
+                            myRoot.Velocity = Vector3.new(0, 0, 0)
+                        end
+                    end
+                end
+                
+            end
+        end)
     end
 end)
 
@@ -4701,212 +5003,515 @@ spawn(function()
     end
 end)
 
-MeterialFarm = AutoModeFarm:AddLeftGroupbox("Mastery Farm")
-
-MeterialFarm:AddDropdown("SelectMethodFarm", {
-    Title = "Select Method Farm Mastery",
-    Values = {"Blox Fruit", "Gun"},
-    Default = nil,
-    Callback = function(Value)
-        _G.MasteryTypeSelect = Value
-    end
-})
-
-MeterialFarm:AddToggle("MasteryStart", {
-    Title = "Farm Mastery",
+-- Thêm chức năng Auto Farm Dragon Scale vào nhóm thiết lập Farm
+SelectMethodFarm:AddToggle("AutoFarmDragonScale", {
+    Title = "Farm Dragon Scale",
     Default = false,
     Callback = function(Value)
-        _G.MasteryFarmStart = Value
-        if not _G.StartFarn then
-        Library:Notify({
-            Title = "Ades Chô Hub",
-            Description = "Open Start Farm Plz!",
-            Duration = 3
-        })
-        end
-    end
-})
-     Max = 500,
-    Default = 300,
-    Callback = function(Value)
-        _G.Safemode = Value
-    end
-})
--- Thêm các biến cần thiết
-local RunSer = game:GetService("RunService")
-local vim1 = game:GetService("VirtualInputManager")
-local Sec = 0.1 -- Hoặc giá trị bạn muốn
-local mastery2 = {} -- Cần định nghĩa table này
-
-spawn(function()
-    RunSer.RenderStepped:Connect(function() 
-        pcall(function()
-            if _G.MasteryFarmStart and _G.StartFarm and not _G.MethodSelect then  -- Sửa: _G.MethodSelect thay vì _G.Method
-                local notifications = plr.PlayerGui:FindFirstChild("Notifications")
-                if notifications then
-                    for a, b in pairs(notifications:GetChildren()) do 
-                        if b.Name == "NotificationTemplate" then 
-                            if string.find(b.Text, "Skill locked!") then 
-                                b:Destroy()
-                            end 
-                        end 
-                    end 
+        getgenv().AutoFarmDragonScale = Value
+        
+        if Value then
+            -- Tắt va chạm nhân vật khi bật để di chuyển mượt mà không giật lag
+            task.spawn(function()
+                while getgenv().AutoFarmDragonScale do
+                    pcall(function()
+                        local char = game.Players.LocalPlayer.Character
+                        if char then
+                            for _, part in pairs(char:GetChildren()) do
+                                if part:IsA("BasePart") then
+                                    part.CanCollide = false
+                                end
+                            end
+                        end
+                    end)
+                    task.wait(0.2)
                 end
-            end 
-        end)
-    end) 
-end)
+            end)
+            
+            -- Luồng chính xử lý tìm quái, di chuyển, gom quái và tấn công
+            task.spawn(function()
+                -- Tọa độ gốc của bãi quái Dragon Crew (Lấy từ bảng PosMsList trong script)
+                local MobPosition = CFrame.new(7021.50439453125, 55.76270294189453, -730.1290893554688)
+                local MobNames = {"Dragon Crew Warrior — Lv. 1575", "Dragon Crew Archer — Lv. 1600"}
 
-spawn(function()
-    local waitTime = 0.1  -- Khai báo biến waitTime
-    while wait(waitTime) do  -- Sửa: wait(waitTime) thay vì wait(Sec)
-        pcall(function()
-            if _G.MasteryFarmStart and _G.StartFarm and not _G.MethodSelect then  -- Sửa: _G.MethodSelect thay vì _G.Method
-                if _G.MasteryTypeSelect == "Blox Fruit" then
-                    local v = GetConnectionEnemies(mastery2)  -- mastery2 cần được định nghĩa
-                    if v and v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") then		
-                        HealthM = v.Humanoid.MaxHealth * 70 / 100
-                        repeat 
-                            wait()
-                            MousePos = v.HumanoidRootPart.Position
-                            Attack.Mas(v, _G.MasteryFarmStart)
-                        until not _G.MasteryFarmStart or not v.Parent or 
-                              (v.Humanoid and v.Humanoid.Health <= 0)		        
-                    else
-                        _tp(CFrame.new(-9495.6806640625, 453.58624267578125, 5977.3486328125)) 		    
+                -- Hàm tìm quái còn sống trong Folder Enemies của Workspace
+                local function GetValidTarget()
+                    local enemiesFolder = game:GetService("Workspace"):FindFirstChild("Enemies")
+                    if enemiesFolder then
+                        for _, enemy in pairs(enemiesFolder:GetChildren()) do
+                            if (enemy.Name == MobNames[1] or enemy.Name == MobNames[2]) 
+                            and enemy:FindFirstChild("Humanoid") 
+                            and enemy.Humanoid.Health > 0 
+                            and enemy:FindFirstChild("HumanoidRootPart") then
+                                return enemy
+                            end
+                        end
                     end
-                elseif _G.MasteryTypeSelect == "Gun" then
-                    local v = GetConnectionEnemies(mastery2)  -- mastery2 cần được định nghĩa
-                    if v and v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") then		      
-                        HealthM = v.Humanoid.MaxHealth * 70 / 100
-                        repeat 
-                            wait()
-                            MousePos = v.HumanoidRootPart.Position
-                            Attack.Masgun(v, _G.MasteryFarmStart)
-                            
-                            local Modules = replicated:FindFirstChild("Modules")
-                            local Net = Modules and Modules:FindFirstChild("Net")
-                            local RE_ShootGunEvent = Net and Net:FindFirstChild("RE/ShootGunEvent")    
-                            
-                            local character = plr.Character
-                            if not character then break end
-                            
-                            local tool = character:FindFirstChildOfClass("Tool")
-                            if not tool then break end
-                            
-                            if tool.ToolTip ~= "Gun" then break end
-                            
-                            if tool and tool.Name == 'Skull Guitar' then
-                                SoulGuitar = true
-                                if tool:FindFirstChild("RemoteEvent") then
-                                    tool.RemoteEvent:FireServer("TAP", MousePos)
-                                end
-                                if _G.MasteryFarmStart then
-                                    vim1:SendMouseButtonEvent(0, 0, 0, true, game, 1)
-                                    wait(0.05)
-                                    vim1:SendMouseButtonEvent(0, 0, 0, false, game, 1)
-                                    wait(0.05)
-                                end
-                            elseif tool and tool.Name ~= 'Skull Guitar' then
-                                SoulGuitar = false
-                                if RE_ShootGunEvent then
-                                    RE_ShootGunEvent:FireServer(MousePos, { v.HumanoidRootPart })
-                                end
-                                if _G.MasteryFarmStart then
-                                    vim1:SendMouseButtonEvent(0, 0, 0, true, game, 1)
-                                    wait(0.05)
-                                    vim1:SendMouseButtonEvent(0, 0, 0, false, game, 1)
-                                    wait(0.05)
-                                end
-                            end		            		
-                        until not _G.MasteryFarmStart or not v.Parent or 
-                              (v.Humanoid and v.Humanoid.Health <= 0)    
-                        SoulGuitar = false     		         		        
-                    else
-                        _tp(CFrame.new(-9495.6806640625, 453.58624267578125, 5977.3486328125)) 
-                    end
+                    return nil
                 end
-            end
-        end)
-    end
-end)
 
-MeterialFarm = AutoModeFarm:AddLeftGroupbox("Farming Meterial")
+                while getgenv().AutoFarmDragonScale do
+                    task.wait(0.05)
+                    pcall(function()
+                        local character = game.Players.LocalPlayer.Character
+                        if not character or not character:FindFirstChild("HumanoidRootPart") or character.Humanoid.Health <= 0 then return end
+                        
+                        local rootPart = character.HumanoidRootPart
+                        local targetMob = GetValidTarget()
 
-if World1 then MaterialList = {"Leather + Scrap Metal", "Angel Wings", "Magma Ore", "Fish Tail"}
-elseif World2 then MaterialList = {"Leather + Scrap Metal", "Radioactive Material", "Ectoplasm", "Mystic Droplet", "Magma Ore", "Vampire Fang"}
-elseif World3 then MaterialList = {"Scrap Metal", "Demonic Wisp", "Conjured Cocoa", "Dragon Scale", "Gunpowder", "Fish Tail", "Mini Tusk"}
-end
+                        if targetMob then
+                            -- GIAI ĐOẠN ĐANG CÓ QUÁI: Khóa vị trí trên đầu quái cách 12 studs để né đòn và chống rung giật
+                            local targetCFrame = targetMob.HumanoidRootPart.CFrame * CFrame.new(0, 12, 0)
+                            
+                            -- Nếu khoảng cách quá xa thì dùng Tween dịch chuyển mượt đến quái
+                            if (targetCFrame.Position - rootPart.Position).Magnitude > 20 then
+                                shouldTween = true
+                                _tp(targetCFrame)
+                            else
+                                -- Khi đã ở khoảng cách an toàn trên đầu quái: Khóa cứng vị trí và triệt tiêu vận tốc chống lag giật
+                                rootPart.CFrame = targetCFrame
+                                rootPart.Velocity = Vector3.new(0, 0, 0)
+                                shouldTween = false
+                                
+                                -- Gọi hàm Gom quái (BringEnemy) có sẵn trong BananaHub
+                                _B = true -- Kích hoạt điều kiện trong hàm gốc
+                                if not targetMob:GetAttribute("Locked") then 
+                                    targetMob:SetAttribute("Locked", targetMob.HumanoidRootPart.CFrame) 
+                                end
+                                PosMon = targetMob:GetAttribute("Locked").Position
+                                BringEnemy()
+                                
+                                -- Tự động trang bị vũ khí người dùng đã chọn trước đó
+                                if _G.SelectWeapon then
+                                    EquipWeapon(_G.SelectWeapon)
+                                else
+                                    weaponSc("Melee") -- Mặc định dùng Melee nếu chưa chọn vũ khí
+                                end
 
-MeterialFarm:AddDropdown("SelectMethodFarm", {
-    Title = "Select Meterial",
-    Values = MaterialList,
-    Default = nil,
-    Callback = function(Value)
-        _G.SelectMaterial = Value 
-    end
-})
-
-MeterialFarm:AddToggle("MeterialStart", {
-    Title = "Farm Meterial",
-    Default = false,
-    Callback = function(Value)
-        _G.AutoMaterial = Value 
-        if not _G.StartFarm then
-            Library:Notify({
-                Title = "Night Slayer Hub",
-                Description = "Open Start Farm Plz!",
-                Duration = 3
-            })
-        end
-    end
-})
-
-spawn(function()
-    local function processEnemy(v, EnemyName)
-        if v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") and v.Humanoid.Health > 0 then
-            if v.Name == EnemyName then 
-                repeat 
-                    wait() 
-                    Attack.Kill(v, _G.AutoMaterial)  -- Sửa: _G thay vì getgenv()
-                until not _G.AutoMaterial or not v.Parent or v.Humanoid.Health <= 0  -- Sửa: _G thay vì getgenv()
-            end
-        end
-    end
-    
-    local function handleEnemySpawns()
-        for _, v in pairs(game:GetService("Workspace")["_WorldOrigin"].EnemySpawns:GetChildren()) do
-            for _, EnemyName in ipairs(MMon) do
-                if string.find(v.Name, EnemyName) then
-                    local character = game.Players.LocalPlayer.Character
-                    local hrp = character and character:FindFirstChild("HumanoidRootPart")
-                    if hrp and (hrp.Position - v.Position).Magnitude >= 10 then
-                        _tp(v.CFrame * Pos)
-                    end
+                                -- Tự động click tấn công quái liên tục không ngừng
+                                game:GetService("VirtualInputManager"):SendMouseButtonEvent(rootPart.Position.X, rootPart.Position.Y, 0, true, game, 1)
+                                task.wait(0.05)
+                                game:GetService("VirtualInputManager"):SendMouseButtonEvent(rootPart.Position.X, rootPart.Position.Y, 0, false, game, 1)
+                            end
+                        else
+                            -- GIAI ĐOẠN HẾT QUÁI (CHỜ SPAWN): Đứng tránh sang một bên an toàn cách bãi quái 45 studs trên cao để chờ quái hồi sinh
+                            local WaitCFrame = MobPosition * CFrame.new(0, 45, 0)
+                            
+                            if (WaitCFrame.Position - rootPart.Position).Magnitude > 10 then
+                                shouldTween = true
+                                _tp(WaitCFrame)
+                            else
+                                -- Đứng cố định một chỗ tại điểm chờ để chống lag giật rung màn hình
+                                rootPart.CFrame = WaitCFrame
+                                rootPart.Velocity = Vector3.new(0, 0, 0)
+                                shouldTween = false
+                            end
+                        end
+                    end)
                 end
-            end
-        end
-    end
-    
-    while wait() do
-        if _G.AutoMaterial then  -- Sửa: _G thay vì getgenv()
+            end)
+        else
+            -- Khi TẮT toggle: Trả lại trạng thái va chạm vật lý bình thường để không bị lỗi game
             pcall(function()
-                if _G.SelectMaterial then  -- Sửa: _G thay vì getgenv()
-                    MaterialMon(_G.SelectMaterial)  -- Sửa: _G thay vì getgenv()
-                    _tp(MPos) 
-                end
-                
-                for _, EnemyName in ipairs(MMon) do
-                    for _, v in pairs(workspace.Enemies:GetChildren()) do 
-                        processEnemy(v, EnemyName) 
+                shouldTween = false
+                local character = game.Players.LocalPlayer.Character
+                if character then
+                    for _, part in pairs(character:GetChildren()) do
+                        if part:IsA("BasePart") then
+                            part.CanCollide = true
+                        end
                     end
                 end
-                
-                handleEnemySpawns()
             end)
         end
     end
-end)
+})
+
+-- Thêm chức năng Auto Farm Fishman Raider & Captain vào UI
+SelectMethodFarm:AddToggle("AutoFarmFishmanRaider", {
+    Title = "Farm Fishman",
+    Default = false,
+    Callback = function(Value)
+        getgenv().AutoFarmFishman = Value
+        
+        if Value then
+            -- Vòng lặp tắt va chạm (NoClip) giúp di chuyển mượt mà, không bị kẹt địa hình gây lag giật
+            task.spawn(function()
+                while getgenv().AutoFarmFishman do
+                    pcall(function()
+                        local char = game.Players.LocalPlayer.Character
+                        if char then
+                            for _, part in pairs(char:GetChildren()) do
+                                if part:IsA("BasePart") then
+                                    part.CanCollide = false
+                                end
+                            end
+                        end
+                    end)
+                    task.wait(0.2)
+                end
+            end)
+            
+            -- Luồng xử lý Farm chính (Tìm quái -> Tween -> Gom quái -> Tấn công)
+            task.spawn(function()
+                -- Tọa độ mặc định bãi quái Fishman để đứng chờ khi quái chết hết
+                local FishmanZonePos = CFrame.new(-10554.12, 331.45, -845.21) 
+                local MobNames = {"Fishman Raider Lv. 1775", "Fishman Captain Lv. 1800"}
+
+                -- Hàm quét tìm quái mục tiêu còn sống trong Workspace
+                local function GetFishmanTarget()
+                    local enemiesFolder = game:GetService("Workspace"):FindFirstChild("Enemies")
+                    if enemiesFolder then
+                        for _, enemy in pairs(enemiesFolder:GetChildren()) do
+                            if (enemy.Name == MobNames[1] or enemy.Name == MobNames[2]) 
+                            and enemy:FindFirstChild("Humanoid") 
+                            and enemy.Humanoid.Health > 0 
+                            and enemy:FindFirstChild("HumanoidRootPart") then
+                                return enemy
+                            end
+                        end
+                    end
+                    return nil
+                end
+
+                while getgenv().AutoFarmFishman do
+                    task.wait(0.05)
+                    pcall(function()
+                        local character = game.Players.LocalPlayer.Character
+                        if not character or not character:FindFirstChild("HumanoidRootPart") or character.Humanoid.Health <= 0 then return end
+                        
+                        local rootPart = character.HumanoidRootPart
+                        local targetMob = GetFishmanTarget()
+
+                        if targetMob then
+                            -- GIAI ĐOẠN CÓ QUÁI: Đứng trên đầu quái 12 studs để né chiêu và dễ gom
+                            local targetCFrame = targetMob.HumanoidRootPart.CFrame * CFrame.new(0, 12, 0)
+                            
+                            -- Nếu ở xa thì dùng hàm tween _tp của script để bay đến
+                            if (targetCFrame.Position - rootPart.Position).Magnitude > 25 then
+                                shouldTween = true
+                                _tp(targetCFrame)
+                            else
+                                -- Khi đã đến nơi: Khóa chặt vị trí và triệt tiêu lực đẩy vật lý để chống rung/lag
+                                rootPart.CFrame = targetCFrame
+                                rootPart.Velocity = Vector3.new(0, 0, 0)
+                                shouldTween = false
+                                
+                                -- Kích hoạt hàm gom quái BringEnemy() hoạt động theo cơ chế của BananaHub
+                                _B = true 
+                                if not targetMob:GetAttribute("Locked") then 
+                                    targetMob:SetAttribute("Locked", targetMob.HumanoidRootPart.CFrame) 
+                                end
+                                PosMon = targetMob:GetAttribute("Locked").Position
+                                BringEnemy()
+                                
+                                -- Tự động trang bị vũ khí đã chọn trước đó từ bộ công cụ của bạn
+                                if _G.SelectWeapon then
+                                    EquipWeapon(_G.SelectWeapon)
+                                else
+                                    weaponSc("Melee") -- Nếu chưa chọn vũ khí, tự dùng Melee cận chiến
+                                end
+
+                                -- Tự động click chuột ảo tấn công liên tục không bị delay hụt
+                                game:GetService("VirtualInputManager"):SendMouseButtonEvent(rootPart.Position.X, rootPart.Position.Y, 0, true, game, 1)
+                                task.wait(0.05)
+                                game:GetService("VirtualInputManager"):SendMouseButtonEvent(rootPart.Position.X, rootPart.Position.Y, 0, false, game, 1)
+                            end
+                        else
+                            -- GIAI ĐOẠN CHỜ SPAWN: Bay lên cao cách bãi quái 40 studs đứng chờ 1 bên an toàn
+                            local WaitCFrame = FishmanZonePos * CFrame.new(0, 40, 0)
+                            
+                            if (WaitCFrame.Position - rootPart.Position).Magnitude > 10 then
+                                shouldTween = true
+                                _tp(WaitCFrame)
+                            else
+                                -- Khóa vị trí đứng chờ cố định tại chỗ, không di chuyển lung tung
+                                rootPart.CFrame = WaitCFrame
+                                rootPart.Velocity = Vector3.new(0, 0, 0)
+                                shouldTween = false
+                            end
+                        end
+                    end)
+                end
+            end)
+        else
+            -- Khi TẮT: Trả lại trạng thái va chạm vật lý gốc cho nhân vật tránh lỗi kẹt map
+            pcall(function()
+                shouldTween = false
+                local character = game.Players.LocalPlayer.Character
+                if character then
+                    for _, part in pairs(character:GetChildren()) do
+                        if part:IsA("BasePart") then
+                            part.CanCollide = true
+                        end
+                    end
+                end
+            end)
+        end
+    end
+})
+
+-- Thêm chức năng Auto Farm CaCao vào UI SelectMethodFarm
+SelectMethodFarm:AddToggle("AutoFarmCaCao", {
+    Title = "Farm CaCao",
+    Default = false,
+    Callback = function(Value)
+        getgenv().AutoFarmCaCao = Value
+        
+        if Value then
+            -[span_6](start_span)- Vòng lặp NoClip: Tắt va chạm nhân vật để di chuyển tween mượt mà, chống kẹt địa hình gây lag giật[span_6](end_span)
+            task.spawn(function()
+                while getgenv().AutoFarmCaCao do
+                    pcall(function()
+                        local char = game.Players.LocalPlayer.Character
+                        if char then
+                            for _, part in pairs(char:GetChildren()) do
+                                if part:IsA("BasePart") then
+                                    part.CanCollide = false
+                                end
+                            end
+                        end
+                    end)
+                    task.wait(0.2)
+                end
+            end)
+            
+            -- Luồng xử lý Farm chính (Quét quái -> Di chuyển -> Gom bãi -> Tấn công -> Đứng chờ)
+            task.spawn(function()
+                -[span_7](start_span)- Lấy tọa độ bãi quái Cake Guard làm mốc đứng chờ (Trích xuất từ bảng PosMsList gốc của bạn)[span_7](end_span)
+                local CocoaZonePos = CFrame.new(-2024, 38, -12026) 
+                local MobNames = {"Cake Chef Lv. 2250", "Cake Guard Lv. 2225"}
+
+                -[span_8](start_span)- Hàm tìm kiếm quái mục tiêu còn sống trong thư mục Enemies[span_8](end_span)
+                local function GetCocoaTarget()
+                    [span_9](start_span)local enemiesFolder = game:GetService("Workspace"):FindFirstChild("Enemies")[span_9](end_span)
+                    if enemiesFolder then
+                        for _, enemy in pairs(enemiesFolder:GetChildren()) do
+                            if (enemy.Name == MobNames[1] or enemy.Name == MobNames[2]) 
+                            and enemy:FindFirstChild("Humanoid") 
+                            and enemy.Humanoid.Health > 0 
+                            [span_10](start_span)and enemy:FindFirstChild("HumanoidRootPart") then[span_10](end_span)
+                                return enemy
+                            end
+                        end
+                    end
+                    return nil
+                end
+
+                while getgenv().AutoFarmCaCao do
+                    task.wait(0.05)
+                    pcall(function()
+                        local character = game.Players.LocalPlayer.Character
+                        if not character or not character:FindFirstChild("HumanoidRootPart") or character.Humanoid.Health <= 0 then return end
+                        
+                        local rootPart = character.HumanoidRootPart
+                        local targetMob = GetCocoaTarget()
+
+                        if targetMob then
+                            -[span_11](start_span)- GIAI ĐOẠN ĐANG CÓ QUÁI: Khóa vị trí phía trên đầu quái 12 studs để né skill và chống rung lắc camera[span_11](end_span)
+                            [span_12](start_span)local targetCFrame = targetMob.HumanoidRootPart.CFrame * CFrame.new(0, 12, 0)[span_12](end_span)
+                            
+                            -[span_13](start_span)- Nếu khoảng cách xa bãi thì dùng hàm tween _tp của BananaHub để bay đến[span_13](end_span)
+                            if (targetCFrame.Position - rootPart.Position).Magnitude > 25 then
+                                [span_14](start_span)shouldTween = true[span_14](end_span)
+                                _[span_15](start_span)tp(targetCFrame)[span_15](end_span)
+                            else
+                                -[span_16](start_span)- Khi đã tiếp cận: Khóa cứng CFrame và triệt tiêu mọi vận tốc rơi vật lý để không bị giật, rung màn hình[span_16](end_span)
+                                rootPart.CFrame = targetCFrame
+                                [span_17](start_span)rootPart.Velocity = Vector3.new(0, 0, 0)[span_17](end_span)
+                                [span_18](start_span)shouldTween = false[span_18](end_span)
+                                
+                                -[span_19](start_span)[span_20](start_span)- Kích hoạt hàm gom quái (BringEnemy) hoạt động đồng bộ theo logic gốc của file[span_19](end_span)[span_20](end_span)
+                                _[span_21](start_span)B = true[span_21](end_span)
+                                if not targetMob:GetAttribute("Locked") then 
+                                    [span_22](start_span)targetMob:SetAttribute("Locked", targetMob.HumanoidRootPart.CFrame)[span_22](end_span)
+                                end
+                                [span_23](start_span)PosMon = targetMob:GetAttribute("Locked").Position[span_23](end_span)
+                                [span_24](start_span)BringEnemy()[span_24](end_span)
+                                
+                                -[span_25](start_span)- Tự động trang bị vũ khí đã chọn[span_25](end_span)
+                                if _G.SelectWeapon then
+                                    [span_26](start_span)EquipWeapon(_G.SelectWeapon)[span_26](end_span)
+                                else
+                                    [span_27](start_span)weaponSc("Melee") -- Mặc định dùng Melee cận chiến nếu chưa chọn[span_27](end_span)
+                                end
+
+                                -- Tạo click chuột ảo liên tục để tấn công dọn quái nhanh gọn
+                                game:GetService("VirtualInputManager"):SendMouseButtonEvent(rootPart.Position.X, rootPart.Position.Y, 0, true, game, 1)
+                                task.wait(0.05)
+                                game:GetService("VirtualInputManager"):SendMouseButtonEvent(rootPart.Position.X, rootPart.Position.Y, 0, false, game, 1)
+                            end
+                        else
+                            -[span_28](start_span)- GIAI ĐOẠN HẾT QUÁI (CHỜ SPAWN): Di chuyển ra 1 bên bãi quái, bay lên cao 40 studs để đứng chờ an toàn[span_28](end_span)
+                            local WaitCFrame = CocoaZonePos * CFrame.new(0, 40, 0)
+                            
+                            if (WaitCFrame.Position - rootPart.Position).Magnitude > 10 then
+                                [span_29](start_span)shouldTween = true[span_29](end_span)
+                                _[span_30](start_span)tp(WaitCFrame)[span_30](end_span)
+                            else
+                                -[span_31](start_span)- Khóa chặt vị trí tại điểm chờ, triệt tiêu lực đẩy để nhân vật không bị trôi hay rung lắc[span_31](end_span)
+                                rootPart.CFrame = WaitCFrame
+                                [span_32](start_span)rootPart.Velocity = Vector3.new(0, 0, 0)[span_32](end_span)
+                                [span_33](start_span)shouldTween = false[span_33](end_span)
+                            end
+                        end
+                    end)
+                end
+            end)
+        else
+            -[span_34](start_span)- Khi TẮT toggle: Khôi phục lại va chạm vật lý gốc cho nhân vật tránh lỗi game[span_34](end_span)
+            pcall(function()
+                [span_35](start_span)shouldTween = false[span_35](end_span)
+                local character = game.Players.LocalPlayer.Character
+                if character then
+                    for _, part in pairs(character:GetChildren()) do
+                        if part:IsA("BasePart") then
+                            part.CanCollide = true
+                        end
+                    end
+                end
+            end)
+        end
+    end
+})
+
+-- Thêm chức năng Auto Farm Nearest / Raid vào UI
+SelectMethodFarm:AddToggle("AutoFarmNearestRaid", {
+    Title = "Auto Farm Nearest / Raid",
+    Default = false,
+    Callback = function(Value)
+        getgenv().AutoFarmNearest = Value
+        
+        if Value then
+            -- Vòng lặp tắt va chạm (NoClip) giúp di chuyển xuyên vật thể mượt mà, chống lag giật
+            task.spawn(function()
+                while getgenv().AutoFarmNearest do
+                    pcall(function()
+                        local char = game.Players.LocalPlayer.Character
+                        if char then
+                            for _, part in pairs(char:GetChildren()) do
+                                if part:IsA("BasePart") then
+                                    part.CanCollide = false
+                                end
+                            end
+                        end
+                    end)
+                    task.wait(0.2)
+                end
+            end)
+            
+            -- Luồng xử lý Farm chính
+            task.spawn(function()
+                -- Hàm thông minh tìm quái gần nhất hoặc quái Raid
+                local function GetNearestEnemy()
+                    local NearestMob = nil
+                    local MaxDistance = math.huge
+                    local player = game.Players.LocalPlayer
+                    
+                    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                        local myPos = player.Character.HumanoidRootPart.Position
+                        local enemiesFolder = game:GetService("Workspace"):FindFirstChild("Enemies")
+                        
+                        -- 1. ƯU TIÊN QUÉT QUÁI TRONG PHÒNG RAID (Nếu đang đi Raid)
+                        local raidEnemies = game:GetService("Workspace"):FindFirstChild("RaidEnemies") -- Hoặc kiểm tra thư mục chứa quái Raid của game
+                        local targetFolder = raidEnemies or enemiesFolder
+                        
+                        if targetFolder then
+                            for _, enemy in pairs(targetFolder:GetChildren()) do
+                                if enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 and enemy:FindFirstChild("HumanoidRootPart") then
+                                    -- Nếu phát hiện quái có chữ "Raid" hoặc đang trong map Raid, ưu tiên nhắm tới liền
+                                    local distance = (enemy.HumanoidRootPart.Position - myPos).Magnitude
+                                    if distance < MaxDistance then
+                                        MaxDistance = distance
+                                        NearestMob = enemy
+                                    end
+                                end
+                            end
+                        end
+                        
+                        -- 2. NẾU THƯ MỤC TRÊN KHÔNG CÓ, QUÉT THÊM TRONG WORKSPACE ĐỂ TRÁNH LỖI SÓT QUÁI RAID
+                        if not NearestMob and enemiesFolder then
+                            for _, enemy in pairs(enemiesFolder:GetChildren()) do
+                                if enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 and enemy:FindFirstChild("HumanoidRootPart") then
+                                        local distance = (enemy.HumanoidRootPart.Position - myPos).Magnitude
+                                        if distance < MaxDistance then
+                                            MaxDistance = distance
+                                            NearestMob = enemy
+                                        end
+                                end
+                            end
+                        end
+                    end
+                    return NearestMob
+                end
+
+                while getgenv().AutoFarmNearest do
+                    task.wait(0.05)
+                    pcall(function()
+                        local character = game.Players.LocalPlayer.Character
+                        if not character or not character:FindFirstChild("HumanoidRootPart") or character.Humanoid.Health <= 0 then return end
+                        
+                        local rootPart = character.HumanoidRootPart
+                        local targetMob = GetNearestEnemy()
+
+                        if targetMob then
+                            -- Khóa vị trí phía trên đầu quái 12 studs để an toàn tuyệt đối và không rung camera
+                            local targetCFrame = targetMob.HumanoidRootPart.CFrame * CFrame.new(0, 12, 0)
+                            
+                            -- Nếu khoảng cách xa thì dùng hàm tween _tp của BananaHub để bay đến
+                            if (targetCFrame.Position - rootPart.Position).Magnitude > 30 then
+                                shouldTween = true
+                                _tp(targetCFrame)
+                            else
+                                -- Khi đã ở khoảng cách đánh: Khóa chặt vị trí và triệt tiêu mọi vận tốc rơi tự do để không bị giật lag
+                                rootPart.CFrame = targetCFrame
+                                rootPart.Velocity = Vector3.new(0, 0, 0)
+                                shouldTween = false
+                                
+                                -- Kích hoạt chức năng gom quái BringEnemy() theo cơ chế gốc của bản hack
+                                _B = true
+                                if not targetMob:GetAttribute("Locked") then 
+                                    targetMob:SetAttribute("Locked", targetMob.HumanoidRootPart.CFrame)
+                                end
+                                PosMon = targetMob:GetAttribute("Locked").Position
+                                BringEnemy()
+                                
+                                -- Tự động trang bị công cụ chiến đấu (Melee/Sword...) đã chọn trên giao diện
+                                if _G.SelectWeapon then
+                                    EquipWeapon(_G.SelectWeapon)
+                                else
+                                    weaponSc("Melee")
+                                end
+
+                                -- Thực hiện click chuột ảo liên tục để xả combo
+                                game:GetService("VirtualInputManager"):SendMouseButtonEvent(rootPart.Position.X, rootPart.Position.Y, 0, true, game, 1)
+                                task.wait(0.05)
+                                game:GetService("VirtualInputManager"):SendMouseButtonEvent(rootPart.Position.X, rootPart.Position.Y, 0, false, game, 1)
+                            end
+                        else
+                            -- Nếu không có quái xung quanh/Quái chưa spawn: Đứng im tại chỗ chống lag game
+                            shouldTween = false
+                            rootPart.Velocity = Vector3.new(0, 0, 0)
+                        end
+                    end)
+                end
+            end)
+        else
+            -- Khi tắt chức năng: Trả lại trạng thái va chạm vật lý gốc cho nhân vật
+            pcall(function()
+                shouldTween = false
+                local character = game.Players.LocalPlayer.Character
+                if character then
+                    for _, part in pairs(character:GetChildren()) do
+                        if part:IsA("BasePart") then
+                            part.CanCollide = true
+                        end
+                    end
+                end
+            end)
+        end
+    end
+})
 
 Stack = Window:AddTab("Stack Farming")
 
@@ -5429,6 +6034,33 @@ spawn(function()
     end
 end)
 
+SoulReaperBoss:AddToggle("SoulReaperHop", {
+    Title = "Auto Soul Reaper [ Hop Server ]",
+    Default = false,
+    Callback = function(Value)
+        _G.SoulHopR = Value
+        if not _G.AutoHytHallow then
+            Library:Notify({
+                Title = "Night Slayer Hub",
+                Description = "Open Auto Soul Reaper Plz!",
+                Duration = 3
+            })
+        end
+    end
+})
+
+spawn(function()
+    while wait(Sec) do
+        if _G.AutoHytHallow and _G.SoulHopR then
+            pcall(function()
+                if not GetConnectionEnemies("Soul Reaper") then
+                    Hop()
+                end
+            end)
+        end
+    end
+end)
+
 DoughKingBoss = Stack:AddLeftGroupbox("Boss Dough King")
 
 DoughKingBoss:AddToggle("DoughKingNormal", {
@@ -5457,9 +6089,36 @@ spawn(function()
     end
 end)
 
+DoughKingBoss:AddToggle("DoughKingHop", {
+    Title = "Auto Dough King [ Hop Server ]",
+    Default = false,
+    Callback = function(Value)
+        _G.DoughKingHop = Value
+        if not _G.AutoMiror then 
+            Library:Notify({
+                Title = "Night Slayer Hub",
+                Description = "Open Auto Dough King Plz!",
+                Duration = 3
+            })
+        end
+    end
+})
+
+spawn(function()
+    while wait(Sec) do
+        if _G.AutoMiror and _G.DoughKingHop then
+            pcall(function()
+                if not GetConnectionEnemies("Dough King") then
+                    Hop()
+                end
+            end)
+        end
+    end
+end)
+
 DarkbeardBoss = Stack:AddLeftGroupbox("Boss Darkbeard")
 DarkbeardBoss:AddToggle("DarkBreadNormal", {
-    Title = "Auto DarkBeard",
+    Title = "Auto Darkbread",
     Default = false,
     Callback = function(Value)
         _G.Auto_Def_DarkCoat = Value
@@ -5480,6 +6139,34 @@ spawn(function()
                             Attack.Kill(v, _G.Auto_Def_DarkCoat)
                         until _G.Auto_Def_DarkCoat == false or not v.Parent or v.Humanoid.Health <= 0  -- Sửa: Health
                     end
+                end
+            end)
+        end
+    end
+end)
+
+DarkbeardBoss:AddToggle("DarkBreadHop", {
+    Title = "Auto Darkbread [ Hop Server ]",
+    Default = false,
+    Callback = function(Value)
+        _G.DarkbreadHop = Value
+        if not _G.Auto_Def_DarkCoat then 
+            Library:Notify({
+                Title = "Night Slayer Hub",
+                Description = "Open Auto Darkbread Plz!",
+                Duration = 3
+            })
+        end
+    end
+})
+
+spawn(function()
+    local waitTime = 0.1  -- Hoặc giá trị bạn muốn
+    while wait(waitTime) do  -- Sửa: wait(waitTime) thay vì wait(Sec)
+        if _G.Auto_Def_DarkCoat and _G.DarkbreadHop then
+            pcall(function()
+                if not workspace.Enemies:FindFirstChild("Darkbeard") then
+                    Hop()
                 end
             end)
         end
@@ -9407,212 +10094,79 @@ spawn(function()
     end
   end
 end)
-    
--- Biến trạng thái để ngăn việc kích hoạt trùng lặp nhiều lần
-local LavaCleaningActive = false
 
-VolcanoFarm:AddToggle("RemoveVolcanoLava", {
-    Title = "Remove Volcano Lava (Anti-Damage)",
+VolcanoFarm:AddToggle("EventVolcanoStart", {
+    Title = "Auto Event Prehistoric Island",
+    Description = "auto Start Event and Auto kill golem, Auto Fix Volcano",
     Default = false,
     Callback = function(Value)
-        _G.RemoveLavaEnabled = Value
-        
-        if _G.RemoveLavaEnabled then
-            -- Nếu đang xử lý dọn dẹp hoặc đã dọn rồi thì bỏ qua không chạy lại
-            if LavaCleaningActive then return end
-            LavaCleaningActive = true
-            
-            -- Tạo hiệu ứng lag 3 giây theo yêu cầu của bạn bằng vòng lặp khóa thread
-            local startTime = os.clock()
-            repeat
-                -- Vòng lặp trống ép hệ thống đứng xử lý, tạo độ trễ lag đúng 3 giây
-            until os.clock() - startTime >= 3
-            
-            -- Tiến hành thực thi dọn dẹp dung nham triệt để
-            pcall(function()
-                local lavaCount = 0
-                
-                -- Hàm nội bộ xử lý hủy diệt lõi sát thương và dập tắt ngọn lửa
-                local function processLavaBlock(object)
-                    if object:IsA("Part") or object:IsA("MeshPart") then
-                        local objName = string.lower(object.Name)
-                        -- Nhận diện tất cả các mảng dung nham của đảo núi lửa
-                        if string.find(objName, "lava") or string.find(objName, "magma") then
-                            
-                            -- 1. FIX LỖI MẤT MÁU: Hủy hoàn toàn TouchInterest (bộ phát tín hiệu gây sát thương khi chạm vào)
-                            if object:FindFirstChild("TouchInterest") then
-                                object.TouchInterest:Destroy()
-                            end
-                            object.CanTouch = false
-                            object.CanCollide = false
-                            
-                            -- 2. FIX LỖI HIỆN LỬA: Tìm sạch sành sanh các hiệu ứng khói lửa bám trên cục Lava và xóa sổ
-                            for _, fx in ipairs(object:GetChildren()) do
-                                if fx:IsA("ParticleEmitter") or fx:IsA("Fire") or fx:IsA("Smoke") or fx:IsA("Sparkles") then
-                                    fx:Destroy()
-                                end
-                            end
-                            
-                            -- 3. Làm tàng hình khối dung nham (Giúp trống map, mượt game mà không gây lỗi game)
-                            object.Transparency = 1
-                            lavaCount = lavaCount + 1
-                        end
-                    end
-                end
-                
-                -- Quét sâu toàn bộ Workspace hiện tại để dọn sạch Lava đang có sẵn
-                for _, obj in ipairs(game:GetService("Workspace"):GetDescendants()) do
-                    if not _G.RemoveLavaEnabled then break end
-                    processLavaBlock(obj)
-                end
-                
-                -- Chặn đứng từ gốc: Nếu game tự sinh (spawn) thêm Lava mới, script tự động triệt tiêu ngay lập tức
-                local workspaceConnection
-                workspaceConnection = game:GetService("Workspace").DescendantAdded:Connect(function(newDescendant)
-                    if _G.RemoveLavaEnabled then
-                        processLavaBlock(newDescendant)
-                    else
-                        workspaceConnection:Disconnect()
-                    end
-                end)
-                
-                -- Hết lag 3 giây và dọn xong sẽ hiển thị thông báo góc màn hình
-                Library:Notify({
-                    Title = "Banana Hub",
-                    Description = "🔥 Đã xóa sạch " .. tostring(lavaCount) .. " vùng Lava! Miễn nhiễm sát thương và dập tắt toàn bộ khói lửa núi lửa.",
-                    Duration = 5
-                })
-            end)
-            
-            LavaCleaningActive = false
-        end
+        _G.Prehis_Skills = Value
     end
 })
 
--- Khai báo các thiết lập và biến kiểm soát trạng thái của Event
-_G.AutoVolcanoEvent = false
-local VolcanoConnection
-
--- Hàm phụ trợ: Tự động trang bị vũ khí (Kiếm hoặc Súng)
-local function EquipWeapon(weaponType)
-    local backpack = Player.Backpack
-    local character = Player.Character
-    if character then
-        -- Tìm trong Backpack trước
-        for _, tool in ipairs(backpack:GetChildren()) do
-            if tool:IsA("Tool") and tool:GetAttribute("Type") == weaponType then
-                character.Humanoid:EquipTool(tool)
-                break
+spawn(function()
+  while wait() do
+    if _G.Prehis_Skills then
+      local prehistoricIsland = game.Workspace.Map:FindFirstChild("PrehistoricIsland")
+      if prehistoricIsland then
+        for _, obj in pairs(prehistoricIsland:GetDescendants()) do
+          if obj:IsA("Part") and obj.Name:lower():find("lava") then obj:Destroy() end
+          if obj:IsA("MeshPart") and obj.Name:lower():find("lava") then obj:Destroy() end
+        end
+        local lavaModel = game.Workspace.Map.PrehistoricIsland.Core:FindFirstChild("InteriorLava")
+        if lavaModel and lavaModel:IsA("Model") then lavaModel:Destroy() end
+        local Island = workspace.Map:FindFirstChild("PrehistoricIsland")
+        if Island then   
+          local trialTeleport = workspace.Map.PrehistoricIsland:FindFirstChild("TrialTeleport")   
+          for _, v in pairs(Island:GetDescendants()) do
+            if v.Name == "TouchInterest" then
+              if not (trialTeleport and v:IsDescendantOf(trialTeleport)) then
+                v.Parent:Destroy()
+              end
             end
-        end
+          end
+        end  
+      end
     end
-end
+  end
+end)
 
--- Hàm phụ trợ: Spam skill Z và X bằng VirtualInputManager
-local function UseSkills()
+spawn(function()
+  while wait() do
     pcall(function()
-        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Z, false, game)
-        task.wait(0.1)
-        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Z, false, game)
-        task.wait(0.2)
-        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.X, false, game)
-        task.wait(0.1)
-        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.X, false, game)
-    end)
-end
-
--- Thêm Nút Bật/Tắt Auto Event vào Groupbox VolcanoFarm
-VolcanoFarm:AddToggle("AutoVolcanoEventToggle", {
-    Title = "Auto Complete Volcano Event",
-    Default = false,
-    Callback = function(Value)
-        _G.AutoVolcanoEvent = Value
-        
-        if _G.AutoVolcanoEvent then
-            task.spawn(function()
-                while _G.AutoVolcanoEvent do
-                    task.wait(0.1)
-                    pcall(function()
-                        local char = Player.Character
-                        local root = char and char:FindFirstChild("HumanoidRootPart")
-                        if not root then return end
-                        
-                        -- 1. KIỂM TRA QUÁI GOLEM SPAWN (ƯU TIÊN LÀM SAU CỤC LỬA HOẶC KHI KHÔNG CÓ CỤC LỬA)
-                        local Golem = nil
-                        for _, v in ipairs(workspace.Enemies:GetChildren()) do
-                            if string.find(v.Name, "Golem") and v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 then
-                                Golem = v
-                                break
-                            end
-                        end
-                        
-                        -- 2. KIỂM TRA CỤC LỬA PHÁT SÁNG (ƯU TIÊN HÀNG ĐẦU)
-                        local OreFire = nil
-                        -- Quét trong Map hoặc vùng chứa quặng sự kiện núi lửa
-                        for _, obj in ipairs(workspace:GetDescendants()) do
-                            if obj:IsA("BasePart") and (obj.Name == "VolcanoOre" or string.find(obj.Name, "Ore")) and obj:FindFirstChild("PointLight") then
-                                OreFire = obj
-                                break
-                            end
-                        end
-                        
-                        -- --- THỰC THI LOGIC ĐIỀU KHIỂN TWEEN ---
-                        
-                        -- Bước A: Nếu có Cục Lửa Phát Sáng -> Ưu tiên xử lý trước
-                        if OreFire then
-                            -- Di chuyển mượt đến sát cục lửa
-                            pcall(function()
-                                TweenService:Create(root, TweenInfo.new((root.Position - OreFire.Position).Magnitude / 300, Enum.EasingStyle.Linear), {CFrame = OreFire.CFrame * CFrame.new(0, 2, 3)}):Play()
-                            end)
-                            
-                            -- Xả chiêu liên tục (Xoay vòng Kiếm -> Súng)
-                            EquipWeapon("Sword")
-                            UseSkills()
-                            task.wait(0.3)
-                            EquipWeapon("Gun")
-                            UseSkills()
-                            
-                        -- Bước B: Nếu không có đá lửa nhưng có Golem -> Đến đập Golem
-                        elseif Golem and Golem:FindFirstChild("HumanoidRootPart") then
-                            local golemRoot = Golem.HumanoidRootPart
-                            
-                            -- Khóa vị trí trên đầu Golem: Giúp đứng yên, chống giật, chống lag và quái không đánh trúng
-                            root.Velocity = Vector3.new(0, 0, 0)
-                            -- Đứng cách đầu Golem 5 units theo trục Y để né hitbox dậm đất của nó
-                            root.CFrame = golemRoot.CFrame * CFrame.new(0, 5, 0) * CFrame.Angles(math.rad(-90), 0, 0)
-                            
-                            -- Kích hoạt Click chuột tự động/Spam đòn đánh thường
-                            EquipWeapon("Sword")
-                            VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 1)
-                            VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 1)
-                            
-                        -- Bước C: Nếu không có cả hai -> Di chuyển đến Đầu Lâu ấn Bắt đầu Event
-                        else
-                            local Skull = workspace:FindFirstChild("VolcanoSkull") or workspace:FindFirstChild("SkullObby") -- Điền chính xác tên Object đầu lâu trên máy của bạn
-                            if Skull and Skull:FindFirstChild("ClickDetector") then
-                                -- Di chuyển mượt đến chỗ đầu lâu
-                                pcall(function()
-                                    TweenService:Create(root, TweenInfo.new((root.Position - Skull.Position).Magnitude / 300, Enum.EasingStyle.Linear), {CFrame = Skull.CFrame * CFrame.new(0, 3, 0)}):Play()
-                                end)
-                                
-                                -- Tự kích hoạt nút ấn bắt đầu khi đến khoảng cách gần
-                                if (root.Position - Skull.Position).Magnitude < 10 then
-                                    fireclickdetector(Skull.ClickDetector)
-                                end
-                            else
-                                -- Nếu đã bấm và không có gì làm, đứng yên tại chỗ an toàn chờ quái/đá hồi
-                                root.Velocity = Vector3.new(0, 0, 0)
-                            end
-                        end
-                    end)
-                end
-            end)
-        else
-            -- Tắt toàn bộ khi gạt nút Off
-            VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 1)
+      if _G.Prehis_Skills then
+        if workspace.Enemies:FindFirstChild("Lava Golem") then
+          local v = GetConnectionEnemies("Lava Golem")
+          if v then 
+            repeat 
+              wait()
+              Attack.Kill(v,_G.Prehis_Skills) 
+              v.Humanoid:ChangeState(15)
+            until not _G.Prehis_Skills or not v.Parent or v.Humanoid.Health <= 0 
+          end
         end
-    end
-})
+        for i,v in pairs(game.Workspace.Map.PrehistoricIsland.Core.VolcanoRocks:GetChildren()) do
+          if v:FindFirstChild("VFXLayer") then
+            if v:FindFirstChild("VFXLayer").At0.Glow.Enabled == true or v.VFXLayer.At0.Glow.Enabled == true then
+              repeat wait()
+                _tp(v.VFXLayer.CFrame)
+                if v.VFXLayer.At0.Glow.Enabled == true and plr:DistanceFromCharacter(v.VFXLayer.CFrame.Position) <= 150 then
+                  MousePos = v.VFXLayer.CFrame.Position
+                  Useskills("Melee","Z") wait(.5)
+                  Useskills("Melee","X") wait(.5)
+                  Useskills("Melee","C") wait(.5)
+                  Useskills("Blox Fruit","Z") wait(.5)
+                  Useskills("Blox Fruit","X") wait(.5)
+                  Useskills("Blox Fruit","C")
+                end   
+              until not _G.Prehis_Skills or v:FindFirstChild("VFXLayer").At0.Glow.Enabled == false or v.VFXLayer.At0.Glow.Enabled == false            
+            end
+          end
+        end
+      end
+    end)
+  end
+end)
 
 VolcanoFarm:AddToggle("CollectBoneVolcano", {
     Title = "Auto Collect Bone",
@@ -9659,232 +10213,216 @@ end)
 
 FullyVolcano = Volcano:AddLeftGroupbox("Fully Volcano")
 
--- Khai báo biến toàn cục điều khiển chức năng
-_G.AutoCraftMagnet = false
-
--- Hàm phụ trợ: Trang bị vũ khí theo loại thuộc tính (Melee, Sword, Gun)
-local function EquipWeaponByType(weaponType)
-    local backpack = game:GetService("Players").LocalPlayer.Backpack
-    local character = game:GetService("Players").LocalPlayer.Character
-    if character and character:FindFirstChild("Humanoid") then
-        for _, tool in ipairs(backpack:GetChildren()) do
-            if tool:IsA("Tool") and tool:GetAttribute("Type") == weaponType then
-                character.Humanoid:EquipTool(tool)
-                break
-            end
-        end
-    end
-end
-
--- Hàm phụ trợ: Spam tất cả chiêu thức (Z, X, C) và đánh thường
-local function SpamAllSkills()
-    pcall(function()
-        local VIM = game:GetService("VirtualInputManager")
-        -- Đánh thường (Click trái)
-        VIM:SendMouseButtonEvent(0, 0, 0, true, game, 1)
-        VIM:SendMouseButtonEvent(0, 0, 0, false, game, 1)
-        -- Spam kỹ năng
-        local keys = {Enum.KeyCode.Z, Enum.KeyCode.X, Enum.KeyCode.C}
-        for _, key in ipairs(keys) do
-            VIM:SendKeyEvent(true, key, false, game)
-            task.wait(0.05)
-            VIM:SendKeyEvent(false, key, false, game)
-        end
-     pcall(function()
-        if game:GetService("ReplicatedStorage"):FindFirstChild("Remotes") and game:GetService("ReplicatedStorage").Remotes:FindFirstChild("CommF_") then
-            game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("Attack")
-        end
-     end)
-    end)
-end
-
--- Hàm di chuyển Tween an toàn, chống bug vận tốc
-local function SafeTween(targetCFrame)
-    local char = game:GetService("Players").LocalPlayer.Character
-    local root = char and char:FindFirstChild("HumanoidRootPart")
-    if root then
-        root.Velocity = Vector3.new(0, 0, 0)
-        local distance = (root.Position - targetCFrame.Position).Magnitude
-        local speed = 320 -- Tốc độ tween chuẩn không bị kick
-        local tweenInfo = TweenInfo.new(distance / speed, Enum.EasingStyle.Linear)
-        local tween = game:GetService("TweenService"):Create(root, {CFrame = targetCFrame}, tweenInfo)
-        tween:Play()
-        tween.Completed:Wait()
-    end
-end
-
--- Hàm khóa vị trí trên đầu mục tiêu (Chống rung, giật, né sát thương)
-local function LockAboveTarget(targetPosition)
-    local char = game:GetService("Players").LocalPlayer.Character
-    local root = char and char:FindFirstChild("HumanoidRootPart")
-    if root then
-        root.Velocity = Vector3.new(0, 0, 0)
-        -- Đứng cao hơn mục tiêu 5 units và chúc góc nhìn xuống dưới
-        root.CFrame = CFrame.new(targetPosition + Vector3.new(0, 5, 0)) * CFrame.Angles(math.rad(-90), 0, 0)
-    end
-end
-
--- Hàm kiểm tra số lượng nguyên liệu hiện có trong Inventory
-local function GetMaterialCount(materialName)
-    local count = 0
-    pcall(function()
-        -- Quét qua dữ liệu túi đồ được lưu trữ tại Client/Server tùy thuộc cấu trúc gốc
-        local inventory = game:GetService("ReplicatedStorage"):FindFirstChild("Remotes") and game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("getInventory")
-        if inventory then
-            for _, item in ipairs(inventory) do
-                if item.Name == materialName then
-                    count = item.Count or item.Value or 0
-                    break
-                end
-            end
-        end
-    end)
-    return count
-end
-
--- Tích hợp vào UI Fluent tại mục VolcanoFarm
-VolcanoFarm:AddToggle("AutoCraftMagnetToggle", {
-    Title = "Auto Craft Volcanic Magnet [Fully]",
+FullyVolcano:AddToggle("IgnoreCraftVolcanicMagnet", {
+    Title = "Ignore Craft Volcanic Magnet [ Fully ]",
     Default = false,
     Callback = function(Value)
-        _G.AutoCraftMagnet = Value
-        
-        if _G.AutoCraftMagnet then
-            task.spawn(function()
-                while _G.AutoCraftMagnet do
-                    task.wait(0.1)
-                    pcall(function()
-                        local char = game:GetService("Players").LocalPlayer.Character
-                        local root = char and char:FindFirstChild("HumanoidRootPart")
-                        if not root then return end
-                        
-                        -- Bước 1: Kiểm tra Sắt vụn (Scrap Metal hoặc tương đương)
-                        local scrapCount = GetMaterialCount("Scrap Metal") -- Thay đổi chính xác tên tiếng Anh của Sắt vụn trong game
-                        if scrapCount < 10 then
-                            -- Tìm quái Forest Pirate Level 1825
-                            local enemy = nil
-                            for _, v in ipairs(workspace.Enemies:GetChildren()) do
-                                if string.find(v.Name, "Forest Pirate") and v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 then
-                                    enemy = v
-                                    break
-                                end
-                            end
-                            
-                            if enemy and enemy:FindFirstChild("HumanoidRootPart") then
-                                LockAboveTarget(enemy.HumanoidRootPart.Position)
-                                EquipWeaponByType("Sword")
-                                SpamAllSkills()
-                            else
-                                -- Nếu chưa có quái, di chuyển về khu vực bãi quái sinh
-                                local spawnArea = workspace.EnemySpawns:FindFirstChild("Forest Pirate") -- Đổi theo đường dẫn map của game
-                                if spawnArea then SafeTween(spawnArea.CFrame) end
-                            end
-                            return
-                        end
-                        
-                        -- Bước 2: Nhận diện và tự động nhặt Blaze Ember rơi trên mặt đất trước tiên nếu xuất hiện
-                        local ember = nil
-                        for _, obj in ipairs(workspace:GetDescendants()) do
-                            if obj.Name == "Blaze Ember" or string.find(obj.Name, "Ember") then
-                                ember = obj
-                                break
-                            end
-                        end
-                        if ember then
-                            SafeTween(ember.CFrame)
-                            task.wait(0.2)
-                            return
-                        end
-                        
-                        -- Bước 3: Đọc tiến trình và trạng thái Quest hiện tại từ Dragon Hunter
-                        -- Giả lập hoặc gọi Remote nhận Quest (Tùy thuộc logic game, ở đây sử dụng di chuyển trực tiếp ấn NPC)
-                        local npcDH = workspace.NPCs:FindFirstChild("Dragon Hunter") -- Tên chính xác của NPC Dragon Hunter trong Workspace
-                        
-                        -- XỬ LÝ NHIỆM VỤ 1: Venomous Assailants (Gom 3 con)
-                        local enemiesVA = {}
-                        for _, v in ipairs(workspace.Enemies:GetChildren()) do
-                            if string.find(v.Name, "Venomous Assailant") and v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 then
-                                table.insert(enemiesVA, v)
-                                if #enemiesVA >= 3 then break end
-                            end
-                        end
-                        
-                        if #enemiesVA > 0 then
-                            -- Gom quái: Đưa vị trí đứng về trung tâm cụm 3 con
-                            local centerPos = Vector3.new(0,0,0)
-                            for _, e in ipairs(enemiesVA) do
-                                centerPos = centerPos + e.HumanoidRootPart.Position
-                            end
-                            centerPos = centerPos / #enemiesVA
-                            
-                            LockAboveTarget(centerPos)
-                            EquipWeaponByType("Sword")
-                            SpamAllSkills()
-                            return
-                        end
-                        
-                        -- XỬ LÝ NHIỆM VỤ 2: Hydra Enforcers (Gom 3 con)
-                        local enemiesHE = {}
-                        for _, v in ipairs(workspace.Enemies:GetChildren()) do
-                            if string.find(v.Name, "Hydra Enforcer") and v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 then
-                                table.insert(enemiesHE, v)
-                                if #enemiesHE >= 3 then break end
-                            end
-                        end
-                        
-                        if #enemiesHE > 0 then
-                            local centerPos = Vector3.new(0,0,0)
-                            for _, e in ipairs(enemiesHE) do
-                                centerPos = centerPos + e.HumanoidRootPart.Position
-                            end
-                            centerPos = centerPos / #enemiesHE
-                            
-                            LockAboveTarget(centerPos)
-                            EquipWeaponByType("Sword")
-                            SpamAllSkills()
-                            return
-                        end
-                        
-                        -- XỬ LÝ NHIỆM VỤ 3: Chặt Cây (Spam Melee -> Kiếm -> Súng)
-                        local targetTree = nil
-                        for _, obj in ipairs(workspace:GetDescendants()) do
-                            if obj:IsA("Model") and (string.find(string.lower(obj.Name), "tree") or obj.Name == "VolcanoTree") and obj:FindFirstChild("Humanoid") and obj.Humanoid.Health > 0 then
-                                targetTree = obj
-                                break
-                            end
-                        end
-                        
-                        if targetTree and targetTree:FindFirstChild("HumanoidRootPart") then
-                            SafeTween(targetTree.HumanoidRootPart.CFrame * CFrame.new(0, 2, 4))
-                            -- Xoay vòng đổi vũ khí để xả sạch chiêu thức vào cây
-                            local weaponOrder = {"Melee", "Sword", "Gun"}
-                            for _, wType in ipairs(weaponOrder) do
-                                EquipWeaponByType(wType)
-                                SpamAllSkills()
-                                task.wait(0.2)
-                            end
-                            return
-                        end
-                        
-                        -- Bước cuối: Nếu kiểm tra đã đủ điều kiện nguyên liệu chế tạo từ chuỗi Quest trên
-                        -- Tiến hành di chuyển thẳng tới NPC Dragon Hunter nhận Volcanic Magnet
-                        if npcDH and npcDH:FindFirstChild("HumanoidRootPart") then
-                            SafeTween(npcDH.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3))
-                            if npcDH:FindFirstChild("ClickDetector") then
-                                fireclickdetector(npcDH.ClickDetector)
-                            end
-                            -- Gọi Remote đổi vật phẩm nếu game hỗ trợ lệnh Server
-                            if game:GetService("ReplicatedStorage"):FindFirstChild("Remotes") then
-                                game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("CraftVolcanicMagnet")
-                            end
-                        end
-                        
-                    end)
-                end
-            end)
-        end
+        _G.CraftVM = Value
     end
 })
+
+spawn(function()
+  while wait(Sec) do
+    pcall(function()
+      if _G.CraftVM then     
+        if GetM("Volcanic Magnet") < 1 then
+          if GetM("Scrap Metal") >= 10 and GetM("Blaze Ember") >= 15 then
+            replicated.Remotes.CommF_:InvokeServer("CraftItem","Craft","Volcanic Magnet")
+          elseif GetM("Scrap Metal") < 10 then
+            local v = GetConnectionEnemies("Forest Pirate")
+            if v then 
+              repeat 
+                wait() 
+                Attack.Kill(v,_G.CraftVM) 
+              until not _G.CraftVM or not v.Parent or v.Humanoid.Health <= 0 or GetM("Scrap Metal") >= 10
+            else 
+              _tp(CFrame.new(-13206.452148438, 425.89199829102, -7964.5537109375))
+            end     
+          elseif GetM("Blaze Ember") < 15 then
+            repeat 
+              wait() 
+              _G.FarmBlazeEM = true 
+            until not _G.CraftVM or GetM("Blaze Ember") >= 15 
+            _G.FarmBlazeEM = false
+          end   
+        end            
+      end
+    end)
+  end
+end)
+
+HasESP = Window:AddTab("ESP")
+
+ESP = HasESP:AddLeftGroupbox("ESP")
+
+-- Khai báo các biến cần thiết
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
+local Player = Players.LocalPlayer
+
+-- ESP Islands
+local IslandESP = false
+local islandUpdateConnection
+
+function UpdateIslandESP()
+    if not Player or not Player.Character or not Player.Character:FindFirstChild("Head") then return end
+    
+    local headPosition = Player.Character.Head.Position
+    local locations = Workspace["_WorldOrigin"].Locations:GetChildren()
+    
+    for _, v in ipairs(locations) do
+        if v.Name ~= "Sea" then
+            if IslandESP then
+                local bill = v:FindFirstChild("NameEsp")
+                if not bill then
+                    bill = Instance.new("BillboardGui")
+                    bill.Name = "NameEsp"
+                    bill.ExtentsOffset = Vector3.new(0, 1, 0)
+                    bill.Size = UDim2.new(1, 200, 1, 30)
+                    bill.Adornee = v
+                    bill.AlwaysOnTop = true
+                    bill.Parent = v
+                    
+                    local name = Instance.new("TextLabel", bill)
+                    name.Font = Enum.Font.GothamBold
+                    name.TextSize = 14
+                    name.TextWrapped = true
+                    name.Size = UDim2.new(1, 0, 1, 0)
+                    name.TextYAlignment = Enum.TextYAlignment.Top
+                    name.BackgroundTransparency = 1
+                    name.TextStrokeTransparency = 0.5
+                    name.TextColor3 = Color3.fromRGB(255, 255, 255)
+                    name.Parent = bill
+                end
+                
+                local textLabel = bill:FindFirstChildOfClass("TextLabel")
+                if textLabel then
+                    local distance = (headPosition - v.Position).Magnitude / 3
+                    textLabel.Text = string.format("%s\n%d Distance", v.Name, math.floor(distance + 0.5))
+                end
+            else
+                local existingBill = v:FindFirstChild("NameEsp")
+                if existingBill then
+                    existingBill:Destroy()
+                end
+            end
+        end
+    end
+end
+
+-- ESP Fruits
+local DevilFruitESP = false
+local fruitUpdateConnection
+local FruitNumber = math.random(1, 1000000)
+
+function UpdateDevilChams()
+    if not Player or not Player.Character or not Player.Character:FindFirstChild("Head") then return end
+    
+    local headPosition = Player.Character.Head.Position
+    
+    for _, v in ipairs(Workspace:GetChildren()) do
+        pcall(function()
+            if v:IsA("Model") and string.find(v.Name, "Fruit") and v:FindFirstChild("Handle") then
+                local handle = v.Handle
+                if DevilFruitESP then
+                    local bill = handle:FindFirstChild("NameEsp" .. FruitNumber)
+                    if not bill then
+                        bill = Instance.new("BillboardGui")
+                        bill.Name = "NameEsp" .. FruitNumber
+                        bill.ExtentsOffset = Vector3.new(0, 1, 0)
+                        bill.Size = UDim2.new(1, 200, 1, 30)
+                        bill.Adornee = handle
+                        bill.AlwaysOnTop = true
+                        bill.Parent = handle
+                        
+                        local name = Instance.new("TextLabel", bill)
+                        name.Font = Enum.Font.GothamSemibold
+                        name.TextSize = 14
+                        name.TextWrapped = true
+                        name.Size = UDim2.new(1, 0, 1, 0)
+                        name.TextYAlignment = Enum.TextYAlignment.Top
+                        name.BackgroundTransparency = 1
+                        name.TextStrokeTransparency = 0.5
+                        name.TextColor3 = Color3.fromRGB(255, 255, 255)
+                        name.Parent = bill
+                    end
+                    
+                    local textLabel = bill:FindFirstChildOfClass("TextLabel")
+                    if textLabel then
+                        local distance = (headPosition - handle.Position).Magnitude / 3
+                        textLabel.Text = string.format("%s\n%d Distance", v.Name, math.floor(distance + 0.5))
+                    end
+                else
+                    local existingBill = handle:FindFirstChild("NameEsp" .. FruitNumber)
+                    if existingBill then
+                        existingBill:Destroy()
+                    end
+                end
+            end
+        end)
+    end
+end
+
+-- ESP Players
+local ESPPlayer = false
+local playerUpdateConnection
+local PlayerNumber = math.random(1, 1000000)
+
+function UpdatePlayerChams()
+    if not Player or not Player.Character or not Player.Character:FindFirstChild("Head") then return end
+    
+    local headPosition = Player.Character.Head.Position
+    
+    for _, v in ipairs(Players:GetPlayers()) do
+        pcall(function()
+            if v ~= Player and v.Character and v.Character:FindFirstChild("Head") and v.Character:FindFirstChild("Humanoid") then
+                local head = v.Character.Head
+                local humanoid = v.Character.Humanoid
+                local bill = head:FindFirstChild("NameEsp" .. PlayerNumber)
+                
+                if ESPPlayer then
+                    if not bill then
+                        bill = Instance.new("BillboardGui")
+                        bill.Name = "NameEsp" .. PlayerNumber
+                        bill.ExtentsOffset = Vector3.new(0, 1, 0)
+                        bill.Size = UDim2.new(1, 200, 1, 30)
+                        bill.Adornee = head
+                        bill.AlwaysOnTop = true
+                        bill.Parent = head
+                        
+                        local name = Instance.new("TextLabel", bill)
+                        name.Font = Enum.Font.GothamSemibold
+                        name.TextSize = 14
+                        name.TextWrapped = true
+                        name.Size = UDim2.new(1, 0, 1, 0)
+                        name.TextYAlignment = Enum.TextYAlignment.Top
+                        name.BackgroundTransparency = 1
+                        name.TextStrokeTransparency = 0.5
+                        name.Parent = bill
+                    end
+                    
+                    local textLabel = bill:FindFirstChildOfClass("TextLabel")
+                    if textLabel then
+                        local distance = math.floor((headPosition - head.Position).Magnitude / 3 + 0.5)
+                        local healthPercent = math.floor((humanoid.Health / humanoid.MaxHealth) * 100 + 0.5)
+                        textLabel.Text = string.format("%s\n%d Distance\nHealth: %d%%", v.Name, distance, healthPercent)
+                        
+                        if v.Team == Player.Team then
+                            textLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+                        else
+                            textLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
+                        end
+                    end
+                else
+                    if bill then
+                        bill:Destroy()
+                    end
+                end
+            end
+        end)
+    end
+end
 
 -- ESP Berries
 local BerryEsp = false
