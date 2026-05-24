@@ -2769,7 +2769,7 @@ ReportIdeas:AddButton({
         
         -- Tạo embed data
         local data = {
-            ["username"] = "AKC Hub BOT",
+            ["username"] = "Night Slayer Hub BOT",
             ["avatar_url"] = "https://cdn.discordapp.com/attachments/...",
             ["embeds"] = {{
                 ["title"] = embedTitle,
@@ -2800,7 +2800,7 @@ ReportIdeas:AddButton({
                     }
                 },
                 ["footer"] = {
-                    ["text"] = "AKC Hub • " .. time,
+                    ["text"] = "Night Slayer Hub • " .. time,
                     ["icon_url"] = "https://cdn.discordapp.com/attachments/..."
                 },
                 ["timestamp"] = os.date("!%Y-%m-%dT%H:%M:%SZ")
@@ -4380,169 +4380,70 @@ spawn(function()
 end)
 
 -- Farm Katakuri
--- [[ KHỞI TẠO BIẾN & THAM CHIẾU THEO BANANAHUB ]] --
-local Players = game:GetService("Players")
-local Workspace = game:GetService("Workspace")
-local TweenService = game:GetService("TweenService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local plr = Players.LocalPlayer
-
--- Kiểm tra và tải Character ổn định
-local Character = plr.Character or plr.CharacterAdded:Wait()
-local Root = Character:WaitForChild("HumanoidRootPart")
-
--[span_6](start_span)- Cấu hình danh sách 4 Quái Vật Katakuri (Cake Island) theo Level[span_6](end_span)
-local KatakuriNPCs = {
-    "Cookie Crafter", -- Lv. [span_7](start_span)[span_8](start_span)2200[span_7](end_span)[span_8](end_span)
-    "Cake Guard",     -- Lv. [span_9](start_span)[span_10](start_span)2225[span_9](end_span)[span_10](end_span)
-    "Baking Staff",    -- Lv. [span_11](start_span)[span_12](start_span)[span_13](start_span)2250[span_11](end_span)[span_12](end_span)[span_13](end_span)
-    "Head Baker"      -- Lv. [span_14](start_span)[span_15](start_span)[span_16](start_span)2275[span_14](end_span)[span_15](end_span)[span_16](end_span)
-}
-
--[span_17](start_span)- Tọa độ trung tâm để chờ quái nếu chưa spawn (Dựa trên PosMsList)[span_17](end_span)
-local CakeIslandCenter = CFrame.new(-2021, 38, -12028) 
-
--- [[ BIẾN BẬT / TẮT TÍNH NĂNG ]] --
-_G.KatakuriFarmV1 = true  -- Chuyển thành false nếu muốn tắt hack
-_[span_18](start_span)[span_19](start_span)G.SelectWeapon = _G.SelectWeapon or "Melee" -- Vũ khí: "Melee", "Sword", hoặc "Blox Fruit"[span_18](end_span)[span_19](end_span)
-getgenv().TweenSpeed = 320 -- Tốc độ di chuyển tween mượt mà, không giật rubber-band
-
--- [[ HÀM HỖ TRỢ DI CHUYỂN & GOM QUÁI (KẾ THỪA TỪ GỐC) ]] --
-
--[span_20](start_span)- Hàm di chuyển Tween chống lag, chống rớt, xuyên đảo mượt mà[span_20](end_span)
-local function SafeTween(targetCFrame)
-    local char = plr.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-    local rootPart = char.HumanoidRootPart
-    
-    local distance = (targetCFrame.Position - rootPart.Position).Magnitude
-    if distance < 8 then return end
-    
-    -[span_21](start_span)- Tắt va chạm toàn thân để không bị kẹt địa hình hay khựng giật khi đi xuyên map[span_21](end_span)
-    for _, part in pairs(char:GetChildren()) do
-        if part:IsA("BasePart") then
-            part.CanCollide = false
-        end
-    end
-    
-    local tweenInfo = TweenInfo.new(distance / getgenv().TweenSpeed, Enum.EasingStyle.Linear)
-    local tween = TweenService:Create(rootPart, tweenInfo, {CFrame = targetCFrame})
-    tween:Play()
-    tween.Completed:Wait()
-    
-    -- Triệt tiêu lực quán tính ngay sau khi hoàn thành Tween để tránh camera bị rung lắc
-    if rootPart then rootPart.Velocity = Vector3.new(0,0,0) end
-end
-
--[span_22](start_span)- Hàm lấy vũ khí tự động[span_22](end_span)
-local function EquipCurrentWeapon()
-    local tool = plr.Backpack:FindFirstChild(_G.SelectWeapon)
-    if tool then
-        plr.Character.Humanoid:EquipTool(tool)
-    end
-end
-
--[span_23](start_span)- Hàm gom quái thông minh (Đánh bãi nào gom riêng bãi đó dựa trên tên quái hiện tại)[span_23](end_span)
-local function BringSpecificEnemies(currentMonName, targetPosition)
-    local enemiesFolder = Workspace:FindFirstChild("Enemies")
-    if not enemiesFolder then return end
-    
-    for _, enemy in pairs(enemiesFolder:GetChildren()) do
-        -[span_24](start_span)- Chỉ gom những con quái cùng tên, còn sống và nằm trong bán kính bãi quái (300 studs)[span_24](end_span)
-        if enemy.Name == currentMonName and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 then
-            local enemyRoot = enemy:FindFirstChild("HumanoidRootPart")
-            if enemyRoot and (enemyRoot.Position - targetPosition).Magnitude <= 300 then
-                [span_25](start_span)enemyRoot.CFrame = CFrame.new(targetPosition) -- Gom toàn bộ về một điểm duy nhất[span_25](end_span)
-                enemyRoot.CanCollide = false
-                [span_26](start_span)enemy.Humanoid.WalkSpeed = 0 -- Khóa di chuyển quái để không bị phân tán[span_26](end_span)
-                [span_27](start_span)enemy.Humanoid.JumpPower = 0[span_27](end_span)
-                
-                -[span_28](start_span)- Xóa hoạt ảnh của quái để chống giật lag và giữ quái đứng im[span_28](end_span)
-                if enemy.Humanoid:FindFirstChild("Animator") then
-                    [span_29](start_span)enemy.Humanoid.Animator:Destroy()[span_29](end_span)
-                end
-                [span_30](start_span)plr.SimulationRadius = math.huge[span_30](end_span)
-            end
-        end
-    end
-end
-
--[span_31](start_span)- Hàm kích hoạt Auto Click tấn công liên tục[span_31](end_span)
-local function AutoAttackClick()
-    local VirtualUser = game:GetService("VirtualUser")
-    VirtualUser:CaptureController()
-    VirtualUser:ClickButton1(Vector2.new(50, 50))
-end
-
--- [[ VÒNG LẶP CHÍNH - MAIN FARMING LOOP ]] --
-task.spawn(function()
-    while true do
-        task.wait(0.1)
-        
-        if _G.KatakuriFarmV1 then
+spawn(function()
+    while task.wait(1) do
+        if _G.StartFarm and _G.MethodSelect == "Farm Katakuri" then
             pcall(function()
-                -[span_32](start_span)- Kiểm tra thế giới có phải là Sea 3 không (PlaceId: 7449423635)[span_32](end_span)
-                if game.PlaceId ~= 7449423635 then
-                    print("Vui lòng kích hoạt script này ở Sea 3!")
-                    return
-                end
+                local player = game.Players.LocalPlayer
+                local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+                local questUI = player.PlayerGui:FindFirstChild("Main") and 
+                                player.PlayerGui.Main:FindFirstChild("Quest")
+                local enemies = workspace.Enemies
+                local bigMirror = workspace.Map.CakeLoaf.BigMirror
                 
-                local char = plr.Character
-                if not char or not char:FindFirstChild("Humanoid") or char.Humanoid.Health <= 0 then return end
+                if not root then return end
+                if not bigMirror:FindFirstChild("Other") then
+                    _tp(CFrame.new(-2077, 252, -12373))
+                end        
                 
-                -[span_33](start_span)- Tìm mục tiêu quái vật còn sống trong danh sách ưu tiên[span_33](end_span)
-                local targetMob = nil
-                local enemiesFolder = Workspace:FindFirstChild("Enemies")
-                
-                if enemiesFolder then
-                    for _, name in ipairs(KatakuriNPCs) do
-                        for _, enemy in pairs(enemiesFolder:GetChildren()) do
-                            if enemy.Name == name and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 and enemy:FindFirstChild("HumanoidRootPart") then
-                                targetMob = enemy
-                                break
-                            end
-                        end
-                        if targetMob then break end
-                    end
-                end
-                
-                -[span_34](start_span)- Xử lý Logic Farm[span_34](end_span)
-                if targetMob then
-                    local mobRoot = targetMob.HumanoidRootPart
-                    local mobName = targetMob.Name
-                    
-                    -[span_35](start_span)[span_36](start_span)- Vị trí khóa cố định của quái để làm điểm tập kết gom bãi[span_35](end_span)[span_36](end_span)
-                    if not targetMob:GetAttribute("LockedPos") then
-                        targetMob:SetAttribute("LockedPos", mobRoot.CFrame)
-                    end
-                    local lockedCFrame = targetMob:GetAttribute("LockedPos")
-                    
-                    -[span_37](start_span)[span_38](start_span)- Điểm đứng farm an toàn: Đứng trên đầu quái đúng 11-12 studs[span_37](end_span)[span_38](end_span)
-                    -[span_39](start_span)[span_40](start_span)- Góc nhìn nghiêng chúc xuống giúp đòn đánh Melee/Sword trúng mọi mục tiêu gom bên dưới mà không bị quái phản công mất máu[span_39](end_span)[span_40](end_span)
-                    local farmPosition = lockedCFrame * CFrame.new(0, 11.5, 0) * CFrame.Angles(math.rad(-90), 0, 0)
-                    
-                    -[span_41](start_span)- Di chuyển nhanh đến điểm farm nếu ở xa[span_41](end_span)
-                    if (char.HumanoidRootPart.Position - farmPosition.Position).Magnitude > 15 then
-                        SafeTween(farmPosition)
+                if bigMirror.Other.Transparency == 0 or enemies:FindFirstChild("Cake Prince") then
+                    local v = GetConnectionEnemies("Cake Prince")
+                    if v then
+                        repeat 
+                            wait() 
+                            Attack.Kill2(v, _G.StartFarm)  -- Sửa: dùng _G.StartFarm thay vì _G.Auto_Cake_Prince
+                        until not _G.StartFarm or not v.Parent or v.Humanoid.Health <= 0
                     else
-                        -[span_42](start_span)- Đóng băng tọa độ nhân vật tại chỗ đứng farm để loại bỏ hoàn toàn hiện tượng rung lắc, rơi rớt[span_42](end_span)
-                        char.HumanoidRootPart.CFrame = farmPosition
-                        char.HumanoidRootPart.Velocity = Vector3.new(0,0,0)
-                        
-                        -[span_43](start_span)[span_44](start_span)- Thực hiện cuộc gọi gom quái của bãi đó[span_43](end_span)[span_44](end_span)
-                        BringSpecificEnemies(mobName, lockedCFrame.Position)
-                        
-                        -[span_45](start_span)[span_46](start_span)- Trang bị vũ khí và xả sát thương[span_45](end_span)[span_46](end_span)
-                        EquipCurrentWeapon()
-                        AutoAttackClick()
+                        if bigMirror.Other.Transparency == 0 and (CFrame.new(-1990.67, 4533, -14973.67).Position - root.Position).Magnitude >= 2000 then
+                            _tp(CFrame.new(-2151.82, 149.32, -12404.91))
+                        end
                     end
                 else
-                    -[span_47](start_span)- Nếu không có quái nào trên đảo spawn, tự động tween về trung tâm Đảo Bánh để đứng chờ[span_47](end_span)
-                    if (char.HumanoidRootPart.Position - CakeIslandCenter.Position).Magnitude > 50 then
-                        SafeTween(CakeIslandCenter * CFrame.new(0, 50, 0)) -- Chờ ở trên cao an toàn
+                    local CakePrince = {"Cookie Crafter","Cake Guard","Baking Staff","Head Baker"}
+                    local v = GetConnectionEnemies(CakePrince)
+                    if v then
+                        if _G.AcceptQuestC and questUI and not questUI.Visible then
+                            local questPos = CFrame.new(-1927.92, 37.8, -12842.54)
+                            _tp(questPos)
+                            
+                            local attempts = 0
+                            while attempts < 50 and (questPos.Position - root.Position).Magnitude > 50 do
+                                wait(0.2)
+                                attempts = attempts + 1
+                            end
+                            
+                            local randomQuest = math.random(1, 4)
+                            local questData = {
+                                [1] = {"StartQuest", "CakeQuest2", 2},
+                                [2] = {"StartQuest", "CakeQuest2", 1},
+                                [3] = {"StartQuest", "CakeQuest1", 1},
+                                [4] = {"StartQuest", "CakeQuest1", 2}
+                            }                    
+                            
+                            pcall(function()
+                                game.ReplicatedStorage.Remotes.CommF_:InvokeServer(unpack(questData[randomQuest]))
+                            end)
+                        end
+                        
+                        repeat 
+                            wait() 
+                            Attack.Kill(v, _G.StartFarm)  -- Sửa: dùng _G.StartFarm
+                        until not _G.StartFarm or not v or not v.Parent or 
+                              (v.Humanoid and v.Humanoid.Health <= 0) or 
+                              bigMirror.Other.Transparency == 0 or 
+                              (_G.AcceptQuestC and questUI and not questUI.Visible)
                     else
-                        char.HumanoidRootPart.CFrame = CakeIslandCenter * CFrame.new(0, 50, 0)
-                        char.HumanoidRootPart.Velocity = Vector3.new(0,0,0)
+                        _tp(CFrame.new(-2077, 252, -12373))
                     end
                 end
             end)
@@ -4679,16 +4580,6 @@ MeterialFarm:AddDropdown("SelectMethodFarm", {
     end
 })
 
-MeterialFarm = AutoModeFarm:AddLeftGroupbox("Addslider({
-     Title = "Distance Farm Aura",
-    Min = 0,
-    Max = 500,
-    Default = 300,
-    Callback = function(Value)
-        _G.Safemode = Value
-    end
-})
-
 MeterialFarm:AddToggle("MasteryStart", {
     Title = "Farm Mastery",
     Default = false,
@@ -4696,8 +4587,8 @@ MeterialFarm:AddToggle("MasteryStart", {
         _G.MasteryFarmStart = Value
         if not _G.StartFarn then
         Library:Notify({
-            Title = "AKC Hub",
-            Description = "Open Start Farm ✅!",
+            Title = "Night Slayer Hub",
+            Description = "Open Start Farm Plz!",
             Duration = 3
         })
         end
@@ -4826,8 +4717,8 @@ MeterialFarm:AddToggle("MeterialStart", {
         _G.AutoMaterial = Value 
         if not _G.StartFarm then
             Library:Notify({
-                Title = "AKC Hub",
-                Description = "Open Start Farm ✅!",
+                Title = "Night Slayer Hub",
+                Description = "Open Start Farm Plz!",
                 Duration = 3
             })
         end
@@ -5067,8 +4958,8 @@ DevilFarm:AddToggle("DevilFarmHopServer", {
         _G.HopFruitsFarm = Value
         if not _G.TwFruits then
             Library:Notify({
-                Title = "AKC Hub",
-                Description = "Open Teleport to Fruit ✅!",
+                Title = "Night Slayer Hub",
+                Description = "Open Teleport to Fruit Plz!",
                 Duration = 3
             })
         end
@@ -5247,8 +5138,8 @@ RipIndraBoss:AddToggle("EliteHunterFarmHop", {
         _G.EliteHop = Value
         if not _G.TwFruits then
             Library:Notify({
-                Title = "AKC Hub",
-                Description = "Open Auto Elite Hunter ✅!",
+                Title = "Night Slayer Hub",
+                Description = "Open Auto Elite Hunter Plz!",
                 Duration = 3
             })
         end
@@ -5408,8 +5299,8 @@ SoulReaperBoss:AddToggle("SoulReaperHop", {
         _G.SoulHopR = Value
         if not _G.AutoHytHallow then
             Library:Notify({
-                Title = "AKC Hub",
-                Description = "Open Auto Soul Reaper ✅!",
+                Title = "Night Slayer Hub",
+                Description = "Open Auto Soul Reaper Plz!",
                 Duration = 3
             })
         end
@@ -5463,8 +5354,8 @@ DoughKingBoss:AddToggle("DoughKingHop", {
         _G.DoughKingHop = Value
         if not _G.AutoMiror then 
             Library:Notify({
-                Title = "AKC Hub",
-                Description = "Open Auto Dough King ✅!",
+                Title = "Night Slayer Hub",
+                Description = "Open Auto Dough King Plz!",
                 Duration = 3
             })
         end
@@ -5519,8 +5410,8 @@ DarkbeardBoss:AddToggle("DarkBreadHop", {
         _G.DarkbreadHop = Value
         if not _G.Auto_Def_DarkCoat then 
             Library:Notify({
-                Title = "AKC Hub",
-                Description = "Open Auto Darkbread ✅!",
+                Title = "Night Slayer Hub",
+                Description = "Open Auto Darkbread Plz!",
                 Duration = 3
             })
         end
@@ -6036,8 +5927,8 @@ BerryFarm:AddToggle("BerryFarmHop", {
         _G.HopBerry = Value
         if not _G.AutoBerry then 
             Library:Notify({
-                Title = "AKC Hub",
-                Description = "Open Auto Berry ✅!",
+                Title = "Night Slayer Hub",
+                Description = "Open Auto Berry Plz!",
                 Duration = 3
             })
         end
@@ -6133,8 +6024,8 @@ ChestFarm:AddToggle("ChestHopAuto", {
         _G.ChestHop = Value
         if not _G.AutoFarmChest then 
             Library:Notify({
-                Title = "AKC Hub",
-                Description = "Open Auto Chest ✅!",
+                Title = "Night Slayer Hub",
+                Description = "Open Auto Chest Plz!",
                 Duration = 3
             })
         end
@@ -6400,8 +6291,8 @@ ObservationFarm:AddToggle("ObservationHop", {
         _G.ObservationFarmHop = Value
         if not _G.obsFarm then 
             Library:Notify({
-                Title = "AKC Hub",
-                Description = "Open Auto Observation ✅!",
+                Title = "Night Slayer Hub",
+                Description = "Open Auto Observation Plz!",
                 Duration = 3
             })
         end
@@ -8540,8 +8431,8 @@ GetItems:AddToggle("AutoHopColorAndSword", {
         _G.AutoHopColorAndSword = Value 
         if not _G.Auto_Buy_Legendary_Sword and not _G.HakiColorBusoBuy then
             Library:Notify({
-                Title = "AKC Hub",
-                Description = "Open Buy Haki Color or Legendary Sword ✅!",
+                Title = "Night Slayer Hub",
+                Description = "Open Buy Haki Color or Legendary Sword Plz!",
                 Duration = 3
             })
         end
