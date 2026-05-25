@@ -5447,51 +5447,181 @@ NF.CreateToggle({
 		_G.AutoFarm_Bone = Y;
 	end,
 });
-spawn(function()
-    while task.wait(1) do
-        if _G.StartFarm and _G.MethodSelect == "Farm Bones" then
-            pcall(function()        
-                local player = game.Players.LocalPlayer
-                local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-                local questUI = player.PlayerGui:FindFirstChild("Main") and 
-                                player.PlayerGui.Main:FindFirstChild("Quest")
-                local BonesTable = {"Reborn Skeleton","Living Zombie","Demonic Soul","Posessed Mummy"}
+-- Khởi tạo biến môi trường dựa trên cấu trúc file cung cấp
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local TweenService = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+
+-- Cấu hình Farm
+_G.AutoFarmBone = true       -- Bật/Tắt farm bone
+_[span_5](start_span)G.SelectWeapon = "Melee"    -- Thay thế bằng loại vũ khí bạn dùng (Melee, Sword, Blox Fruit)[span_5](end_span)
+_[span_6](start_span)G.DistanceAbove = 10        -- Khoảng cách đứng trên đầu quái (Metres)[span_6](end_span)
+
+-[span_7](start_span)- Tọa độ vị trí Đảo Lâu Đài Bóng Tối (Haunted Castle)[span_7](end_span)
+local HauntedCastleCFrame = CFrame.new(-9579, 6, 6194) 
+
+-[span_8](start_span)- Hàm kiểm tra Sea 3[span_8](end_span)
+if game.PlaceId ~= 7449423635 and game.PlaceId ~= 100117331123089 then
+    print("Vui lòng kích hoạt script tại Sea 3!")
+    return
+end
+
+-[span_9](start_span)[span_10](start_span)- Tạo một Part đệm bảo vệ nhân vật, chống rung/rớt/lag (áp dụng cơ chế Rip_Indra từ file gốc)[span_9](end_span)[span_10](end_span)
+local FarmPlatform = Workspace:FindFirstChild("BoneFarmPlatform") or Instance.new("Part", Workspace)
+FarmPlatform.Name = "BoneFarmPlatform"
+FarmPlatform.Size = Vector3.new(5, 1, 5)
+FarmPlatform.Anchored = true
+FarmPlatform.CanCollide = true
+FarmPlatform.Transparency = 1
+
+-[span_11](start_span)- Cơ chế giữ vị trí và chống giật/rớt/anti-collide cho nhân vật[span_11](end_span)
+task.spawn(function()
+    while task.wait() do
+        if _G.AutoFarmBone and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local HRP = LocalPlayer.Character.HumanoidRootPart
+            -[span_12](start_span)- Tắt va chạm cơ thể để không bị kẹt khi gom quái[span_12](end_span)
+            for _, part in pairs(LocalPlayer.Character:GetChildren()) do
+                if part:IsA("BasePart") then part.CanCollide = false end
+            end
+            -[span_13](start_span)- Khóa nhân vật trên Platform an toàn[span_13](end_span)
+            if (HRP.Position - FarmPlatform.Position).Magnitude <= 150 then
+                HRP.CFrame = FarmPlatform.CFrame * CFrame.new(0, 2.5, 0)
+            else
+                FarmPlatform.CFrame = HRP.CFrame
+            end
+        else
+            -[span_14](start_span)- Hoàn trả va chạm khi tắt farm[span_14](end_span)
+            if LocalPlayer.Character then
+                for _, part in pairs(LocalPlayer.Character:GetChildren()) do
+                    if part:IsA("BasePart") then part.CanCollide = true end
+                end
+            end
+        end
+    end
+end)
+
+-[span_15](start_span)- Hàm di chuyển bằng Tween mượt mà đến mục tiêu, không bị rớt[span_15](end_span)
+local function TweenTo(targetCFrame)
+    if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then return end
+    local HRP = LocalPlayer.Character.HumanoidRootPart
+    local distance = (targetCFrame.Position - HRP.Position).Magnitude
+    
+    -[span_16](start_span)- Nếu khoảng cách quá xa, di chuyển mượt với tốc độ 350 (chống giật và kích hoạt anticheat)[span_16](end_span)
+    if distance > 20 then
+        local tweenInfo = TweenInfo.new(distance / 350, Enum.EasingStyle.Linear)
+        local tween = TweenService:Create(FarmPlatform, tweenInfo, {CFrame = targetCFrame})
+        tween:Play()
+        
+        while tween.PlaybackState == Enum.PlaybackState.Playing do
+            if not _G.AutoFarmBone then tween:Cancel() break end
+            task.wait(0.1)
+        end
+    else
+        FarmPlatform.CFrame = targetCFrame
+    end
+end
+
+-[span_17](start_span)- Hàm tự động trang bị vũ khí[span_17](end_span)
+local function EquipWeapon()
+    local backpack = LocalPlayer:WaitForChild("Backpack")
+    local character = LocalPlayer.Character
+    if character and character:FindFirstChild("Humanoid") then
+        for _, tool in pairs(backpack:GetChildren()) do
+            if tool:IsA("Tool") and (tool.ToolTip == _G.SelectWeapon or tool.Name == _G.SelectWeapon) then
+                character.Humanoid:EquipTool(tool)
+            end
+        end
+    end
+end
+
+-[span_18](start_span)- Hàm gom quái theo level mục tiêu và vô hiệu hóa chuyển động chống lag[span_18](end_span)
+local function BringEnemies(monsterName, anchorPosition)
+    for _, enemy in pairs(Workspace.Enemies:GetChildren()) do
+        if enemy.Name == monsterName and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 then
+            if enemy:FindFirstChild("HumanoidRootPart") then
+                -[span_19](start_span)- Vô hiệu hóa hoạt ảnh để quái đứng im không lag[span_19](end_span)
+                if enemy.Humanoid:FindFirstChild("Animator") then
+                    enemy.Humanoid.Animator:Destroy()
+                end
+                [span_20](start_span)enemy.Humanoid.WalkSpeed = 0[span_20](end_span)
+                [span_21](start_span)enemy.Humanoid.JumpPower = 0[span_21](end_span)
                 
-                if not root then return end
+                -[span_22](start_span)- Gom toàn bộ quái về một điểm chính[span_22](end_span)
+                enemy.HumanoidRootPart.CFrame = CFrame.new(anchorPosition)
+                enemy.HumanoidRootPart.CanCollide = false
+            end
+        end
+    end
+end
+
+-[span_23](start_span)[span_24](start_span)- Kích hoạt tự động click đánh quái bằng VirtualInputManager[span_23](end_span)[span_24](end_span)
+task.spawn(function()
+    local VIM = game:GetService("VirtualInputManager")
+    while task.wait(0.1) do
+        if _G.AutoFarmBone and LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Tool") then
+            VIM:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+            VIM:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+        end
+    end
+end)
+
+-[span_25](start_span)[span_26](start_span)- Luồng logic xử lý Farm chính (Lựa chọn quái theo cấp độ nhân vật)[span_25](end_span)[span_26](end_span)
+task.spawn(function()
+    while task.wait(0.2) do
+        if _G.AutoFarmBone then
+            pcall(function()
+                [span_27](start_span)local myLevel = LocalPlayer.Data.Level.Value[span_27](end_span)
+                local targetMonster = ""
                 
-                local bone = GetConnectionEnemies(BonesTable)
-                if bone then
-                    if _G.AcceptQuestC and questUI and not questUI.Visible then
-                        local questPos = CFrame.new(-9516.99316, 172.017181, 6078.46533, 0, 0, -1, 0, 1, 0, 1, 0, 0)
-                        _tp(questPos)
-                        
-                        local attempts = 0
-                        while attempts < 50 and (questPos.Position - root.Position).Magnitude > 50 do
-                            task.wait(0.2)
-                            attempts = attempts + 1
-                        end
-                        
-                        local randomQuest = math.random(1, 4)
-                        local questData = {
-                            [1] = {"StartQuest", "HauntedQuest2", 2},
-                            [2] = {"StartQuest", "HauntedQuest2", 1},
-                            [3] = {"StartQuest", "HauntedQuest1", 1},
-                            [4] = {"StartQuest", "HauntedQuest1", 2}
-                        }                    
-                        
-                        pcall(function()
-                            game.ReplicatedStorage.Remotes.CommF_:InvokeServer(unpack(questData[randomQuest]))
-                        end)
-                    end
-                    
-                    repeat 
-                        task.wait() 
-                        Attack.Kill(bone, _G.StartFarm) 
-                    until not _G.StartFarm or not bone or not bone.Parent or 
-                          (bone.Humanoid and bone.Humanoid.Health <= 0) or 
-                          (_G.AcceptQuestC and questUI and not questUI.Visible)
+                -[span_28](start_span)- Phân chia quái gom theo cấp độ tương ứng yêu cầu[span_28](end_span)
+                if myLevel >= 1975 and myLevel < 2000 then
+                    targetMonster = "Reborn Skeleton"
+                elseif myLevel >= 2000 and myLevel < 2025 then
+                    targetMonster = "Living Zombie"
+                elseif myLevel >= 2025 and myLevel < 2050 then
+                    targetMonster = "Demonic Soul"
+                elseif myLevel >= 2050 then
+                    targetMonster = "Posessed Mummy"
                 else
-                    _tp(CFrame.new(-9495.6806640625, 453.58624267578125, 5977.3486328125))
+                    -[span_29](start_span)- Nếu cấp độ thấp hơn 1975, mặc định vẫn chọn Reborn Skeleton để farm xương[span_29](end_span)
+                    targetMonster = "Reborn Skeleton"
+                end
+                
+                -- Tìm kiếm quái trên Workspace
+                local monsterFound = nil
+                for _, enemy in pairs(Workspace.Enemies:GetChildren()) do
+                    if enemy.Name == targetMonster and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 then
+                        monsterFound = enemy
+                        break
+                    end
+                end
+                
+                if monsterFound and monsterFound:FindFirstChild("HumanoidRootPart") then
+                    -[span_30](start_span)- Điểm khóa cố định vị trí gom quái[span_30](end_span)
+                    local monsterPos = monsterFound.HumanoidRootPart.Position
+                    
+                    -[span_31](start_span)- Gom toàn bộ quái cùng loại về một điểm[span_31](end_span)
+                    BringEnemies(targetMonster, monsterPos)
+                    
+                    -[span_32](start_span)- Trang bị vũ khí[span_32](end_span)
+                    EquipWeapon()
+                    
+                    -[span_33](start_span)- Đứng trên đầu quái chính xác: Cắt hoàn toàn hiện tượng rung lắc/giật lag[span_33](end_span)
+                    local farmCFrame = CFrame.new(monsterPos) * CFrame.new(0, _G.DistanceAbove, 0) * CFrame.Angles(math.rad(-90), 0, 0)
+                    TweenTo(farmCFrame)
+                else
+                    -[span_34](start_span)- Nếu không tìm thấy quái (đang chờ hồi sinh), di chuyển về khu vực spawn của quái đó[span_34](end_span)
+                    if targetMonster == "Reborn Skeleton" then
+                        TweenTo(CFrame.new(-8764, 142 + _G.DistanceAbove, 5963))
+                    elseif targetMonster == "Living Zombie" then
+                        TweenTo(CFrame.new(-10227, 421 + _G.DistanceAbove, 6161))
+                    elseif targetMonster == "Demonic Soul" or targetMonster == "Posessed Mummy" then
+                        TweenTo(CFrame.new(-9579, 6 + _G.DistanceAbove, 6194))
+                    else
+                        TweenTo(HauntedCastleCFrame * CFrame.new(0, _G.DistanceAbove, 0))
+                    end
                 end
             end)
         end
