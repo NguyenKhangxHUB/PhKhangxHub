@@ -5374,71 +5374,110 @@ NF.CreateToggle({
 		_G.Auto_Cake_Prince = Y;
 	end,
 });
+--// AUTO FARM CAKE ISLAND
+_G.AutoFarm_CakeIsland = true
+
+local CakeMobs = {
+    "Cookie Crafter [Lv. 2200]",
+    "Cake Guard [Lv. 2225]",
+    "Baking Staff [Lv. 2250]",
+    "Cake Homie [Lv. 2275]"
+}
+
+local CakePos = {
+    ["Cookie Crafter [Lv. 2200]"] = CFrame.new(-2180, 38, -12041),
+    ["Cake Guard [Lv. 2225]"] = CFrame.new(-1598, 44, -12253),
+    ["Baking Staff [Lv. 2250]"] = CFrame.new(-1870, 38, -12938),
+    ["Cake Homie [Lv. 2275]"] = CFrame.new(-2213, 80, -12869)
+}
+
 spawn(function()
-	while wait() do
-		if _G.Auto_Cake_Prince then
-			pcall(function()
-				local Y = game.Players.LocalPlayer;
-				local d = Y.Character and Y.Character:FindFirstChild("HumanoidRootPart");
-				local R = Y.PlayerGui.Main.Quest;
-				local Q = workspace.Enemies;
-				local r = workspace.Map.CakeLoaf.BigMirror;
-				if not d then
-					return;
-				end;
-				if not r:FindFirstChild("Other") then
-					_tp(CFrame.new(-2077, 252, -12373));
-				end;
-				if r.Other.Transparency == 0 or Q:FindFirstChild("Cake Prince") then
-					local Y = GetConnectionEnemies("Cake Prince");
-					if Y then
-						repeat
-							wait();
-							f.Kill2(Y, _G.Auto_Cake_Prince);
-						until not _G.Auto_Cake_Prince or not Y.Parent or Y.Humanoid.Health <= 0;
-					else
-						if r.Other.Transparency == 0 and ((CFrame.new(-1990.67, 4533, -14973.67)).Position - d.Position).Magnitude >= 2000 then
-							_tp(CFrame.new(-2151.82, 149.32, -12404.91));
-						end;
-					end;
-				else
-					local Y = {
-							"Cookie Crafter",
-							"Cake Guard",
-							"Baking Staff",
-							"Head Baker",
-						};
-					local Q = GetConnectionEnemies(Y);
-					if Q then
-						if _G.AcceptQuestC and not R.Visible then
-							local Y = CFrame.new(-1927.92, 37.8, -12842.54);
-							_tp(Y);
-							while (Y.Position - d.Position).Magnitude > 50 do
-								wait(.2);
-							end;
-							local R = math.random(1, 4);
-							local Q = {
-									[1] = { "StartQuest", "CakeQuest2", 2 },
-									[2] = { "StartQuest", "CakeQuest2", 1 },
-									[3] = { "StartQuest", "CakeQuest1", 1 },
-									[4] = { "StartQuest", "CakeQuest1", 2 },
-								};
-							local r, a = pcall(function()
-									return game.ReplicatedStorage.Remotes.CommF_:InvokeServer(unpack(Q[R]));
-								end);
-						end;
-						repeat
-							wait();
-							f.Kill(Q, _G.Auto_Cake_Prince);
-						until not _G.Auto_Cake_Prince or Q.Humanoid.Health <= 0 or r.Other.Transparency == 0 or _G.AcceptQuestC and not R.Visible;
-					else
-						_tp(CFrame.new(-2077, 252, -12373));
-					end;
-				end;
-			end);
-		end;
-	end;
-end);
+    while task.wait() do
+        pcall(function()
+
+            if _G.AutoFarm_CakeIsland then
+
+                local plr = game.Players.LocalPlayer
+                local char = plr.Character
+                local hrp = char:WaitForChild("HumanoidRootPart")
+
+                -- chống rung + chống rớt
+                hrp.Velocity = Vector3.zero
+                hrp.CanCollide = false
+
+                for _,MobName in pairs(CakeMobs) do
+
+                    local MobFound = nil
+
+                    for i,v in pairs(workspace.Enemies:GetChildren()) do
+                        if v.Name == MobName
+                        and v:FindFirstChild("Humanoid")
+                        and v:FindFirstChild("HumanoidRootPart")
+                        and v.Humanoid.Health > 0 then
+                            MobFound = v
+                            break
+                        end
+                    end
+
+                    if MobFound then
+
+                        repeat task.wait()
+
+                            if not _G.AutoFarm_CakeIsland then
+                                break
+                            end
+
+                            local EnemyHRP = MobFound.HumanoidRootPart
+
+                            -- đứng trên đầu quái
+                            hrp.CFrame = EnemyHRP.CFrame * CFrame.new(0,25,0)
+
+                            -- gom quái cùng level
+                            for i,v in pairs(workspace.Enemies:GetChildren()) do
+                                if v.Name == MobName
+                                and v ~= MobFound
+                                and v:FindFirstChild("Humanoid")
+                                and v:FindFirstChild("HumanoidRootPart")
+                                and v.Humanoid.Health > 0 then
+
+                                    v.HumanoidRootPart.CFrame = EnemyHRP.CFrame
+                                    v.HumanoidRootPart.CanCollide = false
+                                    v.Humanoid.WalkSpeed = 0
+                                    v.Humanoid.JumpPower = 0
+
+                                    if v.Humanoid:FindFirstChild("Animator") then
+                                        v.Humanoid.Animator:Destroy()
+                                    end
+                                end
+                            end
+
+                        until not MobFound
+                        or not MobFound.Parent
+                        or MobFound.Humanoid.Health <= 0
+                        or not _G.AutoFarm_CakeIsland
+
+                    else
+
+                        -- tween tới Cake Island
+                        local TweenService = game:GetService("TweenService")
+
+                        local Distance = (CakePos[MobName].Position - hrp.Position).Magnitude
+
+                        local Tween = TweenService:Create(
+                            hrp,
+                            TweenInfo.new(Distance / 300, Enum.EasingStyle.Linear),
+                            {CFrame = CakePos[MobName]}
+                        )
+
+                        Tween:Play()
+                        Tween.Completed:Wait()
+
+                    end
+                end
+            end
+        end)
+    end
+end)
 NF.CreateToggle({
 	Title = "Auto Bones",
 	Description = "",
@@ -5447,184 +5486,108 @@ NF.CreateToggle({
 		_G.AutoFarm_Bone = Y;
 	end,
 });
--- Khởi tạo biến môi trường dựa trên cấu trúc file cung cấp
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local TweenService = game:GetService("TweenService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Workspace = game:GetService("Workspace")
+--// AUTO FARM BONE
+_G.AutoFarm_Bone = true
 
--- Cấu hình Farm
-_G.AutoFarmBone = true       -- Bật/Tắt farm bone
-_[span_5](start_span)G.SelectWeapon = "Melee"    -- Thay thế bằng loại vũ khí bạn dùng (Melee, Sword, Blox Fruit)[span_5](end_span)
-_[span_6](start_span)G.DistanceAbove = 10        -- Khoảng cách đứng trên đầu quái (Metres)[span_6](end_span)
+local BoneMobs = {
+    "Reborn Skeleton [Lv. 1975]",
+    "Living Zombie [Lv. 2000]",
+    "Demonic Soul [Lv. 2025]",
+    "Posessed Mummy [Lv. 2050]"
+}
 
--[span_7](start_span)- Tọa độ vị trí Đảo Lâu Đài Bóng Tối (Haunted Castle)[span_7](end_span)
-local HauntedCastleCFrame = CFrame.new(-9579, 6, 6194) 
+local BonePos = {
+    ["Reborn Skeleton [Lv. 1975]"] = CFrame.new(-8764, 142, 5963),
+    ["Living Zombie [Lv. 2000]"] = CFrame.new(-10227, 421, 6161),
+    ["Demonic Soul [Lv. 2025]"] = CFrame.new(-9507, 172, 6158),
+    ["Posessed Mummy [Lv. 2050]"] = CFrame.new(-9579, 6, 6194)
+}
 
--[span_8](start_span)- Hàm kiểm tra Sea 3[span_8](end_span)
-if game.PlaceId ~= 7449423635 and game.PlaceId ~= 100117331123089 then
-    print("Vui lòng kích hoạt script tại Sea 3!")
-    return
-end
-
--[span_9](start_span)[span_10](start_span)- Tạo một Part đệm bảo vệ nhân vật, chống rung/rớt/lag (áp dụng cơ chế Rip_Indra từ file gốc)[span_9](end_span)[span_10](end_span)
-local FarmPlatform = Workspace:FindFirstChild("BoneFarmPlatform") or Instance.new("Part", Workspace)
-FarmPlatform.Name = "BoneFarmPlatform"
-FarmPlatform.Size = Vector3.new(5, 1, 5)
-FarmPlatform.Anchored = true
-FarmPlatform.CanCollide = true
-FarmPlatform.Transparency = 1
-
--[span_11](start_span)- Cơ chế giữ vị trí và chống giật/rớt/anti-collide cho nhân vật[span_11](end_span)
-task.spawn(function()
+spawn(function()
     while task.wait() do
-        if _G.AutoFarmBone and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            local HRP = LocalPlayer.Character.HumanoidRootPart
-            -[span_12](start_span)- Tắt va chạm cơ thể để không bị kẹt khi gom quái[span_12](end_span)
-            for _, part in pairs(LocalPlayer.Character:GetChildren()) do
-                if part:IsA("BasePart") then part.CanCollide = false end
-            end
-            -[span_13](start_span)- Khóa nhân vật trên Platform an toàn[span_13](end_span)
-            if (HRP.Position - FarmPlatform.Position).Magnitude <= 150 then
-                HRP.CFrame = FarmPlatform.CFrame * CFrame.new(0, 2.5, 0)
-            else
-                FarmPlatform.CFrame = HRP.CFrame
-            end
-        else
-            -[span_14](start_span)- Hoàn trả va chạm khi tắt farm[span_14](end_span)
-            if LocalPlayer.Character then
-                for _, part in pairs(LocalPlayer.Character:GetChildren()) do
-                    if part:IsA("BasePart") then part.CanCollide = true end
-                end
-            end
-        end
-    end
-end)
+        pcall(function()
 
--[span_15](start_span)- Hàm di chuyển bằng Tween mượt mà đến mục tiêu, không bị rớt[span_15](end_span)
-local function TweenTo(targetCFrame)
-    if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then return end
-    local HRP = LocalPlayer.Character.HumanoidRootPart
-    local distance = (targetCFrame.Position - HRP.Position).Magnitude
-    
-    -[span_16](start_span)- Nếu khoảng cách quá xa, di chuyển mượt với tốc độ 350 (chống giật và kích hoạt anticheat)[span_16](end_span)
-    if distance > 20 then
-        local tweenInfo = TweenInfo.new(distance / 350, Enum.EasingStyle.Linear)
-        local tween = TweenService:Create(FarmPlatform, tweenInfo, {CFrame = targetCFrame})
-        tween:Play()
-        
-        while tween.PlaybackState == Enum.PlaybackState.Playing do
-            if not _G.AutoFarmBone then tween:Cancel() break end
-            task.wait(0.1)
-        end
-    else
-        FarmPlatform.CFrame = targetCFrame
-    end
-end
+            if _G.AutoFarm_Bone then
 
--[span_17](start_span)- Hàm tự động trang bị vũ khí[span_17](end_span)
-local function EquipWeapon()
-    local backpack = LocalPlayer:WaitForChild("Backpack")
-    local character = LocalPlayer.Character
-    if character and character:FindFirstChild("Humanoid") then
-        for _, tool in pairs(backpack:GetChildren()) do
-            if tool:IsA("Tool") and (tool.ToolTip == _G.SelectWeapon or tool.Name == _G.SelectWeapon) then
-                character.Humanoid:EquipTool(tool)
-            end
-        end
-    end
-end
+                local plr = game.Players.LocalPlayer
+                local char = plr.Character
+                local hrp = char:WaitForChild("HumanoidRootPart")
 
--[span_18](start_span)- Hàm gom quái theo level mục tiêu và vô hiệu hóa chuyển động chống lag[span_18](end_span)
-local function BringEnemies(monsterName, anchorPosition)
-    for _, enemy in pairs(Workspace.Enemies:GetChildren()) do
-        if enemy.Name == monsterName and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 then
-            if enemy:FindFirstChild("HumanoidRootPart") then
-                -[span_19](start_span)- Vô hiệu hóa hoạt ảnh để quái đứng im không lag[span_19](end_span)
-                if enemy.Humanoid:FindFirstChild("Animator") then
-                    enemy.Humanoid.Animator:Destroy()
-                end
-                [span_20](start_span)enemy.Humanoid.WalkSpeed = 0[span_20](end_span)
-                [span_21](start_span)enemy.Humanoid.JumpPower = 0[span_21](end_span)
-                
-                -[span_22](start_span)- Gom toàn bộ quái về một điểm chính[span_22](end_span)
-                enemy.HumanoidRootPart.CFrame = CFrame.new(anchorPosition)
-                enemy.HumanoidRootPart.CanCollide = false
-            end
-        end
-    end
-end
+                -- chống rung + chống rớt
+                hrp.Velocity = Vector3.zero
+                hrp.CanCollide = false
 
--[span_23](start_span)[span_24](start_span)- Kích hoạt tự động click đánh quái bằng VirtualInputManager[span_23](end_span)[span_24](end_span)
-task.spawn(function()
-    local VIM = game:GetService("VirtualInputManager")
-    while task.wait(0.1) do
-        if _G.AutoFarmBone and LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Tool") then
-            VIM:SendMouseButtonEvent(0, 0, 0, true, game, 0)
-            VIM:SendMouseButtonEvent(0, 0, 0, false, game, 0)
-        end
-    end
-end)
+                for _,MobName in pairs(BoneMobs) do
 
--[span_25](start_span)[span_26](start_span)- Luồng logic xử lý Farm chính (Lựa chọn quái theo cấp độ nhân vật)[span_25](end_span)[span_26](end_span)
-task.spawn(function()
-    while task.wait(0.2) do
-        if _G.AutoFarmBone then
-            pcall(function()
-                [span_27](start_span)local myLevel = LocalPlayer.Data.Level.Value[span_27](end_span)
-                local targetMonster = ""
-                
-                -[span_28](start_span)- Phân chia quái gom theo cấp độ tương ứng yêu cầu[span_28](end_span)
-                if myLevel >= 1975 and myLevel < 2000 then
-                    targetMonster = "Reborn Skeleton"
-                elseif myLevel >= 2000 and myLevel < 2025 then
-                    targetMonster = "Living Zombie"
-                elseif myLevel >= 2025 and myLevel < 2050 then
-                    targetMonster = "Demonic Soul"
-                elseif myLevel >= 2050 then
-                    targetMonster = "Posessed Mummy"
-                else
-                    -[span_29](start_span)- Nếu cấp độ thấp hơn 1975, mặc định vẫn chọn Reborn Skeleton để farm xương[span_29](end_span)
-                    targetMonster = "Reborn Skeleton"
-                end
-                
-                -- Tìm kiếm quái trên Workspace
-                local monsterFound = nil
-                for _, enemy in pairs(Workspace.Enemies:GetChildren()) do
-                    if enemy.Name == targetMonster and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 then
-                        monsterFound = enemy
-                        break
+                    local MobFound = nil
+
+                    for i,v in pairs(workspace.Enemies:GetChildren()) do
+                        if v.Name == MobName
+                        and v:FindFirstChild("Humanoid")
+                        and v:FindFirstChild("HumanoidRootPart")
+                        and v.Humanoid.Health > 0 then
+                            MobFound = v
+                            break
+                        end
                     end
-                end
-                
-                if monsterFound and monsterFound:FindFirstChild("HumanoidRootPart") then
-                    -[span_30](start_span)- Điểm khóa cố định vị trí gom quái[span_30](end_span)
-                    local monsterPos = monsterFound.HumanoidRootPart.Position
-                    
-                    -[span_31](start_span)- Gom toàn bộ quái cùng loại về một điểm[span_31](end_span)
-                    BringEnemies(targetMonster, monsterPos)
-                    
-                    -[span_32](start_span)- Trang bị vũ khí[span_32](end_span)
-                    EquipWeapon()
-                    
-                    -[span_33](start_span)- Đứng trên đầu quái chính xác: Cắt hoàn toàn hiện tượng rung lắc/giật lag[span_33](end_span)
-                    local farmCFrame = CFrame.new(monsterPos) * CFrame.new(0, _G.DistanceAbove, 0) * CFrame.Angles(math.rad(-90), 0, 0)
-                    TweenTo(farmCFrame)
-                else
-                    -[span_34](start_span)- Nếu không tìm thấy quái (đang chờ hồi sinh), di chuyển về khu vực spawn của quái đó[span_34](end_span)
-                    if targetMonster == "Reborn Skeleton" then
-                        TweenTo(CFrame.new(-8764, 142 + _G.DistanceAbove, 5963))
-                    elseif targetMonster == "Living Zombie" then
-                        TweenTo(CFrame.new(-10227, 421 + _G.DistanceAbove, 6161))
-                    elseif targetMonster == "Demonic Soul" or targetMonster == "Posessed Mummy" then
-                        TweenTo(CFrame.new(-9579, 6 + _G.DistanceAbove, 6194))
+
+                    if MobFound then
+
+                        repeat task.wait()
+
+                            if not _G.AutoFarm_Bone then
+                                break
+                            end
+
+                            local EnemyHRP = MobFound.HumanoidRootPart
+
+                            -- đứng trên đầu quái
+                            hrp.CFrame = EnemyHRP.CFrame * CFrame.new(0,25,0)
+
+                            -- gom quái cùng level
+                            for i,v in pairs(workspace.Enemies:GetChildren()) do
+                                if v.Name == MobName
+                                and v ~= MobFound
+                                and v:FindFirstChild("Humanoid")
+                                and v:FindFirstChild("HumanoidRootPart")
+                                and v.Humanoid.Health > 0 then
+
+                                    v.HumanoidRootPart.CFrame = EnemyHRP.CFrame
+                                    v.HumanoidRootPart.CanCollide = false
+                                    v.Humanoid.WalkSpeed = 0
+                                    v.Humanoid.JumpPower = 0
+
+                                    if v.Humanoid:FindFirstChild("Animator") then
+                                        v.Humanoid.Animator:Destroy()
+                                    end
+                                end
+                            end
+
+                        until not MobFound
+                        or not MobFound.Parent
+                        or MobFound.Humanoid.Health <= 0
+                        or not _G.AutoFarm_Bone
+
                     else
-                        TweenTo(HauntedCastleCFrame * CFrame.new(0, _G.DistanceAbove, 0))
+
+                        -- tween tới Haunted Castle
+                        local TweenService = game:GetService("TweenService")
+
+                        local Distance = (BonePos[MobName].Position - hrp.Position).Magnitude
+
+                        local Tween = TweenService:Create(
+                            hrp,
+                            TweenInfo.new(Distance / 300, Enum.EasingStyle.Linear),
+                            {CFrame = BonePos[MobName]}
+                        )
+
+                        Tween:Play()
+                        Tween.Completed:Wait()
+
                     end
                 end
-            end)
-        end
+            end
+        end)
     end
 end)
 NF.CreateToggle({
