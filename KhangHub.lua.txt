@@ -8220,7 +8220,7 @@ spawn(function()
 			end;
 		end);
 	end;
-end);
+end)
 spawn(function()
 	while wait(T) do
 		pcall(function()
@@ -8252,7 +8252,7 @@ spawn(function()
 			end;
 		end);
 	end;
-end);
+end)
 spawn(function()
 	while wait(T) do
 		pcall(function()
@@ -8263,7 +8263,7 @@ spawn(function()
 			end;
 		end);
 	end;
-end);
+end)
 spawn(function()
 	while wait(T) do
 		pcall(function()
@@ -8274,7 +8274,7 @@ spawn(function()
 			end;
 		end);
 	end;
-end);
+end)
 spawn(function()
 	while wait(.1) do
 		pcall(function()
