@@ -11105,56 +11105,33 @@ spawn(function()
         pcall(function()
             if _G.AutoRaid and World3 then
 
-                local RaidIslands = {
-                    CFrame.new(-5500, 15, -2800), -- Island 1
-                    CFrame.new(-4300, 15, -4500), -- Island 2
-                    CFrame.new(-3000, 15, -3000), -- Island 3
-                    CFrame.new(-1500, 15, -4500), -- Island 4
-                    CFrame.new(500, 15, -3500)    -- Island 5
-                }
+                for i,v in pairs(workspace.Enemies:GetChildren()) do
+                    if v:FindFirstChild("Humanoid")
+                    and v:FindFirstChild("HumanoidRootPart")
+                    and v.Humanoid.Health > 0
+                    and not string.find(v.Name,"Boss") then
 
-                for Island = 1,5 do
+                        repeat task.wait()
 
-                    local IslandPos = RaidIslands[Island]
+                            _B = true
+                            PosMon = v.HumanoidRootPart.Position
 
-                    -- Tween sang đảo tiếp theo
-                    if (game.Players.LocalPlayer.Character.HumanoidRootPart.Position - IslandPos.Position).Magnitude > 150 then
-                        _tp(IslandPos)
-                        wait(2)
+                            -- Fix lỗi quái
+                            v.HumanoidRootPart.CanCollide = false
+                            v.Humanoid.WalkSpeed = 0
+                            v.Humanoid.JumpPower = 0
+                            v.HumanoidRootPart.Size = Vector3.new(60,60,60)
+
+                            -- Bring quái
+                            BringEnemy()
+
+                            -- Đứng trên đầu quái
+                            _tp(v.HumanoidRootPart.CFrame * CFrame.new(0,30,0))
+
+                        until not _G.AutoRaid
+                        or not v.Parent
+                        or v.Humanoid.Health <= 0
                     end
-
-                    -- Đánh toàn bộ quái đảo hiện tại
-                    repeat task.wait()
-
-                        local MonsterAlive = false
-
-                        for i,v in pairs(workspace.Enemies:GetChildren()) do
-                            if v:FindFirstChild("Humanoid")
-                            and v:FindFirstChild("HumanoidRootPart")
-                            and v.Humanoid.Health > 0
-                            and string.find(v.Name,"[Lv.") then
-
-                                MonsterAlive = true
-
-                                _B = true
-                                PosMon = v.HumanoidRootPart.Position
-
-                                v.HumanoidRootPart.CanCollide = false
-                                v.Humanoid.WalkSpeed = 0
-                                v.Humanoid.JumpPower = 0
-
-                                if v.Humanoid:FindFirstChild("Animator") then
-                                    v.Humanoid.Animator:Destroy()
-                                end
-
-                                BringEnemy()
-
-                                -- Đứng trên đầu quái 30 studs
-                                _tp(v.HumanoidRootPart.CFrame * CFrame.new(0,30,0))
-                            end
-                        end
-
-                    until not MonsterAlive or not _G.AutoRaid
                 end
             end
         end)
