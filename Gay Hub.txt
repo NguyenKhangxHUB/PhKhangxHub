@@ -11101,82 +11101,51 @@ Qq.CreateToggle({
 	end,
 });
 spawn(function()
-	while wait(0.1) do
-		pcall(function()
-			if _G.StartRaid then
-				if (game:GetService("Players")['LocalPlayer'].PlayerGui.Main.Timer.Visible == false) then
-					if (( not game:GetService("Workspace")['_WorldOrigin'].Locations:FindFirstChild("Island 1") and game:GetService("Players").LocalPlayer.Backpack:FindFirstChild("Special Microchip")) or game:GetService("Players").LocalPlayer.Character:FindFirstChild("Special Microchip")) then
-						if World2 then
-							fireclickdetector(game:GetService("Workspace").Map.CircleIsland.RaidSummon2.Button.Main.ClickDetector);
-						elseif World3 then
-							fireclickdetector(game:GetService("Workspace").Map["Boat Castle"].RaidSummon2.Button.Main.ClickDetector);
-						end
-					end
-				end
-			end
-		end);
-	end
-end);
-v61:Button("Start Go To Dungeon", function()
-	if World2 then
-		fireclickdetector(game:GetService("Workspace").Map.CircleIsland.RaidSummon2.Button.Main.ClickDetector);
-	elseif World3 then
-		fireclickdetector(game:GetService("Workspace").Map["Boat Castle"].RaidSummon2.Button.Main.ClickDetector);
-	end
-end);
-v61:Toggle("Auto Next Island And Kill Mob", false, function(v662)
-	_G.Dungeon = v662;
-	StopTween(_G.Dungeon);
-end);
-function IsIslandRaid(v663)
-	if game:GetService("Workspace")['_WorldOrigin'].Locations:FindFirstChild("Island "   .. v663 ) then
-		min = 4500;
-		for v1968, v1969 in pairs(game:GetService("Workspace")['_WorldOrigin'].Locations:GetChildren()) do
-			if ((v1969.Name == ("Island "   .. v663)) and ((v1969.Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude < min)) then
-				min = (v1969.Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude;
-			end
-		end
-		for v1970, v1971 in pairs(game:GetService("Workspace")['_WorldOrigin'].Locations:GetChildren()) do
-			if ((v1971.Name == ("Island "   .. v663)) and ((v1971.Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude <= min)) then
-				return v1971;
-			end
-		end
-	end
-end
-function getNextIsland()
-	TableIslandsRaid = {
-		5,
-		4,
-		3,
-		2,
-		1
-	};
-	for v981, v982 in pairs(TableIslandsRaid) do
-		if (IsIslandRaid(v982) and ((IsIslandRaid(v982).Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude <= 4500)) then
-			return IsIslandRaid(v982);
-		end
-	end
-end
-function attackNearbyEnemies()
-	local v664 = {};
-	for v983, v984 in pairs(game:GetService("Workspace").Enemies:GetChildren()) do
-		if (v984:FindFirstChild("HumanoidRootPart") and v984:FindFirstChild("Humanoid") and (v984.Humanoid.Health > 0)) then
-			local v1972 = (v984.HumanoidRootPart.Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude;
-			if (v1972 <= 1000) then
-				table.insert(v664, v984);
-			end
-		end
-	end
-	for v985, v986 in pairs(v664) do
-		repeat
-			if (v986:FindFirstChild("Humanoid") and (v986.Humanoid.Health > 0)) then
-				EquipWeapon(_G.SelectWeapon);
-				topos(v986.HumanoidRootPart.CFrame * Pos );
-				wait(0.1);
-			end
-		until  not v986:FindFirstChild("Humanoid") or (v986.Humanoid.Health <= 0)
-	end
-end
+    local vu1005 = {}
+    while task.wait() do
+        if AutoNextIsland then
+            pcall(function()
+				-- upvalues: (ref) vu1005
+                local v1006 = game.Players.LocalPlayer.Character
+                if v1006 and v1006:FindFirstChild("HumanoidRootPart") then
+                    local v1007 = game:GetService("Workspace")._WorldOrigin.Locations
+                    local v1008 = v1006.HumanoidRootPart.Position
+                    if (v1008 - Vector3.new(- 6438.73535, 250.645355, - 4501.50684)).Magnitude < 1 or (v1008 - Vector3.new(- 5017.40869, 314.844055, - 2823.0127)).Magnitude < 1 then
+                        vu1005 = {}
+                    end
+                    if v1007:FindFirstChild("Island 1") then
+                        _G.AutoNear = true
+                    end
+                    if v1007:FindFirstChild("Island 2") and not vu1005["Island 2"] then
+                        Tween2(v1007:FindFirstChild("Island 2").CFrame)
+                        vu1005["Island 2"] = true
+                        AutoNextIsland = false
+                        wait()
+                        AutoNextIsland = true
+                    elseif v1007:FindFirstChild("Island 3") and not vu1005["Island 3"] then
+                        Tween2(v1007:FindFirstChild("Island 3").CFrame)
+                        vu1005["Island 3"] = true
+                        AutoNextIsland = false
+                        wait()
+                        AutoNextIsland = true
+                    elseif v1007:FindFirstChild("Island 4") and not vu1005["Island 4"] then
+                        Tween2(v1007:FindFirstChild("Island 4").CFrame)
+                        vu1005["Island 4"] = true
+                        AutoNextIsland = false
+                        wait()
+                        AutoNextIsland = true
+                    elseif v1007:FindFirstChild("Island 5") and not vu1005["Island 5"] then
+                        Tween2(v1007:FindFirstChild("Island 5").CFrame)
+                        vu1005["Island 5"] = true
+                        AutoNextIsland = false
+                        wait()
+                        AutoNextIsland = true
+                    end
+                end
+            end)
+        end
+    end
+end)
 Qq.CreateToggle({
 	Title = "Kill Aura",
 	Description = "",
