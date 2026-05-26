@@ -235,7 +235,7 @@ local O = workspace:FindFirstChild("Rocks");
 if O then
 	O:Destroy();
 end;
-gay = (function()
+AKC = (function()
 		local Y = game:GetService("Lighting");
 		local d = Y:FindFirstChild("LightingLayers");
 		if d and (game:GetService("Lighting") and game:GetService("Lighting")) then
@@ -893,7 +893,7 @@ end;
 spawn(function()
 	while task.wait() do
 		pcall(function()
-			if _G.SailBoat_Hydra or _G.WardenBoss or _G.AutoFactory or _G.HighestMirage or _G.HCM or _G.PGB or _G.Leviathan1 or _G.UPGDrago or _G.Complete_Trials or _G.TpDrago_Prehis or _G.BuyDrago or _G.AutoFireFlowers or _G.DT_Uzoth or _G.AutoBerry or _G.Prehis_Find or _G.Prehis_Skills or _G.Prehis_DB or _G.Prehis_DE or _G.FarmBlazeEM or _G.Dojoo or _G.CollectPresent or _G.AutoLawKak or _G.TpLab or _G.AutoPhoenixF or _G.AutoFarmChest or _G.AutoHytHallow or _G.LongsWord or _G.BlackSpikey or _G.AutoHolyTorch or _G.TrainDrago or _G.AutoSaber or _G.FarmMastery_Dev or _G.CitizenQuest or _G.AutoEctoplasm or _G.KeysRen or _G.Auto_Rainbow_Haki or _G.obsFarm or _G.AutoBigmom or _G.Doughv2 or _G.AuraBoss or _G.Raiding or _G.Auto_Cavender or _G.TpPly or _G.Bartilo_Quest or _G.Level or _G.FarmEliteHunt or _G.AutoZou or _G.AutoFarm_Bone or (getgenv()).AutoMaterial or _G.CraftVM or _G.FrozenTP or _G.TPDoor or _G.AcientOne or _G.AutoFarmNear or _G.AutoRaidCastle or _G.DarkBladev3 or _G.AutoFarmRaid or _G.Auto_Cake_Prince or _G.Addealer or _G.TPNpc or _G.TwinHook or _G.FindMirage or _G.FarmChestM or _G.Shark or _G.TerrorShark or _G.Piranha or _G.MobCrew or _G.SeaBeast1 or _G.FishBoat or _G.AutoPole or _G.AutoPoleV2 or _G.Auto_SuperHuman or _G.AutoDeathStep or _G.Auto_SharkMan_Karate or _G.Auto_Electric_Claw or _G.AutoDragonTalon or _G.Auto_Def_DarkCoat or _G.Auto_God_Human or _G.Auto_Tushita or _G.AutoMatSoul or _G.AutoKenVTWO or _G.AutoSerpentBow or _G.AutoFMon or _G.Auto_Soul_Guitar or _G.TPGEAR or _G.AutoSaw or _G.AutoTridentW2 or _G.Auto_StartRaid or _G.AutoEvoRace or _G.AutoGetQuestBounty or _G.MarinesCoat or _G.TravelDres or _G.Defeating or _G.DummyMan or _G.Auto_Yama or _G.Auto_SwanGG or _G.SwanCoat or _G.AutoEcBoss or _G.Auto_Mink or _G.Auto_Human or _G.Auto_Skypiea or _G.Auto_Fish or _G.CDK_TS or _G.CDK_YM or _G.CDK or _G.AutoFarmGodChalice or _G.AutoFistDarkness or _G.AutoMiror or _G.Teleport or _G.AutoKilo or _G.AutoGetUsoap or _G.Praying or _G.TryLucky or _G.AutoColShad or _G.AutoUnHaki or _G.Auto_DonAcces or _G.AutoRipIngay or _G.DragoV3 or _G.DragoV1 or _G.SailBoats or NextIs or _G.FarmGodChalice or _G.IceBossRen or senth or senth2 or _G.Lvthan or _G.beasthunter or _G.DangerLV or _G.Relic123 or _G.tweenKitsune or _G.Collect_Ember or _G.AutofindKitIs or _G.snaguine or _G.TwFruits or _G.tweenKitShrine or _G.Tp_LgS or _G.Tp_MasterA or _G.tweenShrine or _G.FarmMastery_G or _G.FarmMastery_S then
+			if _G.SailBoat_Hydra or _G.WardenBoss or _G.AutoFactory or _G.HighestMirage or _G.HCM or _G.PGB or _G.Leviathan1 or _G.UPGDrago or _G.Complete_Trials or _G.TpDrago_Prehis or _G.BuyDrago or _G.AutoFireFlowers or _G.DT_Uzoth or _G.AutoBerry or _G.Prehis_Find or _G.Prehis_Skills or _G.Prehis_DB or _G.Prehis_DE or _G.FarmBlazeEM or _G.Dojoo or _G.CollectPresent or _G.AutoLawKak or _G.TpLab or _G.AutoPhoenixF or _G.AutoFarmChest or _G.AutoHytHallow or _G.LongsWord or _G.BlackSpikey or _G.AutoHolyTorch or _G.TrainDrago or _G.AutoSaber or _G.FarmMastery_Dev or _G.CitizenQuest or _G.AutoEctoplasm or _G.KeysRen or _G.Auto_Rainbow_Haki or _G.obsFarm or _G.AutoBigmom or _G.Doughv2 or _G.AuraBoss or _G.Raiding or _G.Auto_Cavender or _G.TpPly or _G.Bartilo_Quest or _G.Level or _G.FarmEliteHunt or _G.AutoZou or _G.AutoFarm_Bone or (getgenv()).AutoMaterial or _G.CraftVM or _G.FrozenTP or _G.TPDoor or _G.AcientOne or _G.AutoFarmNear or _G.AutoRaidCastle or _G.DarkBladev3 or _G.AutoFarmRaid or _G.Auto_Cake_Prince or _G.Addealer or _G.TPNpc or _G.TwinHook or _G.FindMirage or _G.FarmChestM or _G.Shark or _G.TerrorShark or _G.Piranha or _G.MobCrew or _G.SeaBeast1 or _G.FishBoat or _G.AutoPole or _G.AutoPoleV2 or _G.Auto_SuperHuman or _G.AutoDeathStep or _G.Auto_SharkMan_Karate or _G.Auto_Electric_Claw or _G.AutoDragonTalon or _G.Auto_Def_DarkCoat or _G.Auto_God_Human or _G.Auto_Tushita or _G.AutoMatSoul or _G.AutoKenVTWO or _G.AutoSerpentBow or _G.AutoFMon or _G.Auto_Soul_Guitar or _G.TPGEAR or _G.AutoSaw or _G.AutoTridentW2 or _G.Auto_StartRaid or _G.AutoEvoRace or _G.AutoGetQuestBounty or _G.MarinesCoat or _G.TravelDres or _G.Defeating or _G.DummyMan or _G.Auto_Yama or _G.Auto_SwanGG or _G.SwanCoat or _G.AutoEcBoss or _G.Auto_Mink or _G.Auto_Human or _G.Auto_Skypiea or _G.Auto_Fish or _G.CDK_TS or _G.CDK_YM or _G.CDK or _G.AutoFarmGodChalice or _G.AutoFistDarkness or _G.AutoMiror or _G.Teleport or _G.AutoKilo or _G.AutoGetUsoap or _G.Praying or _G.TryLucky or _G.AutoColShad or _G.AutoUnHaki or _G.Auto_DonAcces or _G.AutoRipInAKC or _G.DragoV3 or _G.DragoV1 or _G.SailBoats or NextIs or _G.FarmGodChalice or _G.IceBossRen or senth or senth2 or _G.Lvthan or _G.beasthunter or _G.DangerLV or _G.Relic123 or _G.tweenKitsune or _G.Collect_Ember or _G.AutofindKitIs or _G.snaguine or _G.TwFruits or _G.tweenKitShrine or _G.Tp_LgS or _G.Tp_MasterA or _G.tweenShrine or _G.FarmMastery_G or _G.FarmMastery_S then
 				y = true;
 				if not d.Character.HumanoidRootPart:FindFirstChild("BodyClip") then
 					local Y = Instance.new("BodyVelocity");
@@ -1894,7 +1894,7 @@ local Uz = function(Y)
 		local A = tostring((nz.Getcolor(dz.UIColor["Title Text Color"]))[2]);
 		local u = tostring((nz.Getcolor(dz.UIColor["Title Text Color"]))[3]);
 		local g = D .. ("," .. (A .. ("," .. u)));
-		K.Text = "<font color=\"rgb(" .. (g .. (")\">Gay Hub</font> " .. dz.TitleNameNoti));
+		K.Text = "<font color=\"rgb(" .. (g .. (")\">AKC Hub</font> " .. dz.TitleNameNoti));
 		K.Name = "TextLabelNoti";
 		K.Parent = w;
 		K.BackgroundColor3 = Color3.fromRGB(230, 230, 230);
@@ -2028,7 +2028,7 @@ function Kz.CreateMain(Y)
 	local U = tostring((nz.Getcolor(dz.UIColor["Title Text Color"]))[2]);
 	local C = tostring((nz.Getcolor(dz.UIColor["Title Text Color"]))[3]);
 	local v = i .. ("," .. (U .. ("," .. C)));
-	M.Text = "<font color=\"rgb(" .. (v .. ")\">Gay Hub </font> : Blox Fruits");
+	M.Text = "<font color=\"rgb(" .. (v .. ")\">AKC Hub </font> : Blox Fruits");
 	z = Instance.new("ImageLabel");
 	z.Name = "MainContainer";
 	z.Parent = Q;
@@ -2091,7 +2091,7 @@ function Kz.CreateMain(Y)
 	local c = tostring((nz.Getcolor(dz.UIColor["Title Text Color"]))[2]);
 	local H = tostring((nz.Getcolor(dz.UIColor["Title Text Color"]))[3]);
 	local S = b .. ("," .. (c .. ("," .. H)));
-	M.Text = "<font color=\"rgb(" .. (S .. ")\">Gay Hub </font> : Blox Fruits");
+	M.Text = "<font color=\"rgb(" .. (S .. ")\">AKC Hub </font> : Blox Fruits");
 	K.Name = "Background1";
 	K.Parent = g;
 	K.Position = UDim2.new(0, 5, 0, 0);
@@ -4198,18 +4198,18 @@ function Kz.CreateMain(Y)
 	return V;
 end;
 local Cz = Kz.CreateMain({ Desc = "" });
-local vz = Cz.T({ Page_Name = "Main", Page_Title = "Main" });
-local mz = Cz.T({ Page_Name = "Setting", Page_Title = "Setting" });
+local vz = Cz.T({ Page_Name = "Farming", Page_Title = "Main" });
+local mz = Cz.T({ Page_Name = "Control", Page_Title = "Control" });
 local yz = Cz.T({ Page_Name = "Buy melee", Page_Title = "Buy melee" });
-local bz = Cz.T({ Page_Name = "Items", Page_Title = "Items" });
+local bz = Cz.T({ Page_Name = "Stack Farming", Page_Title = "Stack Farming" });
 local cz = Cz.T({ Page_Name = "Sea Events", Page_Title = "Sea Events" });
 local Hz = Cz.T({ Page_Name = "Mirage + V4", Page_Title = "Mirage + V4" });
 local Sz = Cz.T({ Page_Name = "Dragon Events", Page_Title = "Dragon Events" });
 local oz = Cz.T({ Page_Name = "Prehistoric", Page_Title = "Prehistoric" });
-local Zz = Cz.T({ Page_Name = "Raid", Page_Title = "Raid" });
+local Zz = Cz.T({ Page_Name = "Dungeon", Page_Title = "Dungeon" });
 local Tz = Cz.T({ Page_Name = "Combat PVP", Page_Title = "Combat PVP" });
-local kz = Cz.T({ Page_Name = "Teleport", Page_Title = "Teleport" });
-local Lz = Cz.T({ Page_Name = "Fruits", Page_Title = "Fruits" });
+local kz = Cz.T({ Page_Name = "travel island", Page_Title = "travel island" });
+local Lz = Cz.T({ Page_Name = " Devil Fruits", Page_Title = " Devil Fruits" });
 local Pz = Cz.T({ Page_Name = "Shop", Page_Title = "Shop" });
 local jz = Cz.T({ Page_Name = "Misc", Page_Title = "Misc" });
 local Gz = vz.CreateSection("Farm");
@@ -5375,70 +5375,51 @@ NF.CreateToggle({
 	end,
 });
 spawn(function()
-	while wait() do
-		if _G.Auto_Cake_Prince then
-			pcall(function()
-				local Y = game.Players.LocalPlayer;
-				local d = Y.Character and Y.Character:FindFirstChild("HumanoidRootPart");
-				local R = Y.PlayerGui.Main.Quest;
-				local Q = workspace.Enemies;
-				local r = workspace.Map.CakeLoaf.BigMirror;
-				if not d then
-					return;
-				end;
-				if not r:FindFirstChild("Other") then
-					_tp(CFrame.new(-2077, 252, -12373));
-				end;
-				if r.Other.Transparency == 0 or Q:FindFirstChild("Cake Prince") then
-					local Y = GetConnectionEnemies("Cake Prince");
-					if Y then
-						repeat
-							wait();
-							f.Kill2(Y, _G.Auto_Cake_Prince);
-						until not _G.Auto_Cake_Prince or not Y.Parent or Y.Humanoid.Health <= 0;
-					else
-						if r.Other.Transparency == 0 and ((CFrame.new(-1990.67, 4533, -14973.67)).Position - d.Position).Magnitude >= 2000 then
-							_tp(CFrame.new(-2151.82, 149.32, -12404.91));
-						end;
-					end;
-				else
-					local Y = {
-							"Cookie Crafter",
-							"Cake Guard",
-							"Baking Staff",
-							"Head Baker",
-						};
-					local Q = GetConnectionEnemies(Y);
-					if Q then
-						if _G.AcceptQuestC and not R.Visible then
-							local Y = CFrame.new(-1927.92, 37.8, -12842.54);
-							_tp(Y);
-							while (Y.Position - d.Position).Magnitude > 50 do
-								wait(.2);
-							end;
-							local R = math.random(1, 4);
-							local Q = {
-									[1] = { "StartQuest", "CakeQuest2", 2 },
-									[2] = { "StartQuest", "CakeQuest2", 1 },
-									[3] = { "StartQuest", "CakeQuest1", 1 },
-									[4] = { "StartQuest", "CakeQuest1", 2 },
-								};
-							local r, a = pcall(function()
-									return game.ReplicatedStorage.Remotes.CommF_:InvokeServer(unpack(Q[R]));
-								end);
-						end;
-						repeat
-							wait();
-							f.Kill(Q, _G.Auto_Cake_Prince);
-						until not _G.Auto_Cake_Prince or Q.Humanoid.Health <= 0 or r.Other.Transparency == 0 or _G.AcceptQuestC and not R.Visible;
-					else
-						_tp(CFrame.new(-2077, 252, -12373));
-					end;
-				end;
-			end);
-		end;
-	end;
-end);
+    while task.wait() do
+        pcall(function()
+            if _G.AutoFarm_Cake and World3 then
+
+                local CakeMobs = {
+                    "Cookie Crafter",
+                    "Cake Guard",
+                    "Baking Staff",
+                    "Head Baker"
+                }
+
+                local CakePos = CFrame.new(-2021, 38, -12028)
+
+                if (game.Players.LocalPlayer.Character.HumanoidRootPart.Position - CakePos.Position).Magnitude > 300 then
+                    _tp(CakePos)
+                end
+
+                for i,v in pairs(workspace.Enemies:GetChildren()) do
+                    if table.find(CakeMobs, v.Name)
+                    and v:FindFirstChild("Humanoid")
+                    and v:FindFirstChild("HumanoidRootPart")
+                    and v.Humanoid.Health > 0 then
+
+                        repeat task.wait()
+
+                            _B = true
+                            PosMon = v.HumanoidRootPart.Position
+
+                            v.HumanoidRootPart.CanCollide = false
+                            v.Humanoid.WalkSpeed = 0
+                            v.Humanoid.JumpPower = 0
+
+                            BringEnemy()
+
+                            _tp(v.HumanoidRootPart.CFrame * CFrame.new(0,30,0))
+
+                        until not _G.AutoFarm_Cake
+                        or not v.Parent
+                        or v.Humanoid.Health <= 0
+                    end
+                end
+            end
+        end)
+    end
+end)
 NF.CreateToggle({
 	Title = "Auto Bones",
 	Description = "",
@@ -6244,19 +6225,19 @@ UF.CreateToggle({
 	Description = "",
 	Default = false,
 	Callback = function(Y)
-		_G.AutoRipIngay = Y;
+		_G.AutoRipInAKC = Y;
 	end,
 });
 spawn(function()
 	while wait(T) do
 		pcall(function()
-			if _G.AutoRipIngay then
+			if _G.AutoRipInAKC then
 				local Y = GetConnectionEnemies("rip_indra");
 				if not GetWP("Dark Dagger") or not GetIn("Valkyrie") and Y then
 					repeat
 						wait();
-						f.Kill(Y, _G.AutoRipIngay);
-					until not _G.AutoRipIngay or not Y.Parent or Y.Humanoid.Health <= 0;
+						f.Kill(Y, _G.AutoRipInAKC);
+					until not _G.AutoRipInAKC or not Y.Parent or Y.Humanoid.Health <= 0;
 				else
 					Q.Remotes.CommF_:InvokeServer("requestEntrance", Vector3.new(-5097.93164, 316.447021, -3142.66602, -0.405007899, -4.31682743e-08, .914313197, -1.90943332e-08, 1, 3.8755779e-08, -0.914313197, -1.76180437e-09, -0.405007899));
 					wait(.1);
@@ -11119,44 +11100,77 @@ Qq.CreateToggle({
 		_G.Raiding = Y;
 	end,
 });
+_G.AutoRaid = true
+
 spawn(function()
-	pcall(function()
-		while wait(T) do
-			if _G.Raiding then
-				if d.PlayerGui.Main.TopHUDList.RaidTimer.Visible == true then
-					local Y = {
-							"Island5",
-							"Island 4",
-							"Island 3",
-							"Island 2",
-							"Island 1",
-						};
-					for Y, d in ipairs(Y) do
-						local R = (game:GetService("Workspace"))._WorldOrigin.Locations:FindFirstChild(d);
-						if R then
-							for Y, d in pairs(workspace.Enemies:GetChildren()) do
-								if d:FindFirstChild("Humanoid") or d:FindFirstChild("HumanoidRootPart") then
-									if d.Humanoid.Health > 0 then
-										repeat
-											wait();
-											f.Kill(d, _G.Raiding);
-											NextIs = false;
-										until not _G.Raiding or not d.Parent or d.Humanoid.Health <= 0;
-										NextIs = true;
-									end;
-								end;
-							end;
-						end;
-					end;
-				else
-					NextIs = false;
-				end;
-			else
-				NextIs = false;
-			end;
-		end;
-	end);
-end);
+    -- Danh sách tọa độ trung tâm của 5 đảo Raid
+    -- (Bạn có thể tự thay đổi các Vector3 này cho chính xác với hòn đảo thực tế trong game)
+    local RaidIslands = {
+        [1] = CFrame.new(-2500, 60, -2500),
+        [2] = CFrame.new(-3500, 70, -3500),
+        [3] = CFrame.new(-4500, 80, -4500),
+        [4] = CFrame.new(-5500, 90, -5500),
+        [5] = CFrame.new(-6500, 100, -6500)
+    }
+    
+    local currentIsland = 1
+
+    while _G.AutoRaid do
+        task.wait(0.1)
+        pcall(function()
+            local targetEnemy = nil
+            
+            -- Kiểm tra và tìm quái vật còn sống trong workspace.Enemies dựa theo logic file của bạn
+            for _, enemy in pairs(workspace.Enemies:GetChildren()) do
+                if enemy:IsA("Model") and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 and enemy:FindFirstChild("HumanoidRootPart") then
+                    targetEnemy = enemy
+                    break
+                end
+            end
+
+            if targetEnemy then
+                -- Kích hoạt gom quái dựa trên biến toàn cục _B và hàm BringEnemy() từ file
+                _B = true
+                if not targetEnemy:GetAttribute("Locked") then
+                    targetEnemy:SetAttribute("Locked", targetEnemy.HumanoidRootPart.CFrame)
+                end
+                PosMon = (targetEnemy:GetAttribute("Locked")).Position
+                if BringEnemy then
+                    BringEnemy()
+                end
+
+                -- Trang bị vũ khí chiến đấu
+                if EquipWeapon and _G.SelectWeapon then
+                    EquipWeapon(_G.SelectWeapon)
+                end
+
+                -- Sử dụng hàm _tp có sẵn của script để di chuyển
+                -- Đứng trên đầu quái cách tầm 30 studs theo trục Y và xoay góc 180 độ
+                local monsterCFrame = targetEnemy.HumanoidRootPart.CFrame
+                _tp((monsterCFrame * CFrame.new(0, 30, 0)) * CFrame.Angles(0, math.rad(180), 0))
+
+                -- Tự động kích hoạt công cụ (Click/Tấn công)
+                local tool = game.Players.LocalPlayer.Character:FindFirstChildOfClass("Tool")
+                if tool then
+                    tool:Activate()
+                end
+            else
+                -- Khi đảo hiện tại sạch bóng quái vật, tự động Tween chuyển sang đảo kế tiếp
+                if currentIsland < 5 then
+                    currentIsland = currentIsland + 1
+                    print("Đã dọn xong quái! Đang di chuyển bằng Tween sang Đảo thứ: " .. currentIsland)
+                    
+                    -- Tween nhân vật đến điểm hòn đảo tiếp theo và nghỉ 1 nhịp chờ quái spawn
+                    _tp(RaidIslands[currentIsland])
+                    task.wait(2.5)
+                else
+                    print("Chúc mừng! Đã hoàn thành dọn sạch toàn bộ 5 đảo Raid.")
+                    _G.AutoRaid = false
+                end
+            end
+        end)
+    end
+end)
 Qq.CreateToggle({
 	Title = "Kill Aura",
 	Description = "",
@@ -11193,24 +11207,57 @@ Qq.CreateToggle({
 	end,
 });
 spawn(function()
-	while wait(T) do
-		if NextIs then
-			if d.PlayerGui.Main.TopHUDList.RaidTimer.Visible == true then
-				if workspace._WorldOrigin.Locations:FindFirstChild("Island 5") then
-					_tp((workspace._WorldOrigin.Locations:FindFirstChild("Island 5")).CFrame * CFrame.new(0, 50, 100));
-				elseif workspace._WorldOrigin.Locations:FindFirstChild("Island 4") then
-					_tp((workspace._WorldOrigin.Locations:FindFirstChild("Island 4")).CFrame * CFrame.new(0, 50, 100));
-				elseif workspace._WorldOrigin.Locations:FindFirstChild("Island 3") then
-					_tp((workspace._WorldOrigin.Locations:FindFirstChild("Island 3")).CFrame * CFrame.new(0, 50, 100));
-				elseif workspace._WorldOrigin.Locations:FindFirstChild("Island 2") then
-					_tp((workspace._WorldOrigin.Locations:FindFirstChild("Island 2")).CFrame * CFrame.new(0, 50, 100));
-				elseif workspace._WorldOrigin.Locations:FindFirstChild("Island 1") then
-					_tp((workspace._WorldOrigin.Locations:FindFirstChild("Island 1")).CFrame * CFrame.new(0, 50, 100));
-				end;
-			end;
-		end;
-	end;
-end);
+    while task.wait() do
+        pcall(function()
+            if _G.NextIsland and World3 then
+
+                local Islands = {
+                    CFrame.new(-5500, 15, -2800), -- Island 5
+                    CFrame.new(-4300, 15, -4500), -- Island 4
+                    CFrame.new(-3000, 15, -3000), -- Island 3
+                    CFrame.new(-1500, 15, -4500), -- Island 2
+                    CFrame.new(500, 15, -3500)    -- Island 1
+                }
+
+                local EnemiesAlive = false
+
+                for i,v in pairs(workspace.Enemies:GetChildren()) do
+                    if v:FindFirstChild("Humanoid")
+                    and v:FindFirstChild("HumanoidRootPart")
+                    and v.Humanoid.Health > 0
+                    and string.find(v.Name,"[Lv.") then
+
+                        EnemiesAlive = true
+
+                        _B = true
+                        PosMon = v.HumanoidRootPart.Position
+
+                        v.HumanoidRootPart.CanCollide = false
+                        v.Humanoid.WalkSpeed = 0
+                        v.Humanoid.JumpPower = 0
+
+                        BringEnemy()
+
+                        _tp(v.HumanoidRootPart.CFrame * CFrame.new(0,30,0))
+                    end
+                end
+
+                -- Nếu đảo hiện tại hết quái -> sang đảo tiếp theo
+                if not EnemiesAlive then
+                    for i = 1,#Islands do
+                        local Pos = Islands[i]
+
+                        if (game.Players.LocalPlayer.Character.HumanoidRootPart.Position - Pos.Position).Magnitude > 150 then
+                            _tp(Pos)
+                            wait(3)
+                            break
+                        end
+                    end
+                end
+            end
+        end)
+    end
+end)
 Qq.CreateToggle({
 	Title = "Auto Awakening",
 	Description = "",
@@ -11755,22 +11802,22 @@ HakiClorEsp = function()
 		if ColorEsp == true then
 			for Y, R in pairs(Q.NPCs:GetChildren()) do
 				if R.Name == "Barista Cousin" then
-					if not workspace:FindFirstChild("Gay") then
-						Gay = Instance.new("Part");
-						Gay.Name = "Gay";
-						Gay.Transparency = 1;
-						Gay.Size = Vector3.new(1, 1, 1);
-						Gay.Anchored = true;
-						Gay.CanCollide = false;
-						Gay.Parent = workspace;
-						Gay.CFrame = R.HumanoidRootPart.CFrame;
-					elseif workspace:FindFirstChild("Gay") then
-						if not Gay:FindFirstChild("NameEsp") then
-							local Y = Instance.new("BillboardGui", Gay);
+					if not workspace:FindFirstChild("AKC") then
+						AKC = Instance.new("Part");
+						AKC.Name = "AKC";
+						AKC.Transparency = 1;
+						AKC.Size = Vector3.new(1, 1, 1);
+						AKC.Anchored = true;
+						AKC.CanCollide = false;
+						AKC.Parent = workspace;
+						AKC.CFrame = R.HumanoidRootPart.CFrame;
+					elseif workspace:FindFirstChild("AKC") then
+						if not AKC:FindFirstChild("NameEsp") then
+							local Y = Instance.new("BillboardGui", AKC);
 							Y.Name = "NameEsp";
 							Y.ExtentsOffset = Vector3.new(0, 1, 0);
 							Y.Size = UDim2.new(1, 200, 1, 30);
-							Y.Adornee = Gay;
+							Y.Adornee = AKC;
 							Y.AlwaysOnTop = true;
 							local d = Instance.new("TextLabel", Y);
 							d.Font = "Code";
@@ -11782,14 +11829,14 @@ HakiClorEsp = function()
 							d.TextStrokeTransparency = .5;
 							d.TextColor3 = Color3.fromRGB(80, 245, 245);
 						else
-							Gay.NameEsp.TextLabel.Text = R.Name .. ("   \n" .. (nq((d.Character.Head.Position - R.HumanoidRootPart.Position).Magnitude / 3) .. " M"));
+							AKC.NameEsp.TextLabel.Text = R.Name .. ("   \n" .. (nq((d.Character.Head.Position - R.HumanoidRootPart.Position).Magnitude / 3) .. " M"));
 						end;
 					end;
 				end;
 			end;
 		else
-			if workspace:FindFirstChild("Gay") then
-				(workspace:FindFirstChild("Gay")):Destroy();
+			if workspace:FindFirstChild("AKC") then
+				(workspace:FindFirstChild("AKC")):Destroy();
 			end;
 		end;
 	end;
