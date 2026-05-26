@@ -7160,7 +7160,7 @@ SettingsSea = Sea:AddLeftGroupbox("Setting")
 
 SettingsSea:AddDropdown("SelectZone", {
     Title = "Select Zone",
-    Values = {"Zone 1", "Zone 2", "Zone 3", "Zone 4", "Zone 5", "Zone 6",},
+    Values = {"Zone 1", "Zone 2", "Zone 3", "Zone 4", "Zone 5", "Zone 6", "Zone Inf",},
     Default = nil,
     Multi = true,
     Callback = function(Value)
@@ -7170,8 +7170,7 @@ SettingsSea:AddDropdown("SelectZone", {
 
 SettingsSea:AddDropdown("SelectSeaEvent", {
     Title = "Select Sea Events",
-    Values = {"Lv 1", "Lv 2", "Lv 3", "Lv 4", "Lv 5", "Lv 6", "Lv Infinite",})
-    Default = nil,
+    Values = {"Piranha", "Terror shark", "Fish Crew Member", "Haunted Crew Member", "Sea Beast", "Leviathan",},
     Multi = true,
     Callback = function(Value)
         _G.SelectSeaEvent = Value
@@ -9311,7 +9310,7 @@ spawn(function()
 			end);
 		end;
 	end;
-end);
+end)
 
 VolcanoFarm:AddToggle("EventVolcanoStart", {
     Title = "Auto Event Prehistoric Island",
@@ -9395,7 +9394,7 @@ spawn(function()
 			end;
 		end);
 	end;
-end);
+end)
 
 VolcanoFarm:AddToggle("CollectBoneVolcano", {
     Title = "Auto Collect Bone",
