@@ -7168,15 +7168,6 @@ SettingsSea:AddDropdown("SelectZone", {
     end
 })
 
-SettingsSea:AddDropdown("SelectSeaEvent", {
-    Title = "Select Sea Events",
-    Values = {"Piranha", "Terror shark", "Fish Crew Member", "Haunted Crew Member", "Sea Beast", "Leviathan",},
-    Multi = true,
-    Callback = function(Value)
-        _G.SelectSeaEvent = Value
-    end
-})
-
 SettingsSea:AddDropdown("SelectBoat", {
     Title = "Select Boat",
     Values = {"Guardian", "PirateGrandBrigade", "MarineGrandBrigade", "PirateBrigade", "MarineBrigade", "PirateSloop", "MarineSloop", "Beast Hunter"},
@@ -7188,36 +7179,12 @@ SettingsSea:AddDropdown("SelectBoat", {
 })
 
 SettingsSea:AddToggle("SeaFarm", {
-    Title = "Auto Sea Event",
+    Title = "Auto Sail boat",
     Default = false,
     Callback = function(Value)
         _G.SailBoats = Value
     end
 })
-spawn(function()
-    while task.wait(1) do
-        if getgenv().AutoBuyBoatEnabled and getgenv().SelectedBoatToBuy then
-            pcall(function()
-                local hasOwnBoat = false
-                local boatsFolder = workspace:FindFirstChild("Boats")
-                
-                if boatsFolder then
-                    for _, boat in pairs(boatsFolder:GetChildren()) do
-                        local owner = boat:FindFirstChild("Owner")
-                        if owner and tostring(owner.Value) == tostring(game.Players.LocalPlayer.Name) then
-                            hasOwnBoat = true
-                            break
-                        end
-                    end
-                end
-                
-                if not hasOwnBoat then
-                    game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuyBoat", getgenv().SelectedBoatToBuy)
-                end
-            end)
-        end
-    end
-end)
 spawn(function()
 	while wait() do
 		if _G.SailBoats then
@@ -7281,6 +7248,60 @@ spawn(function()
 		end);
 	end;
 end)
+
+SettingsSea:AddToggle("SeaFarm", {
+    Title = "Auto Piranha",
+	Description = "",
+	Default = false,
+	Callback = function(Y)
+		_G.Piranha = Y;
+	end,
+})
+
+SettingsSea:AddToggle("SeaFarm", {
+Title = "Auto Haunted Crew Member",
+	Description = "",
+	Default = false,
+	Callback = function(Y)
+		_G.HCM = Y;
+	end,
+})
+
+SettingsSea:AddToggle("SeaFarm", {
+    Title = "Auto Attack PirateGrandBrigade",
+	Description = "",
+	Default = false,
+	Callback = function(Y)
+		_G.PGB = Y;
+	end,
+})
+
+SettingsSea:AddToggle("SeaFarm", {
+    Title = "Auto Attack Fish Boat",
+	Description = "",
+	Default = false,
+	Callback = function(Y)
+		_G.FishBoat = Y;
+	end,
+})
+
+SettingsSea:AddToggle("SeaFarm", {
+    Title = "Auto Attack Sea Beast",
+	Description = "",
+	Default = false,
+	Callback = function(Y)
+		_G.SeaBeast1 = Y;
+	end,
+})
+
+SettingsSea:AddToggle("SeaFarm", {
+    Title = "Auto Attack Leviathan",
+	Description = "",
+	Default = false,
+	Callback = function(Y)
+		_G.Leviathan1 = Y;
+	end,
+})
 spawn(function()
 	while wait() do
 		pcall(function()
