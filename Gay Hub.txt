@@ -11100,72 +11100,61 @@ Qq.CreateToggle({
 		_G.Raiding = Y;
 	end,
 });
-_G.AutoRaid = true
-
 spawn(function()
-    -- Danh sách tọa độ trung tâm của 5 đảo Raid
-    -- (Bạn có thể tự thay đổi các Vector3 này cho chính xác với hòn đảo thực tế trong game)
-    local RaidIslands = {
-        [1] = CFrame.new(-2500, 60, -2500),
-        [2] = CFrame.new(-3500, 70, -3500),
-        [3] = CFrame.new(-4500, 80, -4500),
-        [4] = CFrame.new(-5500, 90, -5500),
-        [5] = CFrame.new(-6500, 100, -6500)
-    }
-    
-    local currentIsland = 1
-
-    while _G.AutoRaid do
-        task.wait(0.1)
+    while task.wait() do
         pcall(function()
-            local targetEnemy = nil
-            
-            -- Kiểm tra và tìm quái vật còn sống trong workspace.Enemies dựa theo logic file của bạn
-            for _, enemy in pairs(workspace.Enemies:GetChildren()) do
-                if enemy:IsA("Model") and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 and enemy:FindFirstChild("HumanoidRootPart") then
-                    targetEnemy = enemy
-                    break
-                end
-            end
+            if _G.AutoRaid and World3 then
 
-            if targetEnemy then
-                -- Kích hoạt gom quái dựa trên biến toàn cục _B và hàm BringEnemy() từ file
-                _B = true
-                if not targetEnemy:GetAttribute("Locked") then
-                    targetEnemy:SetAttribute("Locked", targetEnemy.HumanoidRootPart.CFrame)
-                end
-                PosMon = (targetEnemy:GetAttribute("Locked")).Position
-                if BringEnemy then
-                    BringEnemy()
-                end
+                local RaidIslands = {
+                    CFrame.new(-5500, 15, -2800), -- Island 1
+                    CFrame.new(-4300, 15, -4500), -- Island 2
+                    CFrame.new(-3000, 15, -3000), -- Island 3
+                    CFrame.new(-1500, 15, -4500), -- Island 4
+                    CFrame.new(500, 15, -3500)    -- Island 5
+                }
 
-                -- Trang bị vũ khí chiến đấu
-                if EquipWeapon and _G.SelectWeapon then
-                    EquipWeapon(_G.SelectWeapon)
-                end
+                for Island = 1,5 do
 
-                -- Sử dụng hàm _tp có sẵn của script để di chuyển
-                -- Đứng trên đầu quái cách tầm 30 studs theo trục Y và xoay góc 180 độ
-                local monsterCFrame = targetEnemy.HumanoidRootPart.CFrame
-                _tp((monsterCFrame * CFrame.new(0, 30, 0)) * CFrame.Angles(0, math.rad(180), 0))
+                    local IslandPos = RaidIslands[Island]
 
-                -- Tự động kích hoạt công cụ (Click/Tấn công)
-                local tool = game.Players.LocalPlayer.Character:FindFirstChildOfClass("Tool")
-                if tool then
-                    tool:Activate()
-                end
-            else
-                -- Khi đảo hiện tại sạch bóng quái vật, tự động Tween chuyển sang đảo kế tiếp
-                if currentIsland < 5 then
-                    currentIsland = currentIsland + 1
-                    print("Đã dọn xong quái! Đang di chuyển bằng Tween sang Đảo thứ: " .. currentIsland)
-                    
-                    -- Tween nhân vật đến điểm hòn đảo tiếp theo và nghỉ 1 nhịp chờ quái spawn
-                    _tp(RaidIslands[currentIsland])
-                    task.wait(2.5)
-                else
-                    print("Chúc mừng! Đã hoàn thành dọn sạch toàn bộ 5 đảo Raid.")
-                    _G.AutoRaid = false
+                    -- Tween sang đảo tiếp theo
+                    if (game.Players.LocalPlayer.Character.HumanoidRootPart.Position - IslandPos.Position).Magnitude > 150 then
+                        _tp(IslandPos)
+                        wait(2)
+                    end
+
+                    -- Đánh toàn bộ quái đảo hiện tại
+                    repeat task.wait()
+
+                        local MonsterAlive = false
+
+                        for i,v in pairs(workspace.Enemies:GetChildren()) do
+                            if v:FindFirstChild("Humanoid")
+                            and v:FindFirstChild("HumanoidRootPart")
+                            and v.Humanoid.Health > 0
+                            and string.find(v.Name,"[Lv.") then
+
+                                MonsterAlive = true
+
+                                _B = true
+                                PosMon = v.HumanoidRootPart.Position
+
+                                v.HumanoidRootPart.CanCollide = false
+                                v.Humanoid.WalkSpeed = 0
+                                v.Humanoid.JumpPower = 0
+
+                                if v.Humanoid:FindFirstChild("Animator") then
+                                    v.Humanoid.Animator:Destroy()
+                                end
+
+                                BringEnemy()
+
+                                -- Đứng trên đầu quái 30 studs
+                                _tp(v.HumanoidRootPart.CFrame * CFrame.new(0,30,0))
+                            end
+                        end
+
+                    until not MonsterAlive or not _G.AutoRaid
                 end
             end
         end)
@@ -11211,46 +11200,36 @@ spawn(function()
         pcall(function()
             if _G.NextIsland and World3 then
 
-                local Islands = {
-                    CFrame.new(-5500, 15, -2800), -- Island 5
-                    CFrame.new(-4300, 15, -4500), -- Island 4
+                local RaidIslands = {
+                    CFrame.new(-5500, 15, -2800), -- Island 1
+                    CFrame.new(-4300, 15, -4500), -- Island 2
                     CFrame.new(-3000, 15, -3000), -- Island 3
-                    CFrame.new(-1500, 15, -4500), -- Island 2
-                    CFrame.new(500, 15, -3500)    -- Island 1
+                    CFrame.new(-1500, 15, -4500), -- Island 4
+                    CFrame.new(500, 15, -3500)    -- Island 5
                 }
 
-                local EnemiesAlive = false
+                for Island = 1,5 do
 
-                for i,v in pairs(workspace.Enemies:GetChildren()) do
-                    if v:FindFirstChild("Humanoid")
-                    and v:FindFirstChild("HumanoidRootPart")
-                    and v.Humanoid.Health > 0
-                    and string.find(v.Name,"[Lv.") then
+                    local IslandPos = RaidIslands[Island]
 
-                        EnemiesAlive = true
+                    local MonsterAlive = false
 
-                        _B = true
-                        PosMon = v.HumanoidRootPart.Position
+                    -- Kiểm tra còn quái không
+                    for i,v in pairs(workspace.Enemies:GetChildren()) do
+                        if v:FindFirstChild("Humanoid")
+                        and v:FindFirstChild("HumanoidRootPart")
+                        and v.Humanoid.Health > 0
+                        and string.find(v.Name,"[Lv.") then
 
-                        v.HumanoidRootPart.CanCollide = false
-                        v.Humanoid.WalkSpeed = 0
-                        v.Humanoid.JumpPower = 0
-
-                        BringEnemy()
-
-                        _tp(v.HumanoidRootPart.CFrame * CFrame.new(0,30,0))
+                            MonsterAlive = true
+                        end
                     end
-                end
 
-                -- Nếu đảo hiện tại hết quái -> sang đảo tiếp theo
-                if not EnemiesAlive then
-                    for i = 1,#Islands do
-                        local Pos = Islands[i]
-
-                        if (game.Players.LocalPlayer.Character.HumanoidRootPart.Position - Pos.Position).Magnitude > 150 then
-                            _tp(Pos)
-                            wait(3)
-                            break
+                    -- Hết quái -> sang đảo tiếp theo
+                    if not MonsterAlive then
+                        if (game.Players.LocalPlayer.Character.HumanoidRootPart.Position - IslandPos.Position).Magnitude > 150 then
+                            _tp(IslandPos)
+                            wait(2)
                         end
                     end
                 end
