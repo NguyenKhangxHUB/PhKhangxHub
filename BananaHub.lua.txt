@@ -7194,7 +7194,30 @@ SettingsSea:AddToggle("SeaFarm", {
         _G.SailBoats = Value
     end
 })
-
+spawn(function()
+    while task.wait(1) do
+        if getgenv().AutoBuyBoatEnabled and getgenv().SelectedBoatToBuy then
+            pcall(function()
+                local hasOwnBoat = false
+                local boatsFolder = workspace:FindFirstChild("Boats")
+                
+                if boatsFolder then
+                    for _, boat in pairs(boatsFolder:GetChildren()) do
+                        local owner = boat:FindFirstChild("Owner")
+                        if owner and tostring(owner.Value) == tostring(game.Players.LocalPlayer.Name) then
+                            hasOwnBoat = true
+                            break
+                        end
+                    end
+                end
+                
+                if not hasOwnBoat then
+                    game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuyBoat", getgenv().SelectedBoatToBuy)
+                end
+            end)
+        end
+    end
+end)
 spawn(function()
 	while wait() do
 		if _G.SailBoats then
