@@ -11101,42 +11101,82 @@ Qq.CreateToggle({
 	end,
 });
 spawn(function()
-    while task.wait() do
-        pcall(function()
-            if _G.AutoRaid and World3 then
-
-                for i,v in pairs(workspace.Enemies:GetChildren()) do
-                    if v:FindFirstChild("Humanoid")
-                    and v:FindFirstChild("HumanoidRootPart")
-                    and v.Humanoid.Health > 0
-                    and not string.find(v.Name,"Boss") then
-
-                        repeat task.wait()
-
-                            _B = true
-                            PosMon = v.HumanoidRootPart.Position
-
-                            -- Fix lỗi quái
-                            v.HumanoidRootPart.CanCollide = false
-                            v.Humanoid.WalkSpeed = 0
-                            v.Humanoid.JumpPower = 0
-                            v.HumanoidRootPart.Size = Vector3.new(60,60,60)
-
-                            -- Bring quái
-                            BringEnemy()
-
-                            -- Đứng trên đầu quái
-                            _tp(v.HumanoidRootPart.CFrame * CFrame.new(0,30,0))
-
-                        until not _G.AutoRaid
-                        or not v.Parent
-                        or v.Humanoid.Health <= 0
-                    end
-                end
-            end
-        end)
-    end
-end)
+	while wait(0.1) do
+		pcall(function()
+			if _G.StartRaid then
+				if (game:GetService("Players")['LocalPlayer'].PlayerGui.Main.Timer.Visible == false) then
+					if (( not game:GetService("Workspace")['_WorldOrigin'].Locations:FindFirstChild("Island 1") and game:GetService("Players").LocalPlayer.Backpack:FindFirstChild("Special Microchip")) or game:GetService("Players").LocalPlayer.Character:FindFirstChild("Special Microchip")) then
+						if World2 then
+							fireclickdetector(game:GetService("Workspace").Map.CircleIsland.RaidSummon2.Button.Main.ClickDetector);
+						elseif World3 then
+							fireclickdetector(game:GetService("Workspace").Map["Boat Castle"].RaidSummon2.Button.Main.ClickDetector);
+						end
+					end
+				end
+			end
+		end);
+	end
+end);
+v61:Button("Start Go To Dungeon", function()
+	if World2 then
+		fireclickdetector(game:GetService("Workspace").Map.CircleIsland.RaidSummon2.Button.Main.ClickDetector);
+	elseif World3 then
+		fireclickdetector(game:GetService("Workspace").Map["Boat Castle"].RaidSummon2.Button.Main.ClickDetector);
+	end
+end);
+v61:Toggle("Auto Next Island And Kill Mob", false, function(v662)
+	_G.Dungeon = v662;
+	StopTween(_G.Dungeon);
+end);
+function IsIslandRaid(v663)
+	if game:GetService("Workspace")['_WorldOrigin'].Locations:FindFirstChild("Island "   .. v663 ) then
+		min = 4500;
+		for v1968, v1969 in pairs(game:GetService("Workspace")['_WorldOrigin'].Locations:GetChildren()) do
+			if ((v1969.Name == ("Island "   .. v663)) and ((v1969.Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude < min)) then
+				min = (v1969.Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude;
+			end
+		end
+		for v1970, v1971 in pairs(game:GetService("Workspace")['_WorldOrigin'].Locations:GetChildren()) do
+			if ((v1971.Name == ("Island "   .. v663)) and ((v1971.Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude <= min)) then
+				return v1971;
+			end
+		end
+	end
+end
+function getNextIsland()
+	TableIslandsRaid = {
+		5,
+		4,
+		3,
+		2,
+		1
+	};
+	for v981, v982 in pairs(TableIslandsRaid) do
+		if (IsIslandRaid(v982) and ((IsIslandRaid(v982).Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude <= 4500)) then
+			return IsIslandRaid(v982);
+		end
+	end
+end
+function attackNearbyEnemies()
+	local v664 = {};
+	for v983, v984 in pairs(game:GetService("Workspace").Enemies:GetChildren()) do
+		if (v984:FindFirstChild("HumanoidRootPart") and v984:FindFirstChild("Humanoid") and (v984.Humanoid.Health > 0)) then
+			local v1972 = (v984.HumanoidRootPart.Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude;
+			if (v1972 <= 1000) then
+				table.insert(v664, v984);
+			end
+		end
+	end
+	for v985, v986 in pairs(v664) do
+		repeat
+			if (v986:FindFirstChild("Humanoid") and (v986.Humanoid.Health > 0)) then
+				EquipWeapon(_G.SelectWeapon);
+				topos(v986.HumanoidRootPart.CFrame * Pos );
+				wait(0.1);
+			end
+		until  not v986:FindFirstChild("Humanoid") or (v986.Humanoid.Health <= 0)
+	end
+end
 Qq.CreateToggle({
 	Title = "Kill Aura",
 	Description = "",
