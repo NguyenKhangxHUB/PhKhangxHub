@@ -1,0 +1,152 @@
+Library = loadstring(game:HttpGet("https://pastefy.app/vKqyc89g/raw"))()
+
+Window = Library:CreateWindow({
+    Title = "Doraemon Hub",
+    Subtitle = "- Blox Fruit",
+    Image = "rbxassetid://122932159240295"
+})
+
+wait(1)
+
+Library:Notify({
+    Title = "Ui Library",
+    Description = "The UI automatically hides once executed.\nPress the button at the bottom-left of the screen to show the GUI.",
+    Duration = 3
+})
+ShopBuy = Window:AddTab("Shop")
+
+MiscShopBuy = ShopBuy:AddLeftGroupbox("Misc Shop")
+
+code = {
+    "LIGHTNINGABUSE",
+    "1LOSTADMIN",
+    "ADMINFIGHT",
+    "NOMOREHACK",
+    "BANEXPLOIT",
+    "krazydares",
+    "TRIPLEABUSE",
+    "24NOADMIN",
+    "REWARDFUN",
+    "Chandler",
+    "NEWTROLL",
+    "KITT_RESET",
+    "Magicbus",
+    "Starcodeheo",
+    "fudd10_v2",
+    "Sub2UncleKizaru",
+    "Fudd10",
+    "Bignews",
+    "SECRET_ADMIN",
+    "SUB2GAMERROBOT_RESET1",
+    "SUB2OFFICIALNOOBIE",
+    "AXIORE",
+    "BIGNEWS",
+    "BLUXXY",
+    "CHANDLER",
+    "ENYU_IS_PRO",
+    "FUDD10",
+    "FUDD10_V2",
+    "KITTGAMING",
+    "MAGICBUS",
+    "STARCODEHEO",
+    "STRAWHATMAINE",
+    "SUB2CAPTAINMAUI",
+    "SUB2DAIGROCK",
+    "SUB2FER999",
+    "SUB2NOOBMASTER123",
+    "SUB2UNCLEKIZARU",
+    "TANTAIGAMING",
+    "THEGREATACE",
+    "WildDares",
+    "BossBuild",
+    "GetPranked",
+    "FIGHT4FRUIT",
+    "EARN_FRUITS"
+}
+MiscShopBuy:AddButton({
+    Title = "Redeem Code",
+    Callback = function()
+    function RedeemCode(Value)
+    game:GetService("ReplicatedStorage").Remotes.Redeem:InvokeServer(Value)
+    end
+    local delayBetweenRequests = 0.5
+    for i, v in pairs(code) do
+    spawn(function()
+        RedeemCode(v)
+        wait(delayBetweenRequests)
+        end)
+    end
+    end
+})
+
+MiscShopBuy:AddButton({
+    Title = "Teleport Old World",
+    Callback = function()
+    CommF_Remote:InvokeServer("TravelMain")
+    end
+})
+
+MiscShopBuy:AddButton({
+    Title = "Teleport New World",
+    Callback = function()
+    CommF_Remote:InvokeServer("TravelDressrosa")
+    end
+})
+
+MiscShopBuy:AddButton({
+    Title = "Teleport Third Sea",
+    Callback = function()
+       CommF_Remote:InvokeServer("TravelZou")
+    end
+})
+
+MiscShopBuy:AddButton({
+        Title = "Buy Dual Flintlock",
+        Description = "",
+        Callback = function()
+            replicated.Remotes.CommF_:InvokeServer("BuyItem", "Dual Flintlock")
+        end
+    })
+    
+MiscShopBuy:AddButton({
+        Title = "Reroll Race",
+        Callback = function()
+            game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BlackbeardReward", "Reroll", "1")
+            game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BlackbeardReward", "Reroll", "2")
+        end
+    })
+    
+MiscShopBuy:AddButton({
+    Title = "Reset Stats",
+    Callback = function()
+    game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BlackbeardReward","Refund","1")
+    game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BlackbeardReward","Refund","2")
+    end
+})
+
+MiscShopBuy:AddButton({
+Title = "Buy Ghoul Race",
+    Callback = function()
+    local args1 = {[1] = "Ectoplasm", [2] = "BuyCheck", [3] = 4
+    }
+    local args2 = {[1] = "Ectoplasm", [2] = "Change", [3] = 4
+    }
+    game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer(unpack(args1))
+    wait(0.5)
+    game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer(unpack(args2))
+    end
+})
+
+MiscShopBuy:AddButton({
+    Title = "Buy Cyborg Race",
+    Callback = function()
+    if not isBuying then
+    isBuying = true
+    local args = {[1] = "CyborgTrainer", [2] = "Buy"
+    }
+    game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer(unpack(args))
+    wait(0.5)
+    isBuying = false
+    end
+    end
+})
