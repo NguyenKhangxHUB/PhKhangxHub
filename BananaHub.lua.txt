@@ -3991,82 +3991,97 @@ spawn(function()
 end)
 
 -- Farm Bones
-spawn(function()
+getgenv().AutoFarm_Bone_Castle = true
+_G.SelectWeapon = "Melee"
+
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local VirtualUser = game:GetService("VirtualUser")
+local plr = Players.LocalPlayer
+
+local BoneMobs = {
+    "Reborn Skeleton [Lv. 1975]",
+    "Living Zombie [Lv. 2000]",
+    "Demonic Soul [Lv. 2025]",
+    "Posessed Mummy [Lv. 2050]"
+}
+
+local function EquipWeapon(text)
+    if not text then return end
+    if plr.Backpack:FindFirstChild(text) then
+        plr.Character.Humanoid:EquipTool(plr.Backpack:FindFirstChild(text))
+    end
+end
+
+local function BringEnemyBone(posMon)
+    for _, v in pairs(Workspace.Enemies:GetChildren()) do
+        if v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 then
+            if (v.PrimaryPart.Position - posMon).Magnitude <= 300 then
+                v.PrimaryPart.CFrame = CFrame.new(posMon)
+                v.PrimaryPart.CanCollide = false
+                v:FindFirstChild("Humanoid").WalkSpeed = 0
+                v:FindFirstChild("Humanoid").JumpPower = 0
+                if v.Humanoid:FindFirstChild("Animator") then 
+                    v.Humanoid.Animator:Destroy()
+                end
+                plr.SimulationRadius = math.huge
+            end
+        end                               
+    end  
+end
+
+task.spawn(function()
     while task.wait() do
         pcall(function()
-            if _G.AutoFarm_Bone then
-                local Player = game.Players.LocalPlayer
-                local Character = Player.Character
+            if getgenv().AutoFarm_Bone_Castle then
+                local Character = plr.Character
                 local HumanoidRootPart = Character and Character:FindFirstChild("HumanoidRootPart")
-
-                if not HumanoidRootPart then
-                    return
-                end
-
+                if not HumanoidRootPart then return end
+                
                 local CastlePos = CFrame.new(-9500, 142, 5567)
-
+                
                 if (HumanoidRootPart.Position - CastlePos.Position).Magnitude > 300 then
-                    shouldTween = true
-                    TeleportToTarget(CastlePos)
-                end
-
-                local BoneMobs = {
-                    "Reborn Skeleton [Lv. 1975]",
-                    "Living Zombie [Lv. 2000]",
-                    "Demonic Soul [Lv. 2025]",
-                    "Posessed Mummy [Lv. 2050]"
-                }
-
-                local Target = nil
-
-                for _,MobName in pairs(BoneMobs) do
-                    for _,v in pairs(workspace.Enemies:GetChildren()) do
-                        if v.Name == MobName
-                        and v:FindFirstChild("Humanoid")
-                        and v:FindFirstChild("HumanoidRootPart")
-                        and v.Humanoid.Health > 0 then
-                            Target = v
-                            break
-                        end
+                    if _tp then
+                        _tp(CastlePos)
+                    else
+                        HumanoidRootPart.CFrame = CastlePos
                     end
-                    if Target then
-                        break
-                    end
-                end
-
-                if Target then
-                    repeat task.wait()
-
-                        BringEnemy()
-
-                        for _,Enemy in pairs(workspace.Enemies:GetChildren()) do
-                            if Enemy.Name == Target.Name
-                            and Enemy:FindFirstChild("Humanoid")
-                            and Enemy:FindFirstChild("HumanoidRootPart")
-                            and Enemy.Humanoid.Health > 0 then
-
-                                Enemy.HumanoidRootPart.CanCollide = false
-                                Enemy.Humanoid.WalkSpeed = 0
-                                Enemy.Humanoid.JumpPower = 0
-
-                                Enemy.HumanoidRootPart.CFrame =
-                                    Target.HumanoidRootPart.CFrame
+                    task.wait(1)
+                else
+                    local Target = nil
+                    for _, MobName in pairs(BoneMobs) do
+                        for _, v in pairs(Workspace.Enemies:GetChildren()) do
+                            if v.Name == MobName and v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") and v.Humanoid.Health > 0 then
+                                Target = v
+                                break
                             end
                         end
-
-                        EquipWeapon(_G.SelectWeapon)
-
-                        HumanoidRootPart.CFrame =
-                            Target.HumanoidRootPart.CFrame *
-                            CFrame.new(0,25,0)
-
-                        game:GetService("VirtualUser"):CaptureController()
-                        game:GetService("VirtualUser"):Button1Down(Vector2.new(1280,672))
-
-                    until not _G.AutoFarm_Bone
-                    or not Target
-                    or not Target.Parent
-                    or Target.Humanoid.Health <= 0
+                        if Target then break end
+                    end
+                    
+                    if Target and Target:FindFirstChild("HumanoidRootPart") then
+                        local targetPos = Target.HumanoidRootPart.Position
+                        
+                        repeat task.wait()
+                            BringEnemyBone(targetPos)
+                            
+                            for _, Enemy in pairs(Workspace.Enemies:GetChildren()) do
+                                if Enemy.Name == Target.Name and Enemy:FindFirstChild("Humanoid") and Enemy:FindFirstChild("HumanoidRootPart") and Enemy.Humanoid.Health > 0 then
+                                    Enemy.HumanoidRootPart.CanCollide = false
+                                    Enemy.Humanoid.WalkSpeed = 0
+                                    Enemy.Humanoid.JumpPower = 0
+                                    Enemy.HumanoidRootPart.CFrame = Target.HumanoidRootPart.CFrame
+                                end
+                            end
+                            
+                            EquipWeapon(_G.SelectWeapon)
+                            HumanoidRootPart.CFrame = Target.HumanoidRootPart.CFrame * CFrame.new(0, 25, 0)
+                            
+                            VirtualUser:CaptureController()
+                            VirtualUser:Button1Down(Vector2.new(1280, 672))
+                            
+                        until not getgenv().AutoFarm_Bone_Castle or not Target or not Target.Parent or Target.Humanoid.Health <= 0
+                    end
                 end
             end
         end)
@@ -4074,83 +4089,97 @@ spawn(function()
 end)
 
 -- Farm Katakuri
-spawn(function()
+getgenv().AutoFarm_Cake_Island = true
+_G.SelectWeapon = "Melee"
+
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local VirtualUser = game:GetService("VirtualUser")
+local plr = Players.LocalPlayer
+
+local CakeMobs = {
+    "Cookie Crafter [Lv. 2200]",
+    "Cake Guard [Lv. 2225]",
+    "Baking Staff [Lv. 2250]",
+    "Head Baker [Lv. 2275]"
+}
+
+local function EquipWeapon(text)
+    if not text then return end
+    if plr.Backpack:FindFirstChild(text) then
+        plr.Character.Humanoid:EquipTool(plr.Backpack:FindFirstChild(text))
+    end
+end
+
+local function BringEnemyCake(posMon)
+    for _, v in pairs(Workspace.Enemies:GetChildren()) do
+        if v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 then
+            if (v.PrimaryPart.Position - posMon).Magnitude <= 300 then
+                v.PrimaryPart.CFrame = CFrame.new(posMon)
+                v.PrimaryPart.CanCollide = false
+                v:FindFirstChild("Humanoid").WalkSpeed = 0
+                v:FindFirstChild("Humanoid").JumpPower = 0
+                if v.Humanoid:FindFirstChild("Animator") then 
+                    v.Humanoid.Animator:Destroy()
+                end
+                plr.SimulationRadius = math.huge
+            end
+        end                               
+    end  
+end
+
+task.spawn(function()
     while task.wait() do
         pcall(function()
-            if _G.AutoFarmKatakuri then
-
-                local Player = game.Players.LocalPlayer
-                local Character = Player.Character
+            if getgenv().AutoFarm_Cake_Island then
+                local Character = plr.Character
                 local HumanoidRootPart = Character and Character:FindFirstChild("HumanoidRootPart")
-
-                if not HumanoidRootPart then
-                    return
-                end
-
-                local CakeIsland = CFrame.new(-2090, 70, -12100)
-
-                if (HumanoidRootPart.Position - CakeIsland.Position).Magnitude > 300 then
-                    shouldTween = true
-                    TeleportToTarget(CakeIsland)
-                end
-
-                local KatakuriMobs = {
-                    "Cookie Crafter [Lv. 2200]",
-                    "Cake Guard [Lv. 2225]",
-                    "Baking Staff [Lv. 2250]",
-                    "Head Baker [Lv. 2275]"
-                }
-
-                local Target = nil
-
-                for _,MobName in pairs(KatakuriMobs) do
-                    for _,v in pairs(workspace.Enemies:GetChildren()) do
-                        if v.Name == MobName
-                        and v:FindFirstChild("Humanoid")
-                        and v:FindFirstChild("HumanoidRootPart")
-                        and v.Humanoid.Health > 0 then
-                            Target = v
-                            break
-                        end
+                if not HumanoidRootPart then return end
+                
+                local CakeIslandPos = CFrame.new(-2090, 70, -12100)
+                
+                if (HumanoidRootPart.Position - CakeIslandPos.Position).Magnitude > 300 then
+                    if _tp then
+                        _tp(CakeIslandPos)
+                    else
+                        HumanoidRootPart.CFrame = CakeIslandPos
                     end
-                    if Target then
-                        break
-                    end
-                end
-
-                if Target then
-                    repeat task.wait()
-
-                        BringEnemy()
-
-                        for _,Enemy in pairs(workspace.Enemies:GetChildren()) do
-                            if Enemy.Name == Target.Name
-                            and Enemy:FindFirstChild("Humanoid")
-                            and Enemy:FindFirstChild("HumanoidRootPart")
-                            and Enemy.Humanoid.Health > 0 then
-
-                                Enemy.HumanoidRootPart.CanCollide = false
-                                Enemy.Humanoid.WalkSpeed = 0
-                                Enemy.Humanoid.JumpPower = 0
-
-                                Enemy.HumanoidRootPart.CFrame =
-                                    Target.HumanoidRootPart.CFrame
+                    task.wait(1)
+                else
+                    local Target = nil
+                    for _, MobName in pairs(CakeMobs) do
+                        for _, v in pairs(Workspace.Enemies:GetChildren()) do
+                            if v.Name == MobName and v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") and v.Humanoid.Health > 0 then
+                                Target = v
+                                break
                             end
                         end
-
-                        EquipWeapon(_G.SelectWeapon)
-
-                        HumanoidRootPart.CFrame =
-                            Target.HumanoidRootPart.CFrame *
-                            CFrame.new(0,25,0)
-
-                        game:GetService("VirtualUser"):CaptureController()
-                        game:GetService("VirtualUser"):Button1Down(Vector2.new(1280,672))
-
-                    until not _G.AutoFarmKatakuri
-                    or not Target
-                    or not Target.Parent
-                    or Target.Humanoid.Health <= 0
+                        if Target then break end
+                    end
+                    
+                    if Target and Target:FindFirstChild("HumanoidRootPart") then
+                        local targetPos = Target.HumanoidRootPart.Position
+                        
+                        repeat task.wait()
+                            BringEnemyCake(targetPos)
+                            
+                            for _, Enemy in pairs(Workspace.Enemies:GetChildren()) do
+                                if Enemy.Name == Target.Name and Enemy:FindFirstChild("Humanoid") and Enemy:FindFirstChild("HumanoidRootPart") and Enemy.Humanoid.Health > 0 then
+                                    Enemy.HumanoidRootPart.CanCollide = false
+                                    Enemy.Humanoid.WalkSpeed = 0
+                                    Enemy.Humanoid.JumpPower = 0
+                                    Enemy.HumanoidRootPart.CFrame = Target.HumanoidRootPart.CFrame
+                                end
+                            end
+                            
+                            EquipWeapon(_G.SelectWeapon)
+                            HumanoidRootPart.CFrame = Target.HumanoidRootPart.CFrame * CFrame.new(0, 25, 0)
+                            
+                            VirtualUser:CaptureController()
+                            VirtualUser:Button1Down(Vector2.new(1280, 672))
+                            
+                        until not getgenv().AutoFarm_Cake_Island or not Target or not Target.Parent or Target.Humanoid.Health <= 0
+                    end
                 end
             end
         end)
