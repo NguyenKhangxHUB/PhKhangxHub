@@ -3992,161 +3992,168 @@ end)
 
 -- Farm Bones
 spawn(function()
-    while task.wait(1) do
-        if _G.StartFarm and _G.MethodSelect == "Farm Bones" then
-            pcall(function()        
-                local player = game.Players.LocalPlayer
-                local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-                local questUI = player.PlayerGui:FindFirstChild("Main") and 
-                                player.PlayerGui.Main:FindFirstChild("Quest")
-                local BonesTable = {"Reborn Skeleton","Living Zombie","Demonic Soul","Posessed Mummy"}
-                
-                if not root then return end
-                
-                local bone = GetConnectionEnemies(BonesTable)
-                if bone then
-                    if _G.AcceptQuestC and questUI and not questUI.Visible then
-                        local questPos = CFrame.new(-9516.99316, 172.017181, 6078.46533, 0, 0, -1, 0, 1, 0, 1, 0, 0)
-                        _tp(questPos)
-                        
-                        local attempts = 0
-                        while attempts < 50 and (questPos.Position - root.Position).Magnitude > 50 do
-                            task.wait(0.2)
-                            attempts = attempts + 1
-                        end
-                        
-                        local randomQuest = math.random(1, 4)
-                        local questData = {
-                            [1] = {"StartQuest", "HauntedQuest2", 2},
-                            [2] = {"StartQuest", "HauntedQuest2", 1},
-                            [3] = {"StartQuest", "HauntedQuest1", 1},
-                            [4] = {"StartQuest", "HauntedQuest1", 2}
-                        }                    
-                        
-                        pcall(function()
-                            game.ReplicatedStorage.Remotes.CommF_:InvokeServer(unpack(questData[randomQuest]))
-                        end)
-                    end
-                    
-                    repeat 
-                        task.wait() 
-                        Attack.Kill(bone, _G.StartFarm) 
-                    until not _G.StartFarm or not bone or not bone.Parent or 
-                          (bone.Humanoid and bone.Humanoid.Health <= 0) or 
-                          (_G.AcceptQuestC and questUI and not questUI.Visible)
-                else
-                    _tp(CFrame.new(-9495.6806640625, 453.58624267578125, 5977.3486328125))
+    while task.wait() do
+        pcall(function()
+            if _G.AutoFarm_Bone then
+                local Player = game.Players.LocalPlayer
+                local Character = Player.Character
+                local HumanoidRootPart = Character and Character:FindFirstChild("HumanoidRootPart")
+
+                if not HumanoidRootPart then
+                    return
                 end
-            end)
-        end
+
+                local CastlePos = CFrame.new(-9500, 142, 5567)
+
+                if (HumanoidRootPart.Position - CastlePos.Position).Magnitude > 300 then
+                    shouldTween = true
+                    TeleportToTarget(CastlePos)
+                end
+
+                local BoneMobs = {
+                    "Reborn Skeleton [Lv. 1975]",
+                    "Living Zombie [Lv. 2000]",
+                    "Demonic Soul [Lv. 2025]",
+                    "Posessed Mummy [Lv. 2050]"
+                }
+
+                local Target = nil
+
+                for _,MobName in pairs(BoneMobs) do
+                    for _,v in pairs(workspace.Enemies:GetChildren()) do
+                        if v.Name == MobName
+                        and v:FindFirstChild("Humanoid")
+                        and v:FindFirstChild("HumanoidRootPart")
+                        and v.Humanoid.Health > 0 then
+                            Target = v
+                            break
+                        end
+                    end
+                    if Target then
+                        break
+                    end
+                end
+
+                if Target then
+                    repeat task.wait()
+
+                        BringEnemy()
+
+                        for _,Enemy in pairs(workspace.Enemies:GetChildren()) do
+                            if Enemy.Name == Target.Name
+                            and Enemy:FindFirstChild("Humanoid")
+                            and Enemy:FindFirstChild("HumanoidRootPart")
+                            and Enemy.Humanoid.Health > 0 then
+
+                                Enemy.HumanoidRootPart.CanCollide = false
+                                Enemy.Humanoid.WalkSpeed = 0
+                                Enemy.Humanoid.JumpPower = 0
+
+                                Enemy.HumanoidRootPart.CFrame =
+                                    Target.HumanoidRootPart.CFrame
+                            end
+                        end
+
+                        EquipWeapon(_G.SelectWeapon)
+
+                        HumanoidRootPart.CFrame =
+                            Target.HumanoidRootPart.CFrame *
+                            CFrame.new(0,25,0)
+
+                        game:GetService("VirtualUser"):CaptureController()
+                        game:GetService("VirtualUser"):Button1Down(Vector2.new(1280,672))
+
+                    until not _G.AutoFarm_Bone
+                    or not Target
+                    or not Target.Parent
+                    or Target.Humanoid.Health <= 0
+                end
+            end
+        end)
     end
 end)
 
 -- Farm Katakuri
 spawn(function()
-    while task.wait(1) do
-        if _G.StartFarm and _G.MethodSelect == "Farm Katakuri" then
-            pcall(function()
+    while task.wait() do
+        pcall(function()
+            if _G.AutoFarmKatakuri then
 
-                local player = game.Players.LocalPlayer
-                local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-                local questUI = player.PlayerGui:FindFirstChild("Main") and 
-                                player.PlayerGui.Main:FindFirstChild("Quest")
+                local Player = game.Players.LocalPlayer
+                local Character = Player.Character
+                local HumanoidRootPart = Character and Character:FindFirstChild("HumanoidRootPart")
 
-                local enemies = workspace:FindFirstChild("Enemies")
-                local bigMirror = workspace.Map.CakeLoaf.BigMirror
-
-                if not root then
+                if not HumanoidRootPart then
                     return
                 end
 
-                if not bigMirror:FindFirstChild("Other") then
-                    _tp(CFrame.new(-2077, 252, -12373))
-                    return
+                local CakeIsland = CFrame.new(-2090, 70, -12100)
+
+                if (HumanoidRootPart.Position - CakeIsland.Position).Magnitude > 300 then
+                    shouldTween = true
+                    TeleportToTarget(CakeIsland)
                 end
 
-                if bigMirror.Other.Transparency == 0 or enemies:FindFirstChild("Cake Prince") then
+                local KatakuriMobs = {
+                    "Cookie Crafter [Lv. 2200]",
+                    "Cake Guard [Lv. 2225]",
+                    "Baking Staff [Lv. 2250]",
+                    "Head Baker [Lv. 2275]"
+                }
 
-                    local v = GetConnectionEnemies("Cake Prince")
+                local Target = nil
 
-                    if v then
-                        repeat
-                            task.wait()
-                            Attack.Kill2(v, _G.StartFarm)
-                        until not _G.StartFarm
-                            or not v.Parent
-                            or not v:FindFirstChild("Humanoid")
-                            or v.Humanoid.Health <= 0
-                    else
-                        if bigMirror.Other.Transparency == 0 and
-                           (CFrame.new(-1990.67, 4533, -14973.67).Position - root.Position).Magnitude >= 2000 then
-
-                            _tp(CFrame.new(-2151.82, 149.32, -12404.91))
+                for _,MobName in pairs(KatakuriMobs) do
+                    for _,v in pairs(workspace.Enemies:GetChildren()) do
+                        if v.Name == MobName
+                        and v:FindFirstChild("Humanoid")
+                        and v:FindFirstChild("HumanoidRootPart")
+                        and v.Humanoid.Health > 0 then
+                            Target = v
+                            break
                         end
                     end
+                    if Target then
+                        break
+                    end
+                end
 
-                else
+                if Target then
+                    repeat task.wait()
 
-                    local CakePrince = {
-                        "Cookie Crafter",
-                        "Cake Guard",
-                        "Baking Staff",
-                        "Head Baker"
-                    }
+                        BringEnemy()
 
-                    local v = GetConnectionEnemies(CakePrince)
+                        for _,Enemy in pairs(workspace.Enemies:GetChildren()) do
+                            if Enemy.Name == Target.Name
+                            and Enemy:FindFirstChild("Humanoid")
+                            and Enemy:FindFirstChild("HumanoidRootPart")
+                            and Enemy.Humanoid.Health > 0 then
 
-                    if v then
+                                Enemy.HumanoidRootPart.CanCollide = false
+                                Enemy.Humanoid.WalkSpeed = 0
+                                Enemy.Humanoid.JumpPower = 0
 
-                        if _G.AcceptQuestC and questUI and not questUI.Visible then
-
-                            local questPos = CFrame.new(-1927.92, 37.8, -12842.54)
-
-                            _tp(questPos)
-
-                            local attempts = 0
-
-                            while attempts < 50 and
-                                (questPos.Position - root.Position).Magnitude > 50 do
-
-                                task.wait(0.2)
-                                attempts += 1
+                                Enemy.HumanoidRootPart.CFrame =
+                                    Target.HumanoidRootPart.CFrame
                             end
-
-                            local randomQuest = math.random(1,4)
-
-                            local questData = {
-                                [1] = {"StartQuest", "CakeQuest2", 2},
-                                [2] = {"StartQuest", "CakeQuest2", 1},
-                                [3] = {"StartQuest", "CakeQuest1", 1},
-                                [4] = {"StartQuest", "CakeQuest1", 2}
-                            }
-
-                            pcall(function()
-                                game.ReplicatedStorage.Remotes.CommF_:InvokeServer(
-                                    unpack(questData[randomQuest])
-                                )
-                            end)
                         end
 
-                        repeat
-                            task.wait()
-                            Attack.Kill(v, _G.StartFarm)
+                        EquipWeapon(_G.SelectWeapon)
 
-                        until not _G.StartFarm
-                            or not v
-                            or not v.Parent
-                            or not v:FindFirstChild("Humanoid")
-                            or v.Humanoid.Health <= 0
-                            or bigMirror.Other.Transparency == 0
-                            or (_G.AcceptQuestC and questUI and not questUI.Visible)
+                        HumanoidRootPart.CFrame =
+                            Target.HumanoidRootPart.CFrame *
+                            CFrame.new(0,25,0)
 
-                    else
-                        _tp(CFrame.new(-2077, 252, -12373))
-                    end
+                        game:GetService("VirtualUser"):CaptureController()
+                        game:GetService("VirtualUser"):Button1Down(Vector2.new(1280,672))
+
+                    until not _G.AutoFarmKatakuri
+                    or not Target
+                    or not Target.Parent
+                    or Target.Humanoid.Health <= 0
                 end
-            end)
-        end
+            end
+        end)
     end
 end)
 
