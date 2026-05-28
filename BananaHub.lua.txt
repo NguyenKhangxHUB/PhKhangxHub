@@ -3224,6 +3224,55 @@ Server:AddButton({
     end
 })
 
+Server:AddButton({
+    Title = "Hop RipIndra",
+    Callback = function()
+       game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, "4946b5f2-4a2c-44e8-947e-f336caebde29", game.Players.LocalPlayer)
+  end
+  })
+  
+  Server:AddButton({
+    Title = "Hop Dough King",
+    Callback = function()
+       game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, "d2f3855d-9b92-4515-8740-c0eb7ffcd781", game.Players.LocalPlayer)
+  end
+  })
+  
+  Server:AddButton({
+    Title = "Hop Tyrant",
+    Callback = function()
+       game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, "f12d49ac-05c5-49b4-865f-afc7b227ef60", game.Players.LocalPlayer)
+  end
+  })
+  
+  Server:AddButton({
+    Title = "Hop Mirage island",
+    Callback = function()
+       game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, "f12d49ac-05c5-49b4-865f-afc7b227ef60", game.Players.LocalPlayer)
+  end
+  })
+  
+  Server:AddButton({
+    Title = "Hop Dark Beard",
+    Callback = function()
+       game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, "b19eab3f-5da2-41f9-8d57-8822163b7219", game.Players.LocalPlayer)
+  end
+  })
+  
+  Server:AddButton({
+    Title = "Hop Swords",
+    Callback = function()
+       game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, "0940dc34-b96d-411a-926b-79dd00b45eab", game.Players.LocalPlayer)
+  end
+  })
+  
+  Server:AddButton({
+    Title = "Hop Full moon",
+    Callback = function()
+       game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, "c7cf4abb-6682-4f33-86e2-03af70ab3153", game.Players.LocalPlayer)
+  end
+  })
+  
 LocalPlayer = Window:AddTab("LocalPlayer")
 
 Player = LocalPlayer:AddLeftGroupbox("Local Player")
@@ -3570,6 +3619,93 @@ SetAutoFarm:AddToggle("BringMob", {
         _B = Value
     end
 })
+-- ============================================================
+-- BRING MOB — bring CẢ mob farm + mob phụ về _lockedBringPos mỗi 0.1s
+-- Không bring nếu có player khác trong phạm vi 500 stud quanh player
+-- ============================================================
+spawn(function()
+    while task.wait(0.1) do
+        pcall(function()
+            -- Đồng bộ getgenv với _G
+            getgenv().IsFarming     = _G.StartFarm
+            getgenv().MaxBringCount = _G.BringCount or 2
+            getgenv().BringMob      = _G.AutoBring
+
+            -- Guard
+            if not getgenv().BringMob  then return end
+            if not getgenv().IsFarming then return end
+
+            local targetMob = getgenv().CurrentTargetMob
+            if not targetMob or not targetMob.Parent then return end
+
+            -- Phải có vị trí đã chốt (tức là tracking đã teleport ít nhất 1 lần)
+            local bringCF = _lockedBringPos
+            if not bringCF then return end
+
+            local myChar = Player.Character
+            if not myChar then return end
+            local myHRP = myChar:FindFirstChild("HumanoidRootPart")
+            if not myHRP then return end
+
+            -- ── CHECK PLAYER KHÁC trong 500 stud — nếu có thì KHÔNG bring ──
+            for _, otherPlayer in ipairs(Players:GetPlayers()) do
+                if otherPlayer == Player then continue end  -- bỏ qua bản thân
+                local otherChar = otherPlayer.Character
+                if not otherChar then continue end
+                local otherHRP = otherChar:FindFirstChild("HumanoidRootPart")
+                if not otherHRP then continue end
+                local distToOther = (otherHRP.Position - myHRP.Position).Magnitude
+                if distToOther <= 500 then
+                    return  -- có player khác gần → bỏ bring lần này
+                end
+            end
+
+            local mobName  = targetMob.Name
+            --   BringCount = 2 → bring thêm 1 (tổng 2 con dưới chân)
+            --   BringCount = 3 → bring thêm 2 (tổng 3 con)
+            local maxExtra = math.max(0, (getgenv().MaxBringCount or 2) - 1)
+
+            -- ── Tìm mob phụ cùng loại, KHÔNG giới hạn khoảng cách ──────
+            -- Collect tất cả mob cùng tên, sort theo khoảng cách gần nhất, lấy maxExtra con
+            local allSame = {}
+            for _, enemy in ipairs(workspace.Enemies:GetChildren()) do
+                if enemy == targetMob then continue end
+                local humanoid = enemy:FindFirstChild("Humanoid")
+                local rootPart = enemy:FindFirstChild("HumanoidRootPart")
+                if humanoid and rootPart and humanoid.Health > 0 and rootPart.Parent then
+                    if enemy.Name == mobName then
+                        local dist = (rootPart.Position - myHRP.Position).Magnitude
+                        -- Chỉ bring mob phụ trong phạm vi 300 stud tính từ player
+                        if dist <= 300 then
+                            table.insert(allSame, { rp = rootPart, dist = dist })
+                        end
+                    end
+                end
+            end
+            -- Sort gần → xa
+            table.sort(allSame, function(a, b) return a.dist < b.dist end)
+
+            local candidates = {}
+            for i = 1, math.min(maxExtra, #allSame) do
+                table.insert(candidates, allSame[i].rp)
+            end
+
+            -- ── Bring mob farm (luôn bring, kể cả khi không có mob phụ) ─
+            local farmHRP = targetMob:FindFirstChild("HumanoidRootPart")
+            local farmHum = targetMob:FindFirstChild("Humanoid")
+            if farmHRP and farmHum and farmHum.Health > 0 then
+                farmHRP.CFrame = bringCF
+                sethiddenproperty(Player, "SimulationRadius", math.huge)
+            end
+
+            -- ── Bring mob phụ (gần nhất, không giới hạn khoảng cách) ───
+            for _, rp in ipairs(candidates) do
+                rp.CFrame = bringCF
+                sethiddenproperty(Player, "SimulationRadius", math.huge)
+            end
+        end)
+    end
+end)
 
 SetAutoFarm:AddToggle("ObservationOpen", {
     Title = "Teleport Y if low hearth",
@@ -3991,170 +4127,111 @@ spawn(function()
 end)
 
 -- Farm Bones
--- ====================================================================
--- SCRIPT 2: CHỈ FARM BONE (HAUNTED CASTLE)
--- ====================================================================
-getgenv().Auto_Bone_Farm = false         -- Đổi thành true để BẬT farm
-getgenv().TweenSpeed = 325                -- Tốc độ lấy từ file gốc của bạn
-_G.SelectWeapon = "Melee"                -- Vũ khí ("Melee" hoặc "Sword")
-local HeadDistance = 25                  -- Khoảng cách đứng trên đầu quái
-
--- Tọa độ trung tâm đảo Haunted Castle để đứng chờ an toàn
-local BoneZoneCFrame = CFrame.new(-9515, 164, 5781)
-
--- Danh sách quái vật rớt Bone chuẩn ở Haunted Castle
-local BoneMonsters = {
-    "Reborn Skeleton",
-    "Living Zombie",
-    "Demonic Soul",
-    "Posessed Mummy"
-}
-
--- Hàm quét tìm mục tiêu trong danh sách Bone
-local function GetBoneMonsterTarget()
-    for _, name in ipairs(BoneMonsters) do
-        local enemy = workspace.Enemies:FindFirstChild(name)
-        if enemy and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 and enemy:FindFirstChild("HumanoidRootPart") then
-            return enemy
-        end
-    end
-    for _, name in ipairs(BoneMonsters) do
-        for _, v in pairs(game:GetService("ReplicatedStorage"):GetChildren()) do
-            if v.Name == name and v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 then
-                return v
-            end
-        end
-    end
-    return nil
-end
-
--- Vòng lặp chạy ngầm (Chỉ hoạt động khi biến Auto_Bone_Farm = true)
-task.spawn(function()
-    while true do
+spawn(function()
+    while _G.AutoFarmBone do
         task.wait(0.1)
-        if getgenv().Auto_Bone_Farm then
-            pcall(function()
-                local player = game:GetService("Players").LocalPlayer
-                if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then return end
-                local myRoot = player.Character.HumanoidRootPart
-                
-                local TargetMonster = GetBoneMonsterTarget()
-                
-                if TargetMonster then
-                    -- Bật trạng thái gom quái từ file gốc
-                    shouldTween = true
-                    _B = true 
-                    
-                    if not TargetMonster:GetAttribute("Locked") then
-                        TargetMonster:SetAttribute("Locked", TargetMonster.HumanoidRootPart.CFrame)
-                    end
-                    PosMon = TargetMonster:GetAttribute("Locked").Position
-                    
-                    -- Gọi các hàm từ script gốc của bạn
-                    if type(BringEnemy) == "function" then BringEnemy() end
-                    if type(EquipWeapon) == "function" then EquipWeapon(_G.SelectWeapon) end
-                    
-                    -- Tween đứng trên đầu quái Bone 25 studs
-                    local targetCFrame = TargetMonster.HumanoidRootPart.CFrame * CFrame.new(0, HeadDistance, 0) * CFrame.Angles(0, math.rad(180), 0)
-                    if type(_tp) == "function" then _tp(targetCFrame) end
-                    
-                    -- Tự động Click đánh quái
-                    local VirtualInputManager = game:GetService("VirtualInputManager")
-                    VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 1)
-                    VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 1)
-                else
-                    -- Nếu hết quái tạm thời, đứng chờ tại khu vực đảo Bone chứ không bay đi đảo khác
-                    local distToZone = (Vector3.new(BoneZoneCFrame.Position.X, myRoot.Position.Y, BoneZoneCFrame.Position.Z) - myRoot.Position).Magnitude
-                    if distToZone > 100 and type(_tp) == "function" then
-                        _tp(BoneZoneCFrame)
+        pcall(function()
+            local Player = game:GetService("Players").LocalPlayer
+            local ReplicatedStorage = game:GetService("ReplicatedStorage")
+            local Level = Player.Data.Level.Value
+            local QuestName, QuestID, MobName, QuestCFrame, MonsterCFrame
+            
+            -- Cấu hình vị trí và loại quái Bone theo Level dựa trên logic gốc
+            if Level >= 2200 then
+                MobName = "Reborn Skeleton"
+                QuestName = "HauntedCastleQuest"
+                QuestID = 1
+                QuestCFrame = CFrame.new(-9515, 164, 5781)
+                MonsterCFrame = CFrame.new(-8764, 142, 5963)
+            else
+                -- Nếu cấp thấp hơn, chuyển sang quái phụ cận bãi Bone
+                MobName = "Living Zombie"
+                QuestName = "HauntedCastleQuest"
+                QuestID = 2
+                QuestCFrame = CFrame.new(-9515, 164, 5781)
+                MonsterCFrame = CFrame.new(-10227, 421, 6161)
+            end
+
+            -- Kiểm tra xem đã nhận nhiệm vụ chưa
+            local QuestGUI = Player.PlayerGui.Main.Quest
+            if QuestGUI.Visible == false then
+                -- Dịch chuyển đến NPC và nhận nhiệm vụ thông qua CommF_
+                _tp(QuestCFrame)
+                if (Player.Character.HumanoidRootPart.Position - QuestCFrame.Position).Magnitude <= 15 then
+                    ReplicatedStorage.Remotes.CommF_:InvokeServer("StartQuest", QuestName, QuestID)
+                end
+            else
+                -- Nếu đã có nhiệm vụ, tiến hành tiêu diệt quái
+                local TargetMob = nil
+                for _, v in pairs(workspace.Enemies:GetChildren()) do
+                    if v.Name == MobName and v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 then
+                        TargetMob = v
+                        break
                     end
                 end
-            end)
-        end
+
+                if TargetMob then
+                    -- Sử dụng hàm kết liễu và gom quái chuẩn từ BananaHub
+                    repeat
+                        task.wait()
+                        if _G.AutoFarmBone then
+                            Attack.Kill(TargetMob, true)
+                        end
+                    until not TargetMob.Parent or TargetMob.Humanoid.Health <= 0 or not _G.AutoFarmBone or QuestGUI.Visible == false
+                else
+                    -- Nếu chưa có quái xuất hiện, đứng chờ tại điểm spawn quái
+                    _tp(MonsterCFrame)
+                end
+            end
+        end)
     end
 end)
 
 -- Farm Katakuri
--- ====================================================================
--- SCRIPT 1: CHỈ FARM 4 QUÁI CAKE ISLAND (TIẾN TRÌNH KATAKURI)
--- ====================================================================
-getgenv().Auto_Specific_Cake_Farm = false -- Đổi thành true để BẬT farm
-getgenv().TweenSpeed = 325                -- Tốc độ lấy từ file gốc của bạn
-_G.SelectWeapon = "Melee"                -- Vũ khí ("Melee" hoặc "Sword")
-local HeadDistance = 25                  -- Khoảng cách đứng trên đầu quái
-
--- Tọa độ khu vực trung tâm bãi quái Cake để đứng chờ khi hết quái
-local CakeZoneCFrame = CFrame.new(-1932, 38, -12848)
-
--- Danh sách 4 quái chỉ định
-local SpecificCakeMonsters = {
-    "Cookie Crafter",
-    "Cake Guard",
-    "Baking Staff",
-    "Head Baker"
-}
-
--- Hàm quét tìm mục tiêu trong danh sách Cake
-local function GetCakeMonsterTarget()
-    for _, name in ipairs(SpecificCakeMonsters) do
-        local enemy = workspace.Enemies:FindFirstChild(name)
-        if enemy and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 and enemy:FindFirstChild("HumanoidRootPart") then
-            return enemy
-        end
-    end
-    for _, name in ipairs(SpecificCakeMonsters) do
-        for _, v in pairs(game:GetService("ReplicatedStorage"):GetChildren()) do
-            if v.Name == name and v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 then
-                return v
-            end
-        end
-    end
-    return nil
-end
-
--- Vòng lặp chạy ngầm (Chỉ hoạt động khi biến Auto_Specific_Cake_Farm = true)
-task.spawn(function()
-    while true do
+spawn(function()
+    while _G.AutoFarmKatakuri do
         task.wait(0.1)
-        if getgenv().Auto_Specific_Cake_Farm then
-            pcall(function()
-                local player = game:GetService("Players").LocalPlayer
-                if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then return end
-                local myRoot = player.Character.HumanoidRootPart
-                
-                local TargetMonster = GetCakeMonsterTarget()
-                
-                if TargetMonster then
-                    -- Bật trạng thái gom quái từ file gốc
-                    shouldTween = true
-                    _B = true 
-                    
-                    if not TargetMonster:GetAttribute("Locked") then
-                        TargetMonster:SetAttribute("Locked", TargetMonster.HumanoidRootPart.CFrame)
+        pcall(function()
+            local ReplicatedStorage = game:GetService("ReplicatedStorage")
+            local Enemies = workspace.Enemies
+            
+            -- Kiểm tra xem Boss Katakuri (Cake Queen / Cake King) có xuất hiện chưa
+            local KatakuriBoss = Enemies:FindFirstChild("Cake Queen") or workspace:FindFirstChild("Cake Queen") or Enemies:FindFirstChild("Katarkuri")
+            
+            if KatakuriBoss and KatakuriBoss:FindFirstChild("Humanoid") and KatakuriBoss.Humanoid.Health > 0 then
+                -- Boss xuất hiện -> Ưu tiên dịch chuyển thẳng tới đập Boss
+                repeat
+                    task.wait()
+                    if _G.AutoFarmKatakuri then
+                        Attack.Kill(KatakuriBoss, true)
                     end
-                    PosMon = TargetMonster:GetAttribute("Locked").Position
-                    
-                    -- Gọi các hàm từ script gốc của bạn
-                    if type(BringEnemy) == "function" then BringEnemy() end
-                    if type(EquipWeapon) == "function" then EquipWeapon(_G.SelectWeapon) end
-                    
-                    -- Tween đứng trên đầu quái 25 studs
-                    local targetCFrame = TargetMonster.HumanoidRootPart.CFrame * CFrame.new(0, HeadDistance, 0) * CFrame.Angles(0, math.rad(180), 0)
-                    if type(_tp) == "function" then _tp(targetCFrame) end
-                    
-                    -- Tự động Click đánh quái
-                    local VirtualInputManager = game:GetService("VirtualInputManager")
-                    VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 1)
-                    VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 1)
-                else
-                    -- Nếu hết quái tạm thời, đứng chờ tại đảo Cake chứ không bay đi đảo khác
-                    local distToZone = (Vector3.new(CakeZoneCFrame.Position.X, myRoot.Position.Y, CakeZoneCFrame.Position.Z) - myRoot.Position).Magnitude
-                    if distToZone > 100 and type(_tp) == "function" then
-                        _tp(CakeZoneCFrame)
+                until not KatakuriBoss.Parent or KatakuriBoss.Humanoid.Health <= 0 or not _G.AutoFarmKatakuri
+            else
+                -- Boss chưa xuất hiện -> Đi farm quái nền trên đảo để kích hoạt cổng mở Katakuri
+                local IslandMobs = {"Cookie Crafter", "Cake Guard", "Baking Staff", "Head Baker"}
+                local TargetMob = nil
+                
+                -- Tìm quái nền bất kỳ đang sống trên đảo
+                for _, v in pairs(Enemies:GetChildren()) do
+                    if table.find(IslandMobs, v.Name) and v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 then
+                        TargetMob = v
+                        break
                     end
                 end
-            end)
-        end
+                
+                if TargetMob then
+                    repeat
+                        task.wait()
+                        if _G.AutoFarmKatakuri then
+                            Attack.Kill(TargetMob, true)
+                        end
+                    until not TargetMob.Parent or TargetMob.Humanoid.Health <= 0 or not _G.AutoFarmKatakuri
+                else
+                    -- Điểm dịch chuyển đứng chờ quái nếu bãi trống
+                    _tp(CFrame.new(-2021, 38, -12028))
+                end
+            end
+        end)
     end
 end)
 
