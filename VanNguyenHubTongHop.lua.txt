@@ -1,0 +1,25 @@
+loadstring(game:HttpGet(("https://raw.githubusercontent.com/daucobonhi/Ui-Redz-V2/refs/heads/main/UiREDzV2.lua")))()
+
+local Window = MakeWindow({
+    Hub = {
+        Title = "Blox Fruit by Ades Chô",
+        Animation = "Youtube: khong co"
+    },
+    Key = {
+        KeySystem = true,
+        Title = "Bloxfruits [FREEMIUM]",
+        Description = "Blox Fruit farm",
+        KeyLink = "https://link4m.org/WjYYkAlG",
+        Keys = {"NguyenKhang_HJ4T-R9WM-2NFK"},
+        Notifi = {
+            Notifications = true,
+            CorrectKey = "key chính xác✅✅✅",
+            Incorrectkey = "Key sai bét rồi",
+            CopyKeyLink = "https://link4m.org/WjYYkAlG"
+        }
+    }
+})
+
+repeat task.wait() until _G.Key == "NguyenKhang_HJ4T-R9WM-2NFK"
+
+loadstring(game:HttpGet("LINK_SCRIPT_CUA_BAN"))()
