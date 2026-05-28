@@ -3943,28 +3943,33 @@ SelectMethodFarm:AddSlider({
     end
 })
 
-SelectMethodFarm:AddToggle("IgnoreAttackKatakuri", {
-    Title = "Ignore Attack Katakuri",
-    Default = false,
-    Callback = function(Value)
-        _G.Auto_Cake_Prince = Value
-    end
-})
-getgenv().IgnoreAttackKatakuri = Value
-    end
+SelectMethodFarm:AddToggle("IgnoreAttackKatakuri", { 
+    Title = "Ignore Attack Katakuri", 
+    Default = false, 
+    Callback = function(Value) 
+        getgenv().IgnoreAttackKatakuri = Value 
+    end 
 })
 
-for _,v in pairs(workspace.Enemies:GetChildren()) do
-    if v:FindFirstChild("Humanoid")
-    and v:FindFirstChild("HumanoidRootPart")
-    and v.Humanoid.Health > 0 then
-
-        if getgenv().IgnoreAttackKatakuri then
-            if string.find(v.Name,"Cake Prince")
-            or string.find(v.Name,"Dough King") then
-                return
+spawn(function()
+    while task.wait(1) do
+        pcall(function()
+            if getgenv().IgnoreAttackKatakuri then
+                local currentKilled = game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("CakePrinceProgress")
+                if (currentKilled and tonumber(currentKilled) >= 500) or workspace.Enemies:FindFirstChild("Cake Prince") then
+                    if _G.Auto_Cake_Prince then
+                        _G.Auto_Cake_Prince = false
+                        if Library and Library.Notify then
+                            Library:Notify({
+                                Title = "Banana Hub Notification",
+                                Description = "Đã đạt 500 quái hoặc Boss đã xuất hiện! Tự động hủy triệu hồi Katakuri V1.",
+                                Duration = 5
+                            })
+                        end
+                    end
+                end
             end
-        end
+        end)
     end
 end)
 
