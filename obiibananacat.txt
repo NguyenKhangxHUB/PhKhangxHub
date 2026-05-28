@@ -3569,6 +3569,55 @@ Server:AddButton({
     end
 })
 
+Server:AddButton({
+    Title = "Hop Rip_Indra",
+    Callback = function()
+       game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, "4946b5f2-4a2c-44e8-947e-f336caebde29", game.Players.LocalPlayer)
+  end
+  })
+  
+  Server:AddButton({
+    Title = "Hop Dough King",
+    Callback = function()
+       game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, "d2f3855d-9b92-4515-8740-c0eb7ffcd781", game.Players.LocalPlayer)
+  end
+  })
+  
+  Server:AddButton({
+    Title = "Hop Tyrant of the skies",
+    Callback = function()
+       game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, "f12d49ac-05c5-49b4-865f-afc7b227ef60", game.Players.LocalPlayer)
+  end
+  })
+  
+  Server:AddButton({
+    Title = "Hop Mirage island",
+    Callback = function()
+       game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, "f12d49ac-05c5-49b4-865f-afc7b227ef60", game.Players.LocalPlayer)
+  end
+  })
+  
+  Server:AddButton({
+    Title = "Hop Dark Beard",
+    Callback = function()
+       game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, "b19eab3f-5da2-41f9-8d57-8822163b7219", game.Players.LocalPlayer)
+  end
+  })
+  
+  Server:AddButton({
+    Title = "Hop Swords",
+    Callback = function()
+       game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, "0940dc34-b96d-411a-926b-79dd00b45eab", game.Players.LocalPlayer)
+  end
+  })
+  
+  Server:AddButton({
+    Title = "Hop Full moon",
+    Callback = function()
+       game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, "c7cf4abb-6682-4f33-86e2-03af70ab3153", game.Players.LocalPlayer)
+  end
+  })
+
 LocalPlayer = Window:AddTab("LocalPlayer")
 
 Player = LocalPlayer:AddLeftGroupbox("Local Player")
@@ -3921,6 +3970,17 @@ SetAutoFarm:AddToggle("BringMob", {
         _B = Value
     end
 })
+
+SetAutoFarm:AddButton("AntiBand", {
+    Title = "AntiBand",
+    Default = false,
+    Callback = function(Value)
+        _B = Value
+    end
+})
+task.wait(1)
+
+game.Players.LocalPlayer:Kick("AntiBand Success | Rejoin Blox Fruits")
 
 SetAutoFarm:AddToggle("ObservationOpen", {
     Title = "Teleport Y if low hearth",
@@ -10096,6 +10156,3 @@ MiscPVP:AddToggle("WalkOnWater", {
             end
         end
     })
-task.wait(1)
-
-game.Players.LocalPlayer:Kick("banana con cặc, tham lam vừa thôi yêu khoai nguyên khang")
