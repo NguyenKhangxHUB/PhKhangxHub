@@ -3991,189 +3991,203 @@ spawn(function()
 end)
 
 -- Farm Bones
-getgenv().AutoFarmBone = true
-getgenv().TweenSpeed = 320
-_G.SelectWeapon = "Melee"
+getgenv().AutoFarm_Bone = true -- Bật/Tắt tính năng Farm Bone
+getgenv().TweenSpeed = 320     -- Tốc độ di chuyển Tween
 
-local HauntedCastleCFrame = CFrame.new(-9515, 164, 5515) 
-local DeathKingNPC_CFrame = CFrame.new(-9374, 112, 5716)
+-- Tọa độ trung tâm Đảo Lâu Đài Bóng Tối (Sea 3)
+local HauntedCastleCFrame = CFrame.new(-9515, 172, 607) 
 
-local HauntedCastleMonsters = {
+-- Danh sách quái vật tại Đảo Lâu Đài Bóng Tối cần quét và farm
+local HauntedCastleMobs = {
     "Reborn Skeleton",
     "Living Zombie",
     "Demonic Soul",
     "Posessed Mummy"
 }
 
-local function GetBoneMonster()
-    for _, enemy in pairs(Workspace.Enemies:GetChildren()) do
-        if table.find(HauntedCastleMonsters, enemy.Name) and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 and enemy:FindFirstChild("HumanoidRootPart") then
-            return enemy
+-- Hàm tìm kiếm quái vật còn sống gần nhất trong danh sách mục tiêu
+local function GetTargetMonster()
+    local closestMob = nil
+    local shortestDistance = math.huge
+    local playerPos = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and plr.Character.HumanoidRootPart.Position
+
+    if not playerPos then return nil end
+
+    for _, v in pairs(workspace.Enemies:GetChildren()) do
+        if table.find(HauntedCastleMobs, v.Name) and v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 and v:FindFirstChild("HumanoidRootPart") then
+            local dist = (v.HumanoidRootPart.Position - playerPos).Magnitude
+            if dist < shortestDistance then
+                shortestDistance = dist
+                closestMob = v
+            end
         end
     end
-    for _, enemy in pairs(ReplicatedStorage:GetChildren()) do
-        if table.find(HauntedCastleMonsters, enemy.Name) and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 and enemy:FindFirstChild("HumanoidRootPart") then
-            return enemy
+
+    -- Nếu trong workspace không có, tìm trong ReplicatedStorage (quái chưa spawn hẳn)
+    if not closestMob then
+        for _, v in pairs(game:GetService("ReplicatedStorage"):GetChildren()) do
+            if table.find(HauntedCastleMobs, v.Name) and v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 and v:FindFirstChild("HumanoidRootPart") then
+                closestMob = v
+                break
+            end
         end
     end
-    return nil
+
+    return closestMob
 end
 
-local function AutoClick()
-    local character = game.Players.LocalPlayer.Character
-    if character and character:FindFirstChildOfClass("Tool") then
-        game:GetService("VirtualUser"):CaptureController()
-        game:GetService("VirtualUser"):Button1Down(Vector2.new(1280, 672))
-    end
-end
-
+-- Vòng lặp chính xử lý Auto Farm Bone
 task.spawn(function()
     while task.wait(0.1) do
-        if getgenv().AutoFarmBone then
-            if game.PlaceId == 7449423635 or game.PlaceId == 85211729168715 or game.PlaceId == 73902483975735 then
-                local TargetMonster = GetBoneMonster()
-                
-                if TargetMonster then
-                    shouldTween = true
-                    _B = true
+        if getgenv().AutoFarm_Bone then
+            -- Kiểm tra chắc chắn đang ở Sea 3 (PlaceId: 7449423635)
+            if game.PlaceId == 7449423635 then
+                pcall(function()
+                    local targetMob = GetTargetMonster()
                     
-                    if not TargetMonster:GetAttribute("Locked") then 
-                        TargetMonster:SetAttribute("Locked", TargetMonster.HumanoidRootPart.CFrame) 
+                    if targetMob then
+                        -- Gán quái vật vào hệ thống khóa mục tiêu của script gốc
+                        if not targetMob:GetAttribute("Locked") then 
+                            targetMob:SetAttribute("Locked", targetMob.HumanoidRootPart.CFrame) 
+                        end
+                        PosMon = targetMob:GetAttribute("Locked").Position
+                        
+                        -- Kích hoạt hàm gom quái (Bring Enemy) tích hợp sẵn trong file gốc
+                        _B = true
+                        BringEnemy()
+                        
+                        -- Tự động trang bị vũ khí chiến đấu (Mặc định chọn Melee/Sword)
+                        if plr.Backpack:FindFirstChild(_G.SelectWeapon or "Melee") then
+                            EquipWeapon(_G.SelectWeapon or "Melee")
+                        end
+                        
+                        -- Di chuyển Tween đến vị trí TRÊN ĐẦU QUÁI 25 đơn vị
+                        shouldTween = true
+                        _tp(targetMob.HumanoidRootPart.CFrame * CFrame.new(0, 25, 0) * CFrame.Angles(math.rad(-90), 0, 0))
+                        
+                        -- Kích hoạt Fast Attack & Hit Registration từ hệ thống cũ
+                        if FastAttackModule and FastAttackModule.ExecuteFastAttack then
+                            FastAttackModule.ExecuteFastAttack()
+                        elseif HitRegistrationModule and HitRegistrationModule.Execute then
+                            HitRegistrationModule.Execute()
+                        end
+                    else
+                        -- Nếu không thấy quái nào trên đảo, tự động di chuyển Tween về bến cảng/trung tâm Lâu Đài Bóng Tối để đợi quái hồi sinh
+                        shouldTween = true
+                        _tp(HauntedCastleCFrame)
                     end
-                    PosMon = TargetMonster:GetAttribute("Locked").Position
-                    BringEnemy() 
-                    
-                    EquipWeapon(_G.SelectWeapon)
-                    
-                    local TargetPosition = TargetMonster.HumanoidRootPart.CFrame * CFrame.new(0, 25, 0) * CFrame.Angles(math.rad(-90), 0, 0)
-                    _tp(TargetPosition)
-                    
-                    pcall(function()
-                        HitRegistrationModule.Execute()
-                        AutoClick()
-                    end)
-                else
-                    shouldTween = true
-                    _B = false
-                    if (game.Players.LocalPlayer.Character.HumanoidRootPart.Position - DeathKingNPC_CFrame.Position).Magnitude > 150 then
-                        _tp(DeathKingNPC_CFrame)
-                    end
-                end
+                end)
             else
+                -- Cảnh báo nếu thực thi nhầm Sea
                 shouldTween = false
-                _B = false
-                print("Vui lòng di chuyển đến Sea 3 để chạy chức năng Farm Bone!")
-                task.wait(5)
+                warn("Tính năng Farm Bone chỉ hoạt động tại Sea 3!")
+                break
             end
         else
-            _B = false
             shouldTween = false
         end
     end
 end)
 
+-- Vòng lặp tự động nhấp chuột (Click) để hỗ trợ xả sát thương khi farm
 task.spawn(function()
-    while task.wait(FastAttackModule.Rate) do
-        if getgenv().AutoFarmBone and GetBoneMonster() then
+    while task.wait() do
+        if getgenv().AutoFarm_Bone and GetTargetMonster() then
             pcall(function()
-                FastAttackModule.ExecuteFastAttack()
+                local virtualUser = game:GetService("VirtualUser")
+                virtualUser:CaptureController()
+                virtualUser:ClickButton1(Vector2.new(850, 520))
             end)
         end
     end
 end)
 
 -- Farm Katakuri
-getgenv().AutoFarmKatakuri = true
-getgenv().TweenSpeed = 320
-_G.SelectWeapon = "Melee"
+getgenv().AutoFarmCake = true -- Bật/Tắt chức năng farm tại đây
+_G.SelectWeapon = _G.SelectWeapon or "Melee" -- Thay bằng "Sword" hoặc tên vũ khí nếu muốn
 
+-- Vị trí trung tâm Đảo Cake (Sea 3) dùng để Tween tới nếu đang ở đảo khác
 local CakeIslandCFrame = CFrame.new(-2024, 38, -12026) 
-local KakaturiNPC_CFrame = CFrame.new(-2104, 38, -10194)
 
-local CakeIslandMonsters = {
+-- Danh sách các loại quái tại đảo Cake để tự động quét và farm
+local CakeMonsters = {
     "Cookie Crafter",
     "Cake Guard",
     "Baking Staff",
-    "Head Baker",
-    "Cocoa Warrior",
-    "Chocolate Bar Battler",
-    "Sweet Thief",
-    "Candy Rebel"
+    "Head Baker"
 }
 
+-- Hàm kiểm tra xem có quái Cake nào đang sống không
 local function GetCakeMonster()
-    for _, enemy in pairs(Workspace.Enemies:GetChildren()) do
-        if table.find(CakeIslandMonsters, enemy.Name) and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 and enemy:FindFirstChild("HumanoidRootPart") then
-            return enemy
+    -- Tìm trong Workspace trước
+    for _, v in pairs(workspace.Enemies:GetChildren()) do
+        if table.find(CakeMonsters, v.Name) and v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 and v:FindFirstChild("HumanoidRootPart") then
+            return v
         end
     end
-    for _, enemy in pairs(ReplicatedStorage:GetChildren()) do
-        if table.find(CakeIslandMonsters, enemy.Name) and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 and enemy:FindFirstChild("HumanoidRootPart") then
-            return enemy
+    -- Tìm trong ReplicatedStorage (Quái chưa render hoàn chỉnh)
+    for _, v in pairs(game:GetService("ReplicatedStorage"):GetChildren()) do
+        if table.find(CakeMonsters, v.Name) and v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 and v:FindFirstChild("HumanoidRootPart") then
+            return v
         end
     end
     return nil
 end
 
-local function AutoClick()
-    local character = game.Players.LocalPlayer.Character
-    if character and character:FindFirstChildOfClass("Tool") then
-        game:GetService("VirtualUser"):CaptureController()
-        game:GetService("VirtualUser"):Button1Down(Vector2.new(1280, 672))
-    end
-end
-
+-- Vòng lặp chính xử lý Auto Farm Cake
 task.spawn(function()
-    while task.wait(0.1) do
-        if getgenv().AutoFarmKatakuri then
-            if game.PlaceId == 7449423635 or game.PlaceId == 85211729168715 or game.PlaceId == 73902483975735 then
-                local TargetMonster = GetCakeMonster()
-                
-                if TargetMonster then
-                    shouldTween = true
-                    _B = true
-                    
-                    if not TargetMonster:GetAttribute("Locked") then 
-                        TargetMonster:SetAttribute("Locked", TargetMonster.HumanoidRootPart.CFrame) 
+    while task.wait() do
+        if getgenv().AutoFarmCake then
+            pcall(function()
+                -- Kích hoạt chế độ Tween xuyên tường/giữ vị trí của script gốc
+                shouldTween = true
+                _B = true -- Kích hoạt BringEnemy (hàm gom quái có sẵn trong file)
+
+                -- Kiểm tra nhân vật hợp lệ
+                local character = game.Players.LocalPlayer.Character
+                if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+                local rootPart = character.HumanoidRootPart
+
+                -- Tìm mục tiêu quái Cake
+                local targetMonster = GetCakeMonster()
+
+                if targetMonster then
+                    -- Nếu có quái: Tiến hành khóa vị trí để hàm BringEnemy gom quái và bay trên đầu quái khoảng cách 25
+                    if not targetMonster:GetAttribute("Locked") then 
+                        targetMonster:SetAttribute("Locked", targetMonster.HumanoidRootPart.CFrame) 
                     end
-                    PosMon = TargetMonster:GetAttribute("Locked").Position
-                    BringEnemy() 
+                    PosMon = targetMonster:GetAttribute("Locked").Position -- Cập nhật biến toàn cục cho BringEnemy()
                     
+                    -- Gọi hàm gom quái của script gốc
+                    BringEnemy()
+                    
+                    -- Trang bị vũ khí
                     EquipWeapon(_G.SelectWeapon)
                     
-                    local TargetPosition = TargetMonster.HumanoidRootPart.CFrame * CFrame.new(0, 25, 0) * CFrame.Angles(math.rad(-90), 0, 0)
-                    _tp(TargetPosition)
+                    -- Tween đến vị trí trên đầu quái cách đúng 25 block
+                    local farmCFrame = targetMonster.HumanoidRootPart.CFrame * CFrame.new(0, 25, 0) * CFrame.Angles(math.rad(-90), 0, 0)
+                    _tp(farmCFrame)
                     
-                    pcall(function()
-                        HitRegistrationModule.Execute()
-                        AutoClick()
-                    end)
+                    -- Tự động kích hoạt Fast Attack / Click đánh quái
+                    if FastAttackModule and FastAttackModule.ExecuteFastAttack then
+                        FastAttackModule.ExecuteFastAttack()
+                    else
+                        -- Dự phòng nếu FastAttack không chạy, dùng VirtualUser click chuột
+                        game:GetService("VirtualUser"):CaptureController()
+                        game:GetService("VirtualUser"):Button1Down(Vector2.new(1280, 720))
+                    end
                 else
-                    shouldTween = true
-                    _B = false
-                    if (game.Players.LocalPlayer.Character.HumanoidRootPart.Position - KakaturiNPC_CFrame.Position).Magnitude > 150 then
-                        _tp(KakaturiNPC_CFrame)
+                    -- Nếu không thấy quái (hoặc quái chưa farm xong/đang ở đảo xa): 
+                    -- Tự động di chuyển (Tween) về vị trí trung tâm đảo Cake
+                    local distanceToCake = (rootPart.Position - CakeIslandCFrame.Position).Magnitude
+                    if distanceToCake > 300 then
+                        _tp(CakeIslandCFrame)
                     end
                 end
-            else
-                shouldTween = false
-                _B = false
-                print("Vui lòng di chuyển đến Sea 3 để chạy chức năng Farm Đảo Bánh Katakuri!")
-                task.wait(5)
-            end
-        else
-            _B = false
-            shouldTween = false
-        end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(FastAttackModule.Rate) do
-        if getgenv().AutoFarmKatakuri and GetCakeMonster() then
-            pcall(function()
-                FastAttackModule.ExecuteFastAttack()
             end)
+        else
+            -- Giải phóng các thiết lập khi tắt farm
+            _B = false
         end
     end
 end)
