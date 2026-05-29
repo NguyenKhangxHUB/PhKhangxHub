@@ -1914,6 +1914,48 @@ QuestB = function()
 				NameMon = "Skull Slayer"
 				PosQ = CFrame.new(-16759.5898, 71.2837, 1595.3399)
 				PosM = CFrame.new(-16759.5898, 71.2837, 1595.3399)
+			elseif a >= 2600 and a <= 2624 then
+				Mon = "Reef Bandit"
+				Qdata = 1;
+				Qname = "SubmergedQuest1";
+				NameMon = "Reef Bandit"
+				PosQ = CFrame.new(10882.264, -2086.322, 10034.226) -- NPC Submerged
+				PosM = CFrame.new(10736.6191, -2087.8439, 9338.4882)
+			elseif a >= 2625 and a <= 2649 then
+				Mon = "Coral Pirate"
+				Qdata = 2;
+				Qname = "SubmergedQuest1";
+				NameMon = "Coral Pirate"
+				PosQ = CFrame.new(10882.264, -2086.322, 10034.226)
+				PosM = CFrame.new(10965.1025, -2158.8842, 9177.2597)
+			elseif a >= 2650 and a <= 2674 then
+				Mon = "Sea Chanter"
+				Qdata = 1;
+				Qname = "SubmergedQuest2";
+				NameMon = "Sea Chanter"
+				PosQ = CFrame.new(10882.264, -2086.322, 10034.226)
+				PosM = CFrame.new(10621.0342, -2087.8440, 10102.0332)
+			elseif a >= 2675 and a <= 2699 then
+				Mon = "Ocean Prophet"
+				Qdata = 2;
+				Qname = "SubmergedQuest2";
+				NameMon = "Ocean Prophet"
+				PosQ = CFrame.new(10882.264, -2086.322, 10034.226)
+				PosM = CFrame.new(11056.1445, -2001.6717, 10117.4493)
+			elseif a >= 2700 and a <= 2724 then
+				Mon = "High Disciple"
+				Qdata = 1;
+				Qname = "SubmergedQuest3";
+				NameMon = "High Disciple"
+				PosQ = CFrame.new(9636.52441, -1992.19507, 9609.52832)
+				PosM = CFrame.new(9828.087890625, -1940.908935546875, 9693.0634765625)
+			elseif a >= 2725 and a <= 2800 then
+				Mon = "Grand Devotee"
+				Qdata = 2;
+				Qname = "SubmergedQuest3";
+				NameMon = "Grand Devotee"
+				PosQ = CFrame.new(9636.52441, -1992.19507, 9609.52832)
+				PosM = CFrame.new(9557.5849609375, -1928.0404052734375, 9859.1826171875)
 			end
 		end
 	end
@@ -3551,67 +3593,6 @@ Server:AddButton({
     end
 })
 
-Server:AddButton({
-    Title = "Hop Rip_Indra",
-    Callback = function()
-       game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, "4946b5f2-4a2c-44e8-947e-f336caebde29", game.Players.LocalPlayer)
-  end
-  })
-  
-  Server:AddButton({
-    Title = "Hop Dough King",
-    Callback = function()
-       game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, "d2f3855d-9b92-4515-8740-c0eb7ffcd781", game.Players.LocalPlayer)
-  end
-  })
-  
-  Server:AddButton({
-    Title = "Hop Tyrant of the skies",
-    Callback = function()
-       game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, "f12d49ac-05c5-49b4-865f-afc7b227ef60", game.Players.LocalPlayer)
-  end
-  })
-  
-  Server:AddButton({
-    Title = "Hop Mirage island",
-    Callback = function()
-       game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, "f12d49ac-05c5-49b4-865f-afc7b227ef60", game.Players.LocalPlayer)
-  end
-  })
-  
-  Server:AddButton({
-    Title = "Hop Dark Beard",
-    Callback = function()
-       game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, "b19eab3f-5da2-41f9-8d57-8822163b7219", game.Players.LocalPlayer)
-  end
-  })
-  
-  Server:AddButton({
-    Title = "Hop Swords",
-    Callback = function()
-       game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, "0940dc34-b96d-411a-926b-79dd00b45eab", game.Players.LocalPlayer)
-  end
-  })
-  
-  Server:AddButton({
-    Title = "Hop Full moon",
-    Callback = function()
-       game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, "c7cf4abb-6682-4f33-86e2-03af70ab3153", game.Players.LocalPlayer)
-  end
-  })
-
-spawn(function()
-    while wait(Sec) do
-        if _G.AutoHytHallow and _G.SoulHopR then
-            pcall(function()
-                if not GetConnectionEnemies("Soul Reaper") then
-                    Hop()
-                end
-            end)
-        end
-    end
-end)
-
 LocalPlayer = Window:AddTab("LocalPlayer")
 
 Player = LocalPlayer:AddLeftGroupbox("Local Player")
@@ -3958,6 +3939,93 @@ SetAutoFarm:AddToggle("BringMob", {
         _B = Value
     end
 })
+-- ============================================================
+-- BRING MOB — bring CẢ mob farm + mob phụ về _lockedBringPos mỗi 0.1s
+-- Không bring nếu có player khác trong phạm vi 500 stud quanh player
+-- ============================================================
+spawn(function()
+    while task.wait(0.1) do
+        pcall(function()
+            -- Đồng bộ getgenv với _G
+            getgenv().IsFarming     = _G.StartFarm
+            getgenv().MaxBringCount = _G.BringCount or 2
+            getgenv().BringMob      = _G.AutoBring
+
+            -- Guard
+            if not getgenv().BringMob  then return end
+            if not getgenv().IsFarming then return end
+
+            local targetMob = getgenv().CurrentTargetMob
+            if not targetMob or not targetMob.Parent then return end
+
+            -- Phải có vị trí đã chốt (tức là tracking đã teleport ít nhất 1 lần)
+            local bringCF = _lockedBringPos
+            if not bringCF then return end
+
+            local myChar = Player.Character
+            if not myChar then return end
+            local myHRP = myChar:FindFirstChild("HumanoidRootPart")
+            if not myHRP then return end
+
+            -- ── CHECK PLAYER KHÁC trong 500 stud — nếu có thì KHÔNG bring ──
+            for _, otherPlayer in ipairs(Players:GetPlayers()) do
+                if otherPlayer == Player then continue end  -- bỏ qua bản thân
+                local otherChar = otherPlayer.Character
+                if not otherChar then continue end
+                local otherHRP = otherChar:FindFirstChild("HumanoidRootPart")
+                if not otherHRP then continue end
+                local distToOther = (otherHRP.Position - myHRP.Position).Magnitude
+                if distToOther <= 500 then
+                    return  -- có player khác gần → bỏ bring lần này
+                end
+            end
+
+            local mobName  = targetMob.Name
+            --   BringCount = 2 → bring thêm 1 (tổng 2 con dưới chân)
+            --   BringCount = 3 → bring thêm 2 (tổng 3 con)
+            local maxExtra = math.max(0, (getgenv().MaxBringCount or 2) - 1)
+
+            -- ── Tìm mob phụ cùng loại, KHÔNG giới hạn khoảng cách ──────
+            -- Collect tất cả mob cùng tên, sort theo khoảng cách gần nhất, lấy maxExtra con
+            local allSame = {}
+            for _, enemy in ipairs(workspace.Enemies:GetChildren()) do
+                if enemy == targetMob then continue end
+                local humanoid = enemy:FindFirstChild("Humanoid")
+                local rootPart = enemy:FindFirstChild("HumanoidRootPart")
+                if humanoid and rootPart and humanoid.Health > 0 and rootPart.Parent then
+                    if enemy.Name == mobName then
+                        local dist = (rootPart.Position - myHRP.Position).Magnitude
+                        -- Chỉ bring mob phụ trong phạm vi 300 stud tính từ player
+                        if dist <= 300 then
+                            table.insert(allSame, { rp = rootPart, dist = dist })
+                        end
+                    end
+                end
+            end
+            -- Sort gần → xa
+            table.sort(allSame, function(a, b) return a.dist < b.dist end)
+
+            local candidates = {}
+            for i = 1, math.min(maxExtra, #allSame) do
+                table.insert(candidates, allSame[i].rp)
+            end
+
+            -- ── Bring mob farm (luôn bring, kể cả khi không có mob phụ) ─
+            local farmHRP = targetMob:FindFirstChild("HumanoidRootPart")
+            local farmHum = targetMob:FindFirstChild("Humanoid")
+            if farmHRP and farmHum and farmHum.Health > 0 then
+                farmHRP.CFrame = bringCF
+                sethiddenproperty(Player, "SimulationRadius", math.huge)
+            end
+
+            -- ── Bring mob phụ (gần nhất, không giới hạn khoảng cách) ───
+            for _, rp in ipairs(candidates) do
+                rp.CFrame = bringCF
+                sethiddenproperty(Player, "SimulationRadius", math.huge)
+            end
+        end)
+    end
+end)
 
 SetAutoFarm:AddToggle("BringMob", {
     Title = "Bring Mob Banana",
@@ -4283,7 +4351,7 @@ SelectMethodFarm:AddDropdown("SelectMethodFarm", {
 SelectMethodFarm:AddSlider({
     Title = "Distance Farm Aura",
     Min = 0,
-    Max = 1000,
+    Max = 500,
     Default = 300,
     Callback = function(Value)
         _G.Safemode = Value
@@ -4309,6 +4377,7 @@ for _,v in pairs(workspace.Enemies:GetChildren()) do
                 return
             end
         end
+
     end
 end)
 
@@ -5544,7 +5613,7 @@ end)
 
 DarkbeardBoss = Stack:AddLeftGroupbox("Boss Darkbeard")
 DarkbeardBoss:AddToggle("DarkBreadNormal", {
-    Title = "Auto Darkbeard",
+    Title = "Auto Darkbread",
     Default = false,
     Callback = function(Value)
         _G.Auto_Def_DarkCoat = Value
@@ -5572,14 +5641,14 @@ spawn(function()
 end)
 
 DarkbeardBoss:AddToggle("DarkBreadHop", {
-    Title = "Auto Darkbeard [ Hop Server ]",
+    Title = "Auto Darkbread [ Hop Server ]",
     Default = false,
     Callback = function(Value)
         _G.DarkbreadHop = Value
         if not _G.Auto_Def_DarkCoat then 
             Library:Notify({
                 Title = "Night Slayer Hub",
-                Description = "Open Auto Darkbeard Plz!",
+                Description = "Open Auto Darkbread Plz!",
                 Duration = 3
             })
         end
