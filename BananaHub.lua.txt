@@ -1914,48 +1914,6 @@ QuestB = function()
 				NameMon = "Skull Slayer"
 				PosQ = CFrame.new(-16759.5898, 71.2837, 1595.3399)
 				PosM = CFrame.new(-16759.5898, 71.2837, 1595.3399)
-			elseif a >= 2600 and a <= 2624 then
-				Mon = "Reef Bandit"
-				Qdata = 1;
-				Qname = "SubmergedQuest1";
-				NameMon = "Reef Bandit"
-				PosQ = CFrame.new(10882.264, -2086.322, 10034.226) -- NPC Submerged
-				PosM = CFrame.new(10736.6191, -2087.8439, 9338.4882)
-			elseif a >= 2625 and a <= 2649 then
-				Mon = "Coral Pirate"
-				Qdata = 2;
-				Qname = "SubmergedQuest1";
-				NameMon = "Coral Pirate"
-				PosQ = CFrame.new(10882.264, -2086.322, 10034.226)
-				PosM = CFrame.new(10965.1025, -2158.8842, 9177.2597)
-			elseif a >= 2650 and a <= 2674 then
-				Mon = "Sea Chanter"
-				Qdata = 1;
-				Qname = "SubmergedQuest2";
-				NameMon = "Sea Chanter"
-				PosQ = CFrame.new(10882.264, -2086.322, 10034.226)
-				PosM = CFrame.new(10621.0342, -2087.8440, 10102.0332)
-			elseif a >= 2675 and a <= 2699 then
-				Mon = "Ocean Prophet"
-				Qdata = 2;
-				Qname = "SubmergedQuest2";
-				NameMon = "Ocean Prophet"
-				PosQ = CFrame.new(10882.264, -2086.322, 10034.226)
-				PosM = CFrame.new(11056.1445, -2001.6717, 10117.4493)
-			elseif a >= 2700 and a <= 2724 then
-				Mon = "High Disciple"
-				Qdata = 1;
-				Qname = "SubmergedQuest3";
-				NameMon = "High Disciple"
-				PosQ = CFrame.new(9636.52441, -1992.19507, 9609.52832)
-				PosM = CFrame.new(9828.087890625, -1940.908935546875, 9693.0634765625)
-			elseif a >= 2725 and a <= 2800 then
-				Mon = "Grand Devotee"
-				Qdata = 2;
-				Qname = "SubmergedQuest3";
-				NameMon = "Grand Devotee"
-				PosQ = CFrame.new(9636.52441, -1992.19507, 9609.52832)
-				PosM = CFrame.new(9557.5849609375, -1928.0404052734375, 9859.1826171875)
 			end
 		end
 	end
@@ -3195,6 +3153,22 @@ spawn(function()
     end
 end)
 
+ServerTime = Status:AddLabel("Time: ")
+
+function UpdateServerTime()
+    local GameTime = math.floor(workspace.DistributedGameTime + 0.5)
+    local Hour = math.floor(GameTime / 3600) % 24
+    local Minute = math.floor(GameTime / 60) % 60
+    local Second = GameTime % 60
+    ServerTime:SetText(string.format("| Hour: %02d | Minute: %02d | Second: %02d |", Hour, Minute, Second))
+end
+
+task.spawn(function()
+    while task.wait(1) do
+        pcall(UpdateServerTime)
+    end
+end)
+
 Miragecheck = Status:AddLabel("Mirage Island:  ")
 
 lastMirageStatus = ""
@@ -3626,83 +3600,30 @@ Server:AddButton({
   end
   })
 
-  Sever:AddButton({
-     Title = "Hop sever low people"
-     Callback = function()
-          AutoRetryHop()
+  Server:AddButton({
+     Title = "hop Soul reaper",
+    Default = false,
+    Callback = function(Value)
+        _G.SoulHopR = Value
+        if not _G.AutoHytHallow then
+            Library:Notify({
+                Title = "Night Slayer Hub",
+                Description = "Open Auto Soul Reaper Plz!",
+                Duration = 3
+            })
+        end
     end
 })
 
-local HttpService = game:GetService("HttpService")
-local TeleportService = game:GetService("TeleportService")
-local Players = game:GetService("Players")
-
--- Hàm thực hiện chức năng Hop Server ưu tiên 1 người / ít người nhất
-local function HopServerOnePlayer()
-    local placeId = game.PlaceId
-    local localPlayer = Players.LocalPlayer
-    
-    -- API lấy danh sách server của Roblox (Sắp xếp theo số người chơi giảm dần hoặc mặc định)
-    local url = "https://games.roblox.com/v1/games/" .. placeId .. "/servers/Public?sortOrder=Desc&limit=100"
-    local success, result = pcall(function()
-        return HttpService:JSONDecode(game:HttpGet(url))
-    end)
-    
-    if success Coul and result and result.data then
-        local targetServer = nil
-        local minPlayers = math.huge
-        
-        -- Vòng lặp thứ nhất: Ưu tiên tuyệt đối tìm server có đúng 1 người
-        for _, server in ipairs(result.data) do
-            if server.id ~= game.JobId and tonumber(server.playing) == 1 then
-                targetServer = server.id
-                break -- Đã tìm thấy đúng server 1 người, dừng vòng lặp để đi tiếp
-            end
-        end
-        
-        -- Vòng lặp thứ hai: Nếu không có server 1 người, tìm server ít người nhất (> 0 người)
-        if not targetServer then
-            for _, server in ipairs(result.data) do
-                local playerCount = tonumber(server.playing)
-                local maxPlayers = tonumber(server.maxPlayers or 12)
-                
-                -- Tìm server có số người ít nhất, loại bỏ server hiện tại và server đầy/trống
-                if server.id ~= game.JobId and playerCount > 0 and playerCount < maxPlayers then
-                    if playerCount < minPlayers then
-                        minPlayers = playerCount
-                        targetServer = server.id
-                    end
+spawn(function()
+    while wait(Sec) do
+        if _G.AutoHytHallow and _G.SoulHopR then
+            pcall(function()
+                if not GetConnectionEnemies("Soul Reaper") then
+                    Hop()
                 end
-            end
-        end
-        
-        -- Nếu tìm thấy server phù hợp, tiến hành Teleport
-        if targetServer then
-            print("Đang chuyển đến server phù hợp. ID: " .. tostring(targetServer))
-            local teleportSuccess, err = pcall(function()
-                TeleportService:TeleportToPlaceInstance(placeId, targetServer, localPlayer)
             end)
-            if not teleportSuccess then
-                print("Lỗi chuyển server: " .. tostring(err))
-            end
-        else
-            print("Không tìm thấy server nào ít người hơn server hiện tại!")
         end
-    else
-        print("Không thể lấy dữ liệu danh sách server từ API Roblox.")
-    end
-end
-
--- Ví dụ tích hợp vào luồng chạy tự động/vòng lặp khi bật Toggle:
--- (Bạn có thể gắn hàm `HopServerOnePlayer()` này vào Callback của một Toggle trong Rayfield/Orion UI của bạn)
-getgenv().AutoHopOnePlayer = true -- Bật/Tắt tính năng
-
-task.spawn(function()
-    while getgenv().AutoHopOnePlayer do
-        pcall(function()
-            HopServerOnePlayer()
-        end)
-        task.wait(10) -- Chờ 10 giây nếu nhảy server thất bại rồi mới thử lại để tránh bị spam rate limit
     end
 end)
 
@@ -4052,6 +3973,14 @@ SetAutoFarm:AddToggle("BringMob", {
         _B = Value
     end
 })
+
+SetAutoFarm:AddToggle("BringMob", {
+    Title = "Bring Mob Banana",
+    Default = false,
+    Callback = function(Value)
+        _B = Value
+    end
+})
 -- ============================================================
 -- BRING MOB — bring CẢ mob farm + mob phụ về _lockedBringPos mỗi 0.1s
 -- Không bring nếu có player khác trong phạm vi 500 stud quanh player
@@ -4157,101 +4086,6 @@ spawn(function()
       end
     end)
   end
-end)
-
-SetAutoFarm:AddToggle("BringMob", {
-    Title = "Bring Mob Banana",
-    Default = false,
-    Callback = function(Value)
-        _B = Value
-    end
-})
--- ============================================================
--- BRING MOB — bring CẢ mob farm + mob phụ về _lockedBringPos mỗi 0.1s
--- Không bring nếu có player khác trong phạm vi 500 stud quanh player
--- ============================================================
-spawn(function()
-    while task.wait(0.1) do
-        pcall(function()
-            -- Đồng bộ getgenv với _G
-            getgenv().IsFarming     = _G.StartFarm
-            getgenv().MaxBringCount = _G.BringCount or 2
-            getgenv().BringMob      = _G.AutoBring
-
-            -- Guard
-            if not getgenv().BringMob  then return end
-            if not getgenv().IsFarming then return end
-
-            local targetMob = getgenv().CurrentTargetMob
-            if not targetMob or not targetMob.Parent then return end
-
-            -- Phải có vị trí đã chốt (tức là tracking đã teleport ít nhất 1 lần)
-            local bringCF = _lockedBringPos
-            if not bringCF then return end
-
-            local myChar = Player.Character
-            if not myChar then return end
-            local myHRP = myChar:FindFirstChild("HumanoidRootPart")
-            if not myHRP then return end
-
-            -- ── CHECK PLAYER KHÁC trong 500 stud — nếu có thì KHÔNG bring ──
-            for _, otherPlayer in ipairs(Players:GetPlayers()) do
-                if otherPlayer == Player then continue end  -- bỏ qua bản thân
-                local otherChar = otherPlayer.Character
-                if not otherChar then continue end
-                local otherHRP = otherChar:FindFirstChild("HumanoidRootPart")
-                if not otherHRP then continue end
-                local distToOther = (otherHRP.Position - myHRP.Position).Magnitude
-                if distToOther <= 500 then
-                    return  -- có player khác gần → bỏ bring lần này
-                end
-            end
-
-            local mobName  = targetMob.Name
-            --   BringCount = 2 → bring thêm 1 (tổng 2 con dưới chân)
-            --   BringCount = 3 → bring thêm 2 (tổng 3 con)
-            local maxExtra = math.max(0, (getgenv().MaxBringCount or 2) - 1)
-
-            -- ── Tìm mob phụ cùng loại, KHÔNG giới hạn khoảng cách ──────
-            -- Collect tất cả mob cùng tên, sort theo khoảng cách gần nhất, lấy maxExtra con
-            local allSame = {}
-            for _, enemy in ipairs(workspace.Enemies:GetChildren()) do
-                if enemy == targetMob then continue end
-                local humanoid = enemy:FindFirstChild("Humanoid")
-                local rootPart = enemy:FindFirstChild("HumanoidRootPart")
-                if humanoid and rootPart and humanoid.Health > 0 and rootPart.Parent then
-                    if enemy.Name == mobName then
-                        local dist = (rootPart.Position - myHRP.Position).Magnitude
-                        -- Chỉ bring mob phụ trong phạm vi 300 stud tính từ player
-                        if dist <= 300 then
-                            table.insert(allSame, { rp = rootPart, dist = dist })
-                        end
-                    end
-                end
-            end
-            -- Sort gần → xa
-            table.sort(allSame, function(a, b) return a.dist < b.dist end)
-
-            local candidates = {}
-            for i = 1, math.min(maxExtra, #allSame) do
-                table.insert(candidates, allSame[i].rp)
-            end
-
-            -- ── Bring mob farm (luôn bring, kể cả khi không có mob phụ) ─
-            local farmHRP = targetMob:FindFirstChild("HumanoidRootPart")
-            local farmHum = targetMob:FindFirstChild("Humanoid")
-            if farmHRP and farmHum and farmHum.Health > 0 then
-                farmHRP.CFrame = bringCF
-                sethiddenproperty(Player, "SimulationRadius", math.huge)
-            end
-
-            -- ── Bring mob phụ (gần nhất, không giới hạn khoảng cách) ───
-            for _, rp in ipairs(candidates) do
-                rp.CFrame = bringCF
-                sethiddenproperty(Player, "SimulationRadius", math.huge)
-            end
-        end)
-    end
 end)
 
 SetAutoFarm:AddToggle("ObservationOpen", {
@@ -4490,7 +4324,6 @@ for _,v in pairs(workspace.Enemies:GetChildren()) do
                 return
             end
         end
-
     end
 end)
 
@@ -5726,7 +5559,7 @@ end)
 
 DarkbeardBoss = Stack:AddLeftGroupbox("Boss Darkbeard")
 DarkbeardBoss:AddToggle("DarkBreadNormal", {
-    Title = "Auto Darkbread",
+    Title = "Auto Darkbeard",
     Default = false,
     Callback = function(Value)
         _G.Auto_Def_DarkCoat = Value
@@ -5754,14 +5587,14 @@ spawn(function()
 end)
 
 DarkbeardBoss:AddToggle("DarkBreadHop", {
-    Title = "Auto Darkbread [ Hop Server ]",
+    Title = "Auto Darkbeard [ Hop Server ]",
     Default = false,
     Callback = function(Value)
         _G.DarkbreadHop = Value
         if not _G.Auto_Def_DarkCoat then 
             Library:Notify({
                 Title = "Night Slayer Hub",
-                Description = "Open Auto Darkbread Plz!",
+                Description = "Open Auto Darkbeard Plz!",
                 Duration = 3
             })
         end
