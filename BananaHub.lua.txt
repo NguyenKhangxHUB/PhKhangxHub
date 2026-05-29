@@ -4356,49 +4356,6 @@ SkillsHold = Window:AddTab("Hold and Select Skill")
 
 Skills = SkillsHold:AddLeftGroupbox("Select Skills")
 
-Skills:AddDropdown("UseSkillFast", {
-    Title = "Use Skill Fast (Don't Hold)", 
-    Default = false,
-    Callback = function(v)
-    end
-})
-    
-Skills:AddDropdown("SetDelayMelee", {
-    Title = "Set Delay Melee", 
-    Values = {}
-    Default = nil,
-    Multi = false
-    Callback = function(v)
-    end 
-})
-    
-Skills:AddDropdown("SetDelaySword", {
-    Title = "Set Delay Sword", 
-    Values = {}
-    Default = nil,
-    Multi = false
-    Callback = function(v)
-    end 
-})
-    
-Skills:AddDropdown("SetDelayGun", {
-    Title = "Set Delay Gun", 
-    Values = {}
-    Default = nil,
-    Multi = false
-    Callback = function(v)
-    end 
-})
-
-Skills:AddDropdown("SetDelayBloxFruit", {
-    Title = "Set Delay Blox Fruit", 
-    Values = {}
-    Default = nil,
-    Multi = false
-    Callback = function(v)
-    end 
-})
-
 Skills:AddDropdown("MeleeSkills", {
     Title = "Select Skill Melee",
     Values = {"Z", "X", "C"},
