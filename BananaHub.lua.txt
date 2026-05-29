@@ -3600,21 +3600,6 @@ Server:AddButton({
   end
   })
 
-  Server:AddButton({
-     Title = "hop Soul reaper",
-    Default = false,
-    Callback = function(Value)
-        _G.SoulHopR = Value
-        if not _G.AutoHytHallow then
-            Library:Notify({
-                Title = "Night Slayer Hub",
-                Description = "Open Auto Soul Reaper Plz!",
-                Duration = 3
-            })
-        end
-    end
-})
-
 spawn(function()
     while wait(Sec) do
         if _G.AutoHytHallow and _G.SoulHopR then
