@@ -4026,126 +4026,79 @@ spawn(function()
     end
 end)
 
-SetAutoFarm:AddDropdown("KillAuraDragonStorm", {
-    Title = "Kill Aura Dragon Storm",
-    Description = "Chọn trạng thái Bật hoặc Tắt",
-    Values = {"Bật", "Tắt"},
-    Default = "Tắt",
-    Callback = function(Value)
-        -- Chuyển đổi lựa chọn thành trạng thái true/false
-        if Value == "Bật" then
-            _G.KillAuraDragonStorms = true
-        else
-            _G.KillAuraDragonStorms = false
-        end
+SetAutoFarm:AddToggle("Kill aura dragon storm", {
+      Title = "Auto gun aura",
+      Default = false,
+      Callback = function(val)
+        getgenv().GunAuraSettings.GunEnabled = val
+    end
+})
 
-        -- Vòng lặp xử lý logic khi trạng thái là true
-        if _G.KillAuraDragonStorms then
-            task.spawn(function()
-                while _G.KillAuraDragonStorms do
-                    pcall(function()
-                        local gunName = "Dragon Storm"
-                        
-                        -- 1. Kiểm tra và rút súng từ Inventory ra Backpack
-                        if not game.Players.LocalPlayer.Backpack:FindFirstChild(gunName) and not game.Players.LocalPlayer.Character:FindFirstChild(gunName) then
-                            local hasGunInInventory = false
-                            for _, v in pairs(game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("getInventory")) do
-                                if type(v) == "table" and v.Name == gunName then
-                                    hasGunInInventory = true
-                                    break
-                                end
-                            end
-                            
-                            if hasGunInInventory then
-                                game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("LoadItem", gunName)
-                                task.wait(0.3)
-                            end
-                        end
-                        
-                        -- 2. Tự động cầm súng lên tay
-                        if game.Players.LocalPlayer.Backpack:FindFirstChild(gunName) then
-                            local tool = game.Players.LocalPlayer.Backpack:FindFirstChild(gunName)
-                            game.Players.LocalPlayer.Character.Humanoid:EquipTool(tool)
-                        end
-                    end)
-                    task.wait(0.5) -- Chu kỳ kiểm tra lại
-                end
-            end)
+SetAutoFarm:AddToggle("autoclick", {
+     Title = "Auto click when holding gun (2s)",
+     Default = false,
+     Callback = function(val)
+        getgenv().AutoClickShootSettings.Enabled = val
+        if not val then
+            getgenv().AutoClickShootSettings.LastClickTime = 0
         end
     end
 })
--- ====================================================================
--- CONFIG KILL AURA GUN (TỰ ĐỘNG ATTACK TỪ XA CHÈN VÀO CUỐI FILE)
--- ====================================================================
 
-_G.KillAuraGun = true        -- Bật/Tắt Kill Aura
-_G.SelectWeapon = "Gun"      -- Tự động chọn vũ khí là Súng
-local MaxDistance = 250      -- Khoảng cách quét quái xung quanh (vẫn tính là từ xa)
-local AttackSpeed = 0.1      -- Tốc độ xả đạn (giây)
+task.spawn(function()
+    while true do
+        pcall(performClick)
+        task.wait(0.1)
+    end
+end)
 
--- Hàm tìm quái ở trước mặt và xung quanh đáp ứng điều kiện
-local function GetTargetEnemy()
-    local character = game.Players.LocalPlayer.Character
-    if not character or not character:FindFirstChild("HumanoidRootPart") then return nil end
-    local myRoot = character.HumanoidRootPart
-    
-    local nearestEnemy = nil
-    local shortestDistance = MaxDistance
-
-    for _, enemy in pairs(workspace.Enemies:GetChildren()) do
-        if enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 and enemy:FindFirstChild("HumanoidRootPart") then
-            local enemyRoot = enemy.HumanoidRootPart
-            local distance = (myRoot.Position - enemyRoot.Position).Magnitude
-            
-            if distance <= shortestDistance then
-                -- Tính toán góc để kiểm tra xem quái có ở vùng phía trước mặt không
-                local directionToEnemy = (enemyRoot.Position - myRoot.Position).Unit
-                local forwardVector = myRoot.CFrame.LookVector
-                local dotProduct = directionToEnemy:Dot(forwardVector)
-                
-                -- dotProduct > 0 nghĩa là quái đang nằm ở góc 180 độ trước mặt
-                if dotProduct > 0 then
-                    shortestDistance = distance
-                    nearestEnemy = enemy
+SetAutoFarm:AddToggle("Current Target", {
+    Title = "Current Target",
+    Content = "Searching..."
+})
+task.spawn(function()
+    while task.wait(0.5) do
+        if getgenv().GunAuraSettings.GunEnabled and getgenv().GunAuraSettings.CurrentTarget then
+            local target = getgenv().GunAuraSettings.CurrentTarget.Parent
+            if target then
+                local targetType = "NPC"
+                if Characters:FindFirstChild(target.Name) then
+                    targetType = "Player"
+                elseif Enemies:FindFirstChild(target.Name) then
+                    targetType = "NPC"
                 end
+                
+                local hum = target:FindFirstChild("Humanoid")
+                local healthText = hum and string.format(" - %.1f/%.1f HP (%.0f%%)", hum.Health, hum.MaxHealth, (hum.Health / hum.MaxHealth) * 100) or ""
+                
+                local myPos = Player.Character and Player.Character:GetPivot().Position
+                local targetPos = getgenv().GunAuraSettings.CurrentTarget.Position
+                local distText = ""
+                if myPos and targetPos then
+                    local dist = math.floor((targetPos - myPos).Magnitude)
+                    distText = string.format(" [%d studs]", dist)
+                end
+                
+                targetDisplay:SetDesc(string.format(" [%s] %s%s%s", targetType, target.Name, healthText, distText))
+            else
+                targetDisplay:SetDesc("Searching...")
             end
+        else
+            targetDisplay:SetDesc("Searching...")
         end
     end
-    return nearestEnemy
-end
+end)
 
--- Vòng lặp tự động Attack từ xa bằng Code
 task.spawn(function()
-    while _G.KillAuraGun do
-        task.wait(AttackSpeed)
-        pcall(function()
-            local target = GetTargetEnemy()
-            if target and target:FindFirstChild("HumanoidRootPart") then
-                local enemyPart = target.HumanoidRootPart
-                
-                -- Gán vị trí mục tiêu cho biến MousePos để can thiệp vào Hook __namecall có sẵn trong file của bạn
-                MousePos = enemyPart.CFrame
-                
-                -- Tự động lấy súng ra cầm trên tay nếu chưa cầm
-                weaponSc("Gun")
-                
-                -- Kiểm tra nếu nhân vật đã cầm súng thì thực hiện bắn từ xa bằng Code
-                local currentTool = game.Players.LocalPlayer.Character:FindFirstChildOfClass("Tool")
-                if currentTool and currentTool.ToolTip == "Gun" then
-                    
-                    -- Cách 1: Triệu hồi đạn trực tiếp qua Remote bằng cách giả lập vị trí bắn trúng
-                    CommF_Remote:InvokeServer("Input", "LeftClick", enemyPart.Position)
-                    
-                    -- Cách 2: Tự động xả kỹ năng Z và X từ xa bằng hàm UseSkills có sẵn trong file của bạn
-                    task.spawn(function()
-                        Useskills("Gun", "Z")
-                    end)
-                    task.spawn(function()
-                        Useskills("Gun", "X")
-                    end)
-                end
-            end
-        end)
+    while true do
+        pcall(applyGunDamage)
+        task.wait(getgenv().GunAuraSettings.FireRate) -- FireRate vẫn là 0.01
+    end
+end)
+
+task.spawn(function()
+    while task.wait(5) do
+        pcall(setSimulationRadius)
     end
 end)
 
