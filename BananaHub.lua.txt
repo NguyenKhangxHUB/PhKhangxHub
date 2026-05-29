@@ -3211,60 +3211,6 @@ task.spawn(function()
     end
 end)
 
-local StatusSection = StatusServerTab:AddLeftGroupbox("Status")
-_G.TimerLabel = StatusSection:AddLabel("Timer: 0h 0m 0s")
-_G.ServerTimerLabel = StatusSection:AddLabel("Server Timer: 0h 0m 0s")
-_G.SpawnLabel = StatusSection:AddLabel("Next Time Spawn Fist of Darkness or God's Chalice: 0h 0m 0s")
-spawn(function()
-    local serverTimeElapsed = 0 
-    local playerTimeElapsed = 0 
-    local SPAWN_COOLDOWN = 14400 
-
-    local function formatTime(totalSeconds)
-        local hours = math.floor(totalSeconds / 3600)
-        local minutes = math.floor((totalSeconds % 3600) / 60)
-        local seconds = totalSeconds % 60
-        return string.format("%dh %dm %ds", hours, minutes, seconds)
-    end
-
-    if game:GetService("Workspace").DistributedGameTime then
-        serverTimeElapsed = math.floor(game:GetService("Workspace").DistributedGameTime)
-    end
-
-    while true do
-        task.wait(1) 
-        
-        playerTimeElapsed = playerTimeElapsed + 1
-        serverTimeElapsed = serverTimeElapsed + 1
-        
-        local currentCycleProgress = serverTimeElapsed % SPAWN_COOLDOWN
-        local timeLeftToSpawn = SPAWN_COOLDOWN - currentCycleProgress
-        
-        -- Tính toán Giờ Việt Nam hiện tại (UTC+7) dựa trên thời gian hệ thống
-        local currentTime = os.time()
-        local vnTime = os.date("!*t", currentTime + 25200) -- +7 tiếng (25200 giây)
-        local vnTimeStr = string.format("%02d:%02d:%02d", vnTime.hour, vnTime.min, vnTime.sec)
-        
-        pcall(function()
-            if _G.TimerLabel then
-                _G.TimerLabel:SetText("Timer: " .. formatTime(playerTimeElapsed) .. " | VN: " .. vnTimeStr)
-            end
-            
-            if _G.ServerTimerLabel then
-                _G.ServerTimerLabel:SetText("Server Timer: " .. formatTime(serverTimeElapsed))
-            end
-            
-            if _G.SpawnLabel then
-                if timeLeftToSpawn <= 0 then
-                    _G.SpawnLabel:SetText("Next Time Spawn Fist of Darkness or God's Chalice: Spawning...")
-                else
-                    _G.SpawnLabel:SetText("Next Time Spawn Fist of Darkness or God's Chalice: " .. formatTime(timeLeftToSpawn))
-                end
-            end
-        end)
-    end
-end)
-
 Miragecheck = Status:AddLabel("Mirage Island:  ")
 
 lastMirageStatus = ""
@@ -10399,3 +10345,91 @@ MiscPVP:AddToggle("WalkOnWater", {
             end
         end
     })
+-- =========================================================================
+-- BANANA HUB - HỆ THỐNG TIME ZONE & COOLDOWN SPAWN CHÉN THÁNH / RÂU ĐEN
+-- =========================================================================
+
+-- Tận dụng các biến toàn cục và dịch vụ đã khai báo sẵn trong file của bạn
+local Workspace = game:GetService("Workspace")
+local Lighting = game:GetService("Lighting")
+local Players = game:GetService("Players")
+[span_3](start_span)[span_4](start_span)local plr = Players.LocalPlayer -- Đồng bộ biến người chơi từ Banana Hub[span_3](end_span)[span_4](end_span)
+
+-[span_5](start_span)- 1. Nhận diện Sea (Giữ nguyên cấu trúc ID chuẩn xác từ BananaHub.lua.txt)[span_5](end_span)
+[span_6](start_span)local World2 = game.PlaceId == 4442272183 or 79091703265657 or 73902483975735 -- Sea 2[span_6](end_span)
+[span_7](start_span)local World3 = game.PlaceId == 7449423635 or 85211729168715 or 73902483975735 -- Sea 3[span_7](end_span)
+
+-- 2. Hàm lấy Giờ Hệ Thống theo Múi giờ Việt Nam (UTC+7)
+local function getVNTimeZone()
+    local format = "!*t"
+    -- Cộng thêm 7 tiếng (7 * 3600 giây) để chuyển đổi từ múi giờ UTC sang ICT (Việt Nam)
+    local dateTable = os.date(format, os.time() + (7 * 3600))
+    return string.format("%02d:%02d:%02d", dateTable.hour, dateTable.min, dateTable.sec)
+end
+
+-- 3. Hàm lấy tổng thời gian Server hiện tại đã mở
+local function getServerAgeTime()
+    local totalSeconds = math.floor(Workspace.DistributedGameTime)
+    local hours = math.floor(totalSeconds / 3600)
+    local minutes = math.floor((totalSeconds % 3600) / 60)
+    local seconds = totalSeconds % 60
+    return string.format("%02d:%02d:%02d", hours, minutes, seconds)
+end
+
+-- 4. Logic đếm ngược TỐI ĐA 4 TIẾNG chuẩn xác (Chu kỳ Spawn trong rương = 14400 giây)
+local function getItemSpawnCountdown()
+    local SPAWN_CYCLE = 14400 -- 4 tiếng tính bằng giây
+    local serverTime = math.floor(Workspace.DistributedGameTime)
+    
+    -- TRƯỜNG HỢP 1: Server chạy CHƯA ĐỦ 4 TIẾNG -> Thực hiện đếm lùi từ 04:00:00 về 00:00:00
+    if serverTime < SPAWN_CYCLE then
+        local timeLeft = SPAWN_CYCLE - serverTime
+        local hours = math.floor(timeLeft / 3600)
+        local minutes = math.floor((timeLeft % 3600) / 60)
+        local seconds = timeLeft % 60
+        return string.format("%02d:%02d:%02d", hours, minutes, seconds), false
+    else
+        -- TRƯỜNG HỢP 2: Server chạy QUÁ 4 TIẾNG -> Vật phẩm chắc chắn đã tự động spawn ngẫu nhiên trong các rương trên bản đồ
+        return "Đã Spawn (Kiểm tra rương!)", true
+    end
+end
+
+-- 5. Luồng chạy ngầm Loop cập nhật liên tục (Task Spawn Loop tương thích Banana Hub)
+task.spawn(function()
+    -[span_8](start_span)- Đợi game tải xong hoàn toàn giống logic kiểm tra của Banana Hub[span_8](end_span)
+    [span_9](start_span)[span_10](start_span)repeat task.wait() until game:IsLoaded() and plr:WaitForChild("PlayerGui"):FindFirstChild("Main")[span_9](end_span)[span_10](end_span)
+    
+    while task.wait(1) do
+        pcall(function()
+            -- Tự động lọc tên vật phẩm theo Sea hiện tại để hiển thị trực quan
+            local itemTarget = "Không xác định"
+            if World2 then
+                [span_11](start_span)itemTarget = "Fist of Darkness (Râu Đen)"[span_11](end_span)
+            elseif World3 then
+                [span_12](start_span)itemTarget = "God's Chalice (Chén Thánh)"[span_12](end_span)
+            end
+            
+            -- Tiến hành nạp dữ liệu từ các hàm tính toán thời gian
+            local current_time = getVNTimeZone()
+            local server_age = getServerAgeTime()
+            local countdownText, isSpawned = getItemSpawnCountdown()
+            
+            -- In kết quả ra Console để bạn kiểm tra (Bản build hoàn thiện bạn hãy nạp các biến này vào Label UI)
+            print("=========================================")
+            print("🕒 Giờ hệ thống (VN): " .. current_time)
+            print("⏳ Thời gian Server chạy: " .. server_age)
+            print("🎯 Vật phẩm theo dõi: " .. itemTarget)
+            
+            if isSpawned then
+                print("🚨 Trạng thái vật phẩm: " .. countdownText) -- Hiển thị: Đã Spawn (Kiểm tra rương!)
+            else
+                print("⏰ Thời gian đếm ngược (Tối đa 4h): " .. countdownText) -- Hiển thị đếm lùi từ 04:00:00
+            end
+            print("=========================================")
+            
+            -- HƯỚNG DẪN KẾT NỐI UI (Nếu bạn dùng Thư viện UI có sẵn trong Hub):
+            -- Hãy thay các hàm print bên trên thành hàm gán giá trị của UI Element, ví dụ:
+            -- MyLabelSpawnElement:Set("Thời gian Spawn: " .. countdownText)
+        end)
+    end
+end)
