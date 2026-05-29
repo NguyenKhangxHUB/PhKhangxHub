@@ -4358,10 +4358,10 @@ SelectMethodFarm:AddSlider({
     end
 })
 
-SelectMethodFarm:AddToggle("IgnoreAttackKatakuri", { 
-    Title = "Ignore Attack Katakuri", 
-    Default = false, 
-    Callback = function(Value) 
+SelectMethodFarm:AddToggle("IgnoreAttackKatakuri", {
+    Title = "Ignore Attack Katakuri",
+    Default = false,
+    Callback = function(Value)
         getgenv().IgnoreAttackKatakuri = Value
     end
 })
@@ -4377,8 +4377,9 @@ for _,v in pairs(workspace.Enemies:GetChildren()) do
                 return
             end
         end
+
     end
-end)
+end
 
 SelectMethodFarm:AddToggle("HopKataV1", {
     Title = "Hop Find Katakuri",
