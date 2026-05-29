@@ -1,25 +1,48 @@
 loadstring(game:HttpGet(("https://raw.githubusercontent.com/daucobonhi/Ui-Redz-V2/refs/heads/main/UiREDzV2.lua")))()
 
-local Window = MakeWindow({
-    Hub = {
-        Title = "Blox Fruit by Ades Chô",
-        Animation = "Youtube: khong co"
-    },
-    Key = {
+      
+       local Window = MakeWindow({
+         Hub = {
+         Title = "Bloxfruits by Ades Chô",
+         Animation = "Youtube: deo co"
+         },
+        Key = {
         KeySystem = true,
-        Title = "Bloxfruits [FREEMIUM]",
-        Description = "Blox Fruit farm",
-        KeyLink = "https://link4m.org/WjYYkAlG",
-        Keys = {"NguyenKhang_HJ4T-R9WM-2NFK"},
+        Title = "Bloxfruits free by Ades Chô",
+        Description = "Script Banana",
+        KeyLink = "https://link4m.org/6DeUo",
+        Keys = {"Ades_BLF_X7K9P2QW4M"},
         Notifi = {
-            Notifications = true,
-            CorrectKey = "key chính xác✅✅✅",
-            Incorrectkey = "Key sai bét rồi",
-            CopyKeyLink = "https://link4m.org/WjYYkAlG"
-        }
+        Notifications = true,
+        CorrectKey = "Wrong Key Successfull ✅",
+       Incorrectkey = "Working Key No Key ❌",
+       CopyKeyLink = "https://link4m.org/6DeUo"
+      }
     }
-})
+  })
 
-repeat task.wait() until _G.Key == "NguyenKhang_HJ4T-R9WM-2NFK"
-
-loadstring(game:HttpGet("LINK_SCRIPT_CUA_BAN"))()
+       MinimizeButton({
+       Image = "http://www.roblox.com/asset/?id=91169320061483",
+       Size = {60, 60},
+       Color = Color3.fromRGB(10, 10, 10),
+       Corner = true,
+       Stroke = false,
+       StrokeColor = Color3.fromRGB(255, 0, 0)
+      })
+      
+------ Tab
+     local Tab14o = MakeTab({Name = "Script by Ades Chô"})
+     
+------- BUTTON
+    AddButton(Tab14o, {
+     Name = "banana táo Premium",
+    Callback = function()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/NguyenKhangxHUB/PhKhangxHub/refs/heads/main/7821232980149767.lua.txt"))()
+  end
+  })
+    AddButton(Tab14o, {
+     Name = "Banana Cat Hub Premium",
+    Callback = function()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/NguyenKhangxHUB/PhKhangxHub/refs/heads/main/5902875523962415.lua.txt"))()
+  end
+  })
