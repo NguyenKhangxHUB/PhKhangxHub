@@ -3195,55 +3195,6 @@ spawn(function()
     end
 end)
 
-ServerTime = Status:AddLabel("Time: ")
-
-function UpdateServerTime()
-    local GameTime = math.floor(workspace.DistributedGameTime + 0.5)
-    local Hour = math.floor(GameTime / 3600) % 24
-    local Minute = math.floor(GameTime / 60) % 60
-    local Second = GameTime % 60
-    ServerTime:SetText(string.format("| Hour: %02d | Minute: %02d | Second: %02d |", Hour, Minute, Second))
-end
-
-task.spawn(function()
-    while task.wait(1) do
-        pcall(UpdateServerTime)
-    end
-end)
-
-ServerTime = Status:AddLabel("Time: ")
-spawn(function()
-    while task.wait(1) do
-        pcall(function()
-
-            local TimeLeft = SpawnTime - (tick() - StartTime)
-
-            if TimeLeft < 0 then
-                TimeLeft = 0
-            end
-
-            local hours = math.floor(TimeLeft / 3600)
-            local minutes = math.floor((TimeLeft % 3600) / 60)
-            local seconds = math.floor(TimeLeft % 60)
-
-            local text = string.format("%02d:%02d:%02d", hours, minutes, seconds)
-
-            if World2 then
-                BBStatus:Set({
-                    Title = "Blackbeard Key",
-                    Content = text
-                })
-            elseif World3 then
-                BBStatus:Set({
-                    Title = "God Chalice",
-                    Content = text
-                })
-            end
-
-        end)
-    end
-end)
-
 Miragecheck = Status:AddLabel("Mirage Island:  ")
 
 lastMirageStatus = ""
@@ -3674,6 +3625,86 @@ Server:AddButton({
        game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, "c7cf4abb-6682-4f33-86e2-03af70ab3153", game.Players.LocalPlayer)
   end
   })
+
+  Sever:AddButton({
+     Title = "Hop sever low people"
+     Callback = function()
+          AutoRetryHop()
+    end
+})
+
+local HttpService = game:GetService("HttpService")
+local TeleportService = game:GetService("TeleportService")
+local Players = game:GetService("Players")
+
+-- Hàm thực hiện chức năng Hop Server ưu tiên 1 người / ít người nhất
+local function HopServerOnePlayer()
+    local placeId = game.PlaceId
+    local localPlayer = Players.LocalPlayer
+    
+    -- API lấy danh sách server của Roblox (Sắp xếp theo số người chơi giảm dần hoặc mặc định)
+    local url = "https://games.roblox.com/v1/games/" .. placeId .. "/servers/Public?sortOrder=Desc&limit=100"
+    local success, result = pcall(function()
+        return HttpService:JSONDecode(game:HttpGet(url))
+    end)
+    
+    if success Coul and result and result.data then
+        local targetServer = nil
+        local minPlayers = math.huge
+        
+        -- Vòng lặp thứ nhất: Ưu tiên tuyệt đối tìm server có đúng 1 người
+        for _, server in ipairs(result.data) do
+            if server.id ~= game.JobId and tonumber(server.playing) == 1 then
+                targetServer = server.id
+                break -- Đã tìm thấy đúng server 1 người, dừng vòng lặp để đi tiếp
+            end
+        end
+        
+        -- Vòng lặp thứ hai: Nếu không có server 1 người, tìm server ít người nhất (> 0 người)
+        if not targetServer then
+            for _, server in ipairs(result.data) do
+                local playerCount = tonumber(server.playing)
+                local maxPlayers = tonumber(server.maxPlayers or 12)
+                
+                -- Tìm server có số người ít nhất, loại bỏ server hiện tại và server đầy/trống
+                if server.id ~= game.JobId and playerCount > 0 and playerCount < maxPlayers then
+                    if playerCount < minPlayers then
+                        minPlayers = playerCount
+                        targetServer = server.id
+                    end
+                end
+            end
+        end
+        
+        -- Nếu tìm thấy server phù hợp, tiến hành Teleport
+        if targetServer then
+            print("Đang chuyển đến server phù hợp. ID: " .. tostring(targetServer))
+            local teleportSuccess, err = pcall(function()
+                TeleportService:TeleportToPlaceInstance(placeId, targetServer, localPlayer)
+            end)
+            if not teleportSuccess then
+                print("Lỗi chuyển server: " .. tostring(err))
+            end
+        else
+            print("Không tìm thấy server nào ít người hơn server hiện tại!")
+        end
+    else
+        print("Không thể lấy dữ liệu danh sách server từ API Roblox.")
+    end
+end
+
+-- Ví dụ tích hợp vào luồng chạy tự động/vòng lặp khi bật Toggle:
+-- (Bạn có thể gắn hàm `HopServerOnePlayer()` này vào Callback của một Toggle trong Rayfield/Orion UI của bạn)
+getgenv().AutoHopOnePlayer = true -- Bật/Tắt tính năng
+
+task.spawn(function()
+    while getgenv().AutoHopOnePlayer do
+        pcall(function()
+            HopServerOnePlayer()
+        end)
+        task.wait(10) -- Chờ 10 giây nếu nhảy server thất bại rồi mới thử lại để tránh bị spam rate limit
+    end
+end)
 
 LocalPlayer = Window:AddTab("LocalPlayer")
 
@@ -4325,6 +4356,49 @@ SkillsHold = Window:AddTab("Hold and Select Skill")
 
 Skills = SkillsHold:AddLeftGroupbox("Select Skills")
 
+Skills:AddDropdown("UseSkillFast", {
+    Title = "Use Skill Fast (Don't Hold)", 
+    Default = false,
+    Callback = function(v)
+    end
+})
+    
+Skills:AddDropdown("SetDelayMelee", {
+    Title = "Set Delay Melee", 
+    Values = {}
+    Default = nil,
+    Multi = false
+    Callback = function(v)
+    end 
+})
+    
+Skills:AddDropdown("SetDelaySword", {
+    Title = "Set Delay Sword", 
+    Values = {}
+    Default = nil,
+    Multi = false
+    Callback = function(v)
+    end 
+})
+    
+Skills:AddDropdown("SetDelayGun", {
+    Title = "Set Delay Gun", 
+    Values = {}
+    Default = nil,
+    Multi = false
+    Callback = function(v)
+    end 
+})
+
+Skills:AddDropdown("SetDelayBloxFruit", {
+    Title = "Set Delay Blox Fruit", 
+    Values = {}
+    Default = nil,
+    Multi = false
+    Callback = function(v)
+    end 
+})
+
 Skills:AddDropdown("MeleeSkills", {
     Title = "Select Skill Melee",
     Values = {"Z", "X", "C"},
@@ -4433,7 +4507,7 @@ SelectMethodFarm:AddDropdown("SelectMethodFarm", {
 SelectMethodFarm:AddSlider({
     Title = "Distance Farm Aura",
     Min = 0,
-    Max = 500,
+    Max = 1000,
     Default = 300,
     Callback = function(Value)
         _G.Safemode = Value
