@@ -4026,82 +4026,6 @@ spawn(function()
     end
 end)
 
-SetAutoFarm:AddToggle("Kill aura dragon storm", {
-      Title = "Auto gun aura",
-      Default = false,
-      Callback = function(val)
-        getgenv().GunAuraSettings.GunEnabled = val
-    end
-})
-
-SetAutoFarm:AddToggle("autoclick", {
-     Title = "Auto click when holding gun (2s)",
-     Default = false,
-     Callback = function(val)
-        getgenv().AutoClickShootSettings.Enabled = val
-        if not val then
-            getgenv().AutoClickShootSettings.LastClickTime = 0
-        end
-    end
-})
-
-task.spawn(function()
-    while true do
-        pcall(performClick)
-        task.wait(0.1)
-    end
-end)
-
-SetAutoFarm:AddToggle("Current Target", {
-    Title = "Current Target",
-    Content = "Searching..."
-})
-task.spawn(function()
-    while task.wait(0.5) do
-        if getgenv().GunAuraSettings.GunEnabled and getgenv().GunAuraSettings.CurrentTarget then
-            local target = getgenv().GunAuraSettings.CurrentTarget.Parent
-            if target then
-                local targetType = "NPC"
-                if Characters:FindFirstChild(target.Name) then
-                    targetType = "Player"
-                elseif Enemies:FindFirstChild(target.Name) then
-                    targetType = "NPC"
-                end
-                
-                local hum = target:FindFirstChild("Humanoid")
-                local healthText = hum and string.format(" - %.1f/%.1f HP (%.0f%%)", hum.Health, hum.MaxHealth, (hum.Health / hum.MaxHealth) * 100) or ""
-                
-                local myPos = Player.Character and Player.Character:GetPivot().Position
-                local targetPos = getgenv().GunAuraSettings.CurrentTarget.Position
-                local distText = ""
-                if myPos and targetPos then
-                    local dist = math.floor((targetPos - myPos).Magnitude)
-                    distText = string.format(" [%d studs]", dist)
-                end
-                
-                targetDisplay:SetDesc(string.format(" [%s] %s%s%s", targetType, target.Name, healthText, distText))
-            else
-                targetDisplay:SetDesc("Searching...")
-            end
-        else
-            targetDisplay:SetDesc("Searching...")
-        end
-    end
-end)
-
-task.spawn(function()
-    while true do
-        pcall(applyGunDamage)
-        task.wait(getgenv().GunAuraSettings.FireRate) -- FireRate vẫn là 0.01
-    end
-end)
-
-task.spawn(function()
-    while task.wait(5) do
-        pcall(setSimulationRadius)
-    end
-end)
-
 SetAutoFarm:AddToggle("BusoOpen", {
     Title = "Auto Open Buso",
     Default = false,
@@ -4507,214 +4431,141 @@ spawn(function()
 end)
 
 -- Farm Bones
--- ==========================================
--- CONFIGURATION HAUNTED CASTLE (BONE FARM)
--- ==========================================
-getgenv().AutoFarmBoneMobs = true -- Bật/Tắt chế độ farm Bone
-getgenv().TweenSpeed = 320 -- Tốc độ di chuyển tween mượt mà từ file gốc
-
--- Danh sách quái vật tại Đảo Lâu Đài Bóng Tối theo cấp độ
-local BoneMobs = {
-    {Name = "Reborn Skeleton", Level = 1975, QuestData = 1, QuestName = "HauntedQuest1"},
-    {Name = "Living Zombie", Level = 2000, QuestData = 2, QuestName = "HauntedQuest1"},
-    {Name = "Demonic Soul", Level = 2025, QuestData = 1, QuestName = "HauntedQuest2"},
-    {Name = "Possessed Mummy", Level = 2050, QuestData = 2, QuestName = "HauntedQuest2"} -- Sửa chính tả theo chuẩn game "Possessed Mummy"
-}
-
--- Vị trí NPC nhận nhiệm vụ tương ứng tại Lâu Đài Bóng Tối
-local HauntedQuestNPCs = {
-    ["HauntedQuest1"] = CFrame.new(-9515.5, 164.5, 5782.5), -- NPC gần khu vực Skeleton/Zombie
-    ["HauntedQuest2"] = CFrame.new(-9515.5, 164.5, 5782.5)  -- NPC nhận Q2 (thường chung NPC hoặc ở tầng trên)
-}
-
--- Khống chế khoảng cách đứng trên đầu quái (Num_self lấy từ cấu trúc file của bạn)
-Num_self = 25 
-
--- ==========================================
--- MAIN FARMING LOOP
--- ==========================================
-task.spawn(function()
+spawn(function()
     while task.wait() do
-        if getgenv().AutoFarmBoneMobs then
-            -- Kích hoạt chế độ xuyên tường / bay có sẵn trong file gốc
-            _G.Level = true 
-            
+        if _G.AutoFarm_Bone and _G.StartFarm then
             pcall(function()
-                local CurrentLevel = game.Players.LocalPlayer.Data.Level.Value
-                local TargetMob = nil
+                local plr = game.Players.LocalPlayer  
+                local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")  
+                if not hrp then return end  
                 
-                -- Tìm quái vật phù hợp nhất với Level hiện tại của bạn
-                for i = #BoneMobs, 1, -1 do
-                    if CurrentLevel >= BoneMobs[i].Level then
-                        TargetMob = BoneMobs[i]
-                        break
-                    end
-                end
-                
-                -- Nếu level thấp hơn 1975, mặc định chọn quái thấp nhất khu vực là Reborn Skeleton
-                if not TargetMob then 
-                    TargetMob = BoneMobs[1] 
-                end
+                local QuestUI = plr.PlayerGui.Main.Quest      
+                local MOBS = {"Reborn Skeleton", "Living Zombie", "Demonic Soul", "Posessed Mummy"}
+                local npcPos = CFrame.new(-9516.99, 172.01, 6078.46) -- Posição do NPC de Bones
 
-                -- Kiểm tra trạng thái nhiệm vụ hiện tại
-                local HasQuest = game:GetService("Players").LocalPlayer.PlayerGui.Main.Quest.Visible
-                
-                if not HasQuest then
-                    -- Sử dụng hàm di chuyển TeleportToTarget có sẵn để đến NPC nhận Q
-                    local NPC_Pos = HauntedQuestNPCs[TargetMob.QuestName] or PosMsList[TargetMob.Name]
-                    if NPC_Pos then
-                        shouldTween = true
-                        TeleportToTarget(NPC_Pos * CFrame.new(0, 5, 0))
-                        
-                        -- Gửi lệnh nhận Quest lên Server hệ thống
-                        game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("StartQuest", TargetMob.QuestName, TargetMob.QuestData)
-                        task.wait(0.5)
-                    end
-                else
-                    -- Tìm quái vật bằng hàm quét có sẵn trong file của bạn
-                    local Enemy = GetConnectionEnemies(TargetMob.Name)
+                -- [PASSO 1] SE PRECISAR DE QUEST, VAI AO NPC PRIMEIRO
+                if _G.AcceptQuest and not QuestUI.Visible then      
+                    local distToNPC = (npcPos.Position - hrp.Position).Magnitude
                     
-                    if Enemy and Enemy:FindFirstChild("HumanoidRootPart") and Enemy.Humanoid.Health > 0 then
-                        shouldTween = true
-                        PosMon = Enemy.HumanoidRootPart.Position
-                        
-                        -- Gọi hàm gom quái (Bring Quái vào một điểm) từ file gốc của bạn
-                        BringEnemy()
-                        
-                        -- Tự động lấy vũ khí đã chọn trong cấu hình `_G.SelectWeapon` hoặc mặc định là Melee
-                        if _G.SelectWeapon then
-                            EquipWeapon(_G.SelectWeapon)
-                        else
-                            weaponSc("Melee")
-                        end
-                        
-                        -- Di chuyển mượt mà ra phía TRÊN đầu quái vật một khoảng cách chính xác là 25 và khóa góc nhìn hướng xuống quái
-                        _tp(Enemy.HumanoidRootPart.CFrame * CFrame.new(0, Num_self, 0) * CFrame.Angles(math.rad(-90), 0, 0))
-                        
-                        -- Tự động Click/Tấn công liên tục bằng VirtualUser có sẵn
-                        game:GetService("VirtualUser"):CaptureController()
-                        game:GetService("VirtualUser"):Button1Down(Vector2.new(1280, 720))
+                    if distToNPC > 5 then
+                        _tp(npcPos) -- Teleporta direto para o NPC
                     else
-                        -- Nếu chưa tìm thấy quái trong Workspace, di chuyển về điểm Spawn của quái chờ sẵn
-                        shouldTween = true
-                        local SpawnPos = PosMsList[TargetMob.Name]
-                        if SpawnPos then
-                            TeleportToTarget(SpawnPos * CFrame.new(0, Num_self, 0))
-                        end
+                        -- Se estiver perto, tenta pegar a quest
+                        task.wait(0.5)
+                        local quests = {
+                            {"StartQuest","HauntedQuest1",1}, 
+                            {"StartQuest","HauntedQuest1",2},
+                            {"StartQuest","HauntedQuest2",1}, 
+                            {"StartQuest","HauntedQuest2",2}
+                        }
+                        -- Tenta pegar a quest baseada no seu level (opcional: deixei aleatório como no seu original)
+                        game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer(unpack(quests[math.random(1,#quests)]))
+                        task.wait(1) -- Espera a quest carregar na UI
                     end
+
+                -- [PASSO 2] SE JÁ TEM QUEST OU NÃO QUER ACEITAR, VAI FARMAL
+                else
+                    local function GetClosestMob()      
+                        local closest, shortest = nil, math.huge      
+                        for _, mobName in pairs(MOBS) do      
+                            for _, mob in pairs(workspace.Enemies:GetChildren()) do      
+                                if mob.Name == mobName and mob:FindFirstChild("Humanoid") and mob.Humanoid.Health > 0 then      
+                                    local dist = (mob.PrimaryPart.Position - hrp.Position).Magnitude      
+                                    if dist < shortest then 
+                                        shortest = dist 
+                                        closest = mob 
+                                    end      
+                                end      
+                            end      
+                        end      
+                        return closest      
+                    end      
+
+                    local mob = GetClosestMob()      
+                    if mob then      
+                        -- Teleporta para o mob e mata
+                        _tp(mob.PrimaryPart.CFrame)      
+                        EquipWeapon(_G.SelectWeapon)
+                        G.Kill(mob, true)
+                    else      
+                        -- Se não achar mobs, vai para o spot de spawn deles
+                        _tp(CFrame.new(-9495.68, 453.58, 5977.34))      
+                    end      
                 end
-            end)
-        else
-            -- Tắt trạng thái farm, trả lại cơ chế di chuyển bình thường
-            _G.Level = false
-            shouldTween = false
-        end
+            end)  
+        end  
     end
 end)
 
 -- Farm Katakuri
--- ==========================================
--- CONFIGURATION KATAKURI FARM
--- ==========================================
-getgenv().AutoFarmKatakuriMobs = true -- Bật/Tắt farm
-getgenv().TweenSpeed = 320 -- Tốc độ di chuyển tween mượt mà
-
--- Danh sách quái vật cần tiêu diệt tại Đảo Bánh
-local KatakuriMobs = {
-    {Name = "Cookie Crafter", Level = 2200, QuestData = 1, QuestName = "IceCreamIslandQuest"},
-    {Name = "Cake Guard", Level = 2225, QuestData = 2, QuestName = "IceCreamIslandQuest"},
-    {Name = "Baking Staff", Level = 2250, QuestData = 1, QuestName = "BakeQuest"},
-    {Name = "Head Baker", Level = 2275, QuestData = 2, QuestName = "BakeQuest"}
-}
-
--- Vị trí các NPC nhận nhiệm vụ tương ứng trên Đảo Bánh
-local QuestNPCPositions = {
-    ["IceCreamIslandQuest"] = CFrame.new(-819.376709, 64.9259796, -10967.2832),
-    ["BakeQuest"] = CFrame.new(-1924.5, 38.5, -12842.1) -- Tọa độ ước tính gần quái Baking Staff/Head Baker
-}
-
--- Xử lý độ cao đứng trên đầu quái vật (Num_self lấy từ file của bạn là 25)
-Num_self = 25 
-
--- ==========================================
--- MAIN FARMING LOOP
--- ==========================================
-task.spawn(function()
+spawn(function()
     while task.wait() do
-        if getgenv().AutoFarmKatakuriMobs then
-            -- Ép hệ thống bật chế độ bay / xuyên tường có sẵn từ file gốc
-            _G.Level = true 
-            
+        if _G.AutoFarm_Cake and _G.StartFarm then
             pcall(function()
-                local CurrentLevel = game.Players.LocalPlayer.Data.Level.Value
-                local TargetMob = nil
-                
-                -- Tìm loại quái vật phù hợp nhất với Level hiện tại của người chơi
-                for i = #KatakuriMobs, 1, -1 do
-                    if CurrentLevel >= KatakuriMobs[i].Level then
-                        TargetMob = KatakuriMobs[i]
-                        break
-                    end
-                end
-                
-                -- Nếu level thấp hơn 2200, mặc định farm quái thấp nhất trong danh sách
-                if not TargetMob then 
-                    TargetMob = KatakuriMobs[1] 
-                end
+                local plr = game.Players.LocalPlayer
+                local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+                if not hrp then return end
+                local enemies = workspace:FindFirstChild("Enemies")  
+                if not enemies then return end  
+                local CakePos = CFrame.new(-2091.91, 70.00, -12142.83)  
+                local PortalEntrance = CFrame.new(-2151.82, 149.32, -12404.91)  
+                local mirror = workspace.Map:FindFirstChild("CakeLoaf")  
+                mirror = mirror and mirror:FindFirstChild("BigMirror")  
+                local other = mirror and mirror:FindFirstChild("Other")  
+                local portalOpen = other and other.Transparency == 0  
+                local boss = enemies:FindFirstChild("Cake Prince") or enemies:FindFirstChild("Dough King")  
 
-                -- Kiểm tra xem đã nhận Quest chưa
-                local HasQuest = game:GetService("Players").LocalPlayer.PlayerGui.Main.Quest.Visible
-                
-                if not HasQuest then
-                    -- Di chuyển mượt mà tới NPC giao nhiệm vụ bằng hàm TeleportToTarget có sẵn
-                    local NPC_Pos = QuestNPCPositions[TargetMob.QuestName] or PosMsList[TargetMob.Name]
-                    if NPC_Pos then
-                        shouldTween = true
-                        TeleportToTarget(NPC_Pos * CFrame.new(0, 5, 0))
-                        
-                        -- Gọi lệnh nhận Quest từ hệ thống game
-                        game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("StartQuest", TargetMob.QuestName, TargetMob.QuestData)
-                        task.wait(0.5)
-                    end
-                else
-                    -- Nếu đã có Quest, tiến hành tìm và di chuyển tới quái vật
-                    local Enemy = GetConnectionEnemies(TargetMob.Name)
-                    
-                    if Enemy and Enemy:FindFirstChild("HumanoidRootPart") and Enemy.Humanoid.Health > 0 then
-                        shouldTween = true
-                        PosMon = Enemy.HumanoidRootPart.Position
-                        
-                        -- Gom quái lại một điểm bằng hàm có sẵn trong file
-                        BringEnemy()
-                        
-                        -- Tự động trang bị vũ khí được chọn cấu hình trong _G.SelectWeapon
-                        if _G.SelectWeapon then
-                            EquipWeapon(_G.SelectWeapon)
-                        else
-                            weaponSc("Melee") -- Mặc định dùng Melee nếu chưa chọn vũ khí
-                        end
-                        
-                        -- Di chuyển mượt mà ra phía TRÊN đầu quái vật một khoảng cách là 25 hành trình mượt mà
-                        _tp(Enemy.HumanoidRootPart.CFrame * CFrame.new(0, Num_self, 0) * CFrame.Angles(math.rad(-90), 0, 0))
-                        
-                        -- Tự động kích hoạt Click/Attack chuột trái liên tục để tiêu diệt quái
-                        game:GetService("VirtualUser"):CaptureController()
-                        game:GetService("VirtualUser"):Button1Down(Vector2.new(1280, 720))
-                    else
-                        -- Nếu chưa thấy quái xuất hiện ở Workspace, di chuyển tới điểm Spawn của quái chờ sẵn
-                        shouldTween = true
-                        local SpawnPos = PosMsList[TargetMob.Name]
-                        if SpawnPos then
-                            TeleportToTarget(SpawnPos * CFrame.new(0, Num_self, 0))
-                        end
-                    end
-                end
-            end)
-        else
-            -- Khi tắt trạng thái farm, trả lại các thuộc tính ban đầu
-            _G.Level = false
-            shouldTween = false
-        end
+                if not boss and not portalOpen and (hrp.Position - CakePos.Position).Magnitude > 3000 then  
+                    _tp(CakePos) 
+                    return  
+                end  
+
+                if boss or portalOpen then  
+                    if boss and boss:FindFirstChild("Humanoid") and boss.Humanoid.Health > 0 and boss.PrimaryPart then  
+                        local bossTarget = boss.PrimaryPart.CFrame * CFrame.new(0, 5, 0)  
+                        _tp(bossTarget)  
+                        local bossPos = boss.PrimaryPart.CFrame * CFrame.new(0, 25, 0) * CFrame.Angles(math.rad(-90), 0, 0)  
+                        _tp(bossPos)  
+                        G.Kill(boss, true)  
+                        return  
+                    end  
+                    if (hrp.Position - PortalEntrance.Position).Magnitude < 500 then  
+                        TeleportConditional(hrp, PortalEntrance, TELEPORT_DISTANCE_THRESHOLD)  
+                    end  
+                    return  
+                end  
+
+                local CAKE_MOBS = {"Cookie Crafter", "Cake Guard", "Baking Staff", "Head Baker"}  
+                if _G.AcceptQuest and not plr.PlayerGui.Main.Quest.Visible then  
+                    local questPos = CFrame.new(-1927.92, 37.80, -12842.54)  
+                    TeleportConditional(hrp, questPos, TELEPORT_DISTANCE_THRESHOLD)  
+                    if (hrp.Position - questPos.Position).Magnitude <= 40 then  
+                        local q = {{"StartQuest", "CakeQuest2", 2}, {"StartQuest", "CakeQuest2", 1}, {"StartQuest", "CakeQuest1", 1}, {"StartQuest", "CakeQuest1", 2}}  
+                        game.ReplicatedStorage.Remotes.CommF_:InvokeServer(unpack(q[math.random(1, 4)]))  
+                    end  
+                    return  
+                end  
+
+                local bestMob, bestDist = nil, math.huge  
+                for _, mob in ipairs(enemies:GetChildren()) do  
+                    if table.find(CAKE_MOBS, mob.Name) and mob:FindFirstChild("Humanoid") and mob.Humanoid.Health > 0 then  
+                        local dist = (mob.HumanoidRootPart.Position - hrp.Position).Magnitude  
+                        if dist < bestDist then bestDist = dist bestMob = mob end  
+                    end  
+                end  
+                if bestMob then  
+                    repeat task.wait()  
+                        if (workspace.Map.CakeLoaf.BigMirror.Other.Transparency == 0) or enemies:FindFirstChild("Cake Prince") then break end  
+                        if bestMob.Parent and bestMob.Humanoid.Health > 0 then  
+                            _tp(bestMob.HumanoidRootPart.CFrame * CFrame.new(0, 20, 0) * CFrame.Angles(math.rad(-90), 0, 0))  
+                            G.Kill(bestMob, true)  
+                        else break end  
+                    until not _G.StartFarm or not _G.AutoFarm_Cake or not bestMob.Parent or bestMob.Humanoid.Health <= 0  
+                else  
+                    TeleportConditional(hrp, CFrame.new(-1927.92, 37.80, -12842.54), TELEPORT_DISTANCE_THRESHOLD)  
+                end  
+            end)  
+        end  
     end
 end)
 
