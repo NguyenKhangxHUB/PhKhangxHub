@@ -1,0 +1,99 @@
+--// =========================
+--// FLUENT UI KEY SYSTEM
+--// =========================
+
+--// ===== CÀI ĐẶT =====
+_G.Key = "Ades_BLF_A7K29XQ1"
+_G.GetKeyLink = "https://link4m.org/y2ci0nQ"
+_G.ScriptLoad = "https://raw.githubusercontent.com/NguyenKhangxHUB/PhKhangxHub/refs/heads/main/5902875523962415.lua.txt"
+
+--// =========================
+
+repeat task.wait() until game:IsLoaded()
+
+local Fluent = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/main/source.lua"))()
+
+local Window = Fluent:CreateWindow({
+    Title = "Ades Hub",
+    SubTitle = "Key System",
+    TabWidth = 160,
+    Size = UDim2.fromOffset(430, 260),
+    Acrylic = true,
+    Theme = "Dark",
+    MinimizeKey = Enum.KeyCode.LeftControl
+})
+
+local MainTab = Window:AddTab({
+    Title = "Key System",
+    Icon = "key"
+})
+
+local InputKey = ""
+
+MainTab:AddParagraph({
+    Title = "Status",
+    Content = "Nhập key để kích hoạt script"
+})
+
+-- Ô nhập key
+MainTab:AddInput("KeyInput", {
+    Title = "Enter Key",
+    Default = "",
+    Placeholder = "Nhập key ở đây...",
+    Numeric = false,
+    Finished = false,
+
+    Callback = function(Value)
+        InputKey = Value
+    end
+})
+
+-- Nút góc trái - Get Key
+MainTab:AddButton({
+    Title = "Get Key",
+    Description = "Copy link get key",
+    Callback = function()
+        setclipboard(_G.GetKeyLink)
+        Fluent:Notify({
+            Title = "Đã copy",
+            Content = "Đã copy link get key",
+            Duration = 3
+        })
+    end
+})
+
+-- Nút góc phải - Xác nhận key
+MainTab:AddButton({
+    Title = "Confirm Key",
+    Description = "Xác nhận key",
+    Callback = function()
+
+        if InputKey == _G.Key then
+
+            Fluent:Notify({
+                Title = "Success",
+                Content = "Key chính xác, đang load script...",
+                Duration = 5
+            })
+
+            wait(1)
+
+            loadstring(game:HttpGet(https://raw.githubusercontent.com/NguyenKhangxHUB/PhKhangxHub/refs/heads/main/5902875523962415.lua.txt))()
+
+        else
+
+            Fluent:Notify({
+                Title = "Error",
+                Content = "Key không đúng",
+                Duration = 5
+            })
+
+        end
+    end
+})
+
+Fluent:Notify({
+    Title = "Ades Hub",
+    Content = "UI Key System Loaded",
+    Duration = 5
+})
