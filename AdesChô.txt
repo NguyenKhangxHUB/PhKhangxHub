@@ -1,0 +1,44 @@
+loadstring(game:HttpGet(("https://raw.githubusercontent.com/daucobonhi/Ui-Redz-V2/refs/heads/main/UiREDzV2.lua")))()
+
+local Window = MakeWindow({
+    Hub = {
+        Title = "Bloxfruits by Ades Chô",
+        Animation = "Youtube: deo co"
+    },
+
+    Key = {
+        KeySystem = true,
+        Title = "Bloxfruits free by Ades Chô",
+        Description = "Script Banana",
+        KeyLink = "https://link4m.org/6DeUo",
+
+        Keys = {
+            "Ades_BLF_X7K9P2QW4M"
+        },
+
+        Notifi = {
+            Notifications = true,
+            CorrectKey = "Key Correct ✅",
+            Incorrectkey = "Wrong Key ❌",
+            CopyKeyLink = "Copied Link Get Key!"
+        }
+    }
+})
+
+MinimizeButton({
+    Image = "http://www.roblox.com/asset/?id=91169320061483",
+    Size = {60, 60},
+    Color = Color3.fromRGB(10, 10, 10),
+    Corner = true,
+    Stroke = false,
+    StrokeColor = Color3.fromRGB(255, 0, 0)
+})
+
+-- CHECK KEY
+repeat task.wait() until _G.Key == "Ades_BLF_X7K9P2QW4M"
+
+-- SCRIPT CHẠY KHI KEY ĐÚNG
+loadstring(game:HttpGet("https://raw.githubusercontent.com/NguyenKhangxHUB/PhKhangxHub/refs/heads/main/5902875523962415.lua.txt"))()
+
+-- hoặc code trực tiếp ở dưới
+print("Key đúng, script đã bật!")
