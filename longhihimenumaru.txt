@@ -2257,6 +2257,30 @@ local Bringmob = Tabs.Settings:AddToggle("Bringmob", {Title = "Bring Mobs", Desc
 Bringmob:OnChanged(function(Value)
   _B = Value
 end)
+local FarmAttack = Tabs.Settings:AddToggle("FarmAttack", {Title = "Farm Attack", Description = "", Default = false})
+FarmAttack:OnChanged(function(Value)
+    _G.FarmAttack = Value
+end)
+Attack = {}
+Attack.__index = Attack
+
+Attack.Alive = function(model) 
+    if not model then return end 
+    Humanoid = model:FindFirstChild("Humanoid")
+    return Humanoid and Humanoid.Health > 0 
+end
+
+Attack.Pos = function(model, dist) 
+    return (Root.Position - model.Position).Magnitude <= dist 
+end
+
+Attack.Dist = function(model, dist) 
+    return (Root.Position - model:FindFirstChild("HumanoidRootPart").Position).Magnitude <= dist 
+end
+
+Attack.DistH = function(model, dist) 
+    return (Root.Position - model:FindFirstChild("HumanoidRootPart").Position).Magnitude > dist 
+end
 local Bringmob = Tabs.Settings:AddToggle("Bringmob", {Title = "Bring Mobs Banana", Description = "", Default = true})
 Bringmob:OnChanged(function(Value)
   _B = Value
