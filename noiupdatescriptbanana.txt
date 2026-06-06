@@ -3697,6 +3697,225 @@ SetAutoFarm:AddToggle("BringMob", {
     end
 })
 
+SetAutoFarm:AddToggle("BringMob", {
+    Title = "Bring Mob Banana",
+    Default = true,
+    Callback = function(Value)
+        _B = Value
+    end
+})
+-- ============================================================
+-- BRING MOB — bring CẢ mob farm + mob phụ về _lockedBringPos mỗi 0.1s
+-- Không bring nếu có player khác trong phạm vi 500 stud quanh player
+-- ============================================================
+spawn(function()
+    while task.wait(0.1) do
+        pcall(function()
+            -- Đồng bộ getgenv với _G
+            getgenv().IsFarming     = _G.StartFarm
+            getgenv().MaxBringCount = _G.BringCount or 2
+            getgenv().BringMob      = _G.AutoBring
+
+            -- Guard
+            if not getgenv().BringMob  then return end
+            if not getgenv().IsFarming then return end
+
+            local targetMob = getgenv().CurrentTargetMob
+            if not targetMob or not targetMob.Parent then return end
+
+            -- Phải có vị trí đã chốt (tức là tracking đã teleport ít nhất 1 lần)
+            local bringCF = _lockedBringPos
+            if not bringCF then return end
+
+            local myChar = Player.Character
+            if not myChar then return end
+            local myHRP = myChar:FindFirstChild("HumanoidRootPart")
+            if not myHRP then return end
+
+            -- ── CHECK PLAYER KHÁC trong 500 stud — nếu có thì KHÔNG bring ──
+            for _, otherPlayer in ipairs(Players:GetPlayers()) do
+                if otherPlayer == Player then continue end  -- bỏ qua bản thân
+                local otherChar = otherPlayer.Character
+                if not otherChar then continue end
+                local otherHRP = otherChar:FindFirstChild("HumanoidRootPart")
+                if not otherHRP then continue end
+                local distToOther = (otherHRP.Position - myHRP.Position).Magnitude
+                if distToOther <= 500 then
+                    return  -- có player khác gần → bỏ bring lần này
+                end
+            end
+
+            local mobName  = targetMob.Name
+            --   BringCount = 2 → bring thêm 1 (tổng 2 con dưới chân)
+            --   BringCount = 3 → bring thêm 2 (tổng 3 con)
+            local maxExtra = math.max(0, (getgenv().MaxBringCount or 2) - 1)
+
+            -- ── Tìm mob phụ cùng loại, KHÔNG giới hạn khoảng cách ──────
+            -- Collect tất cả mob cùng tên, sort theo khoảng cách gần nhất, lấy maxExtra con
+            local allSame = {}
+            for _, enemy in ipairs(workspace.Enemies:GetChildren()) do
+                if enemy == targetMob then continue end
+                local humanoid = enemy:FindFirstChild("Humanoid")
+                local rootPart = enemy:FindFirstChild("HumanoidRootPart")
+                if humanoid and rootPart and humanoid.Health > 0 and rootPart.Parent then
+                    if enemy.Name == mobName then
+                        local dist = (rootPart.Position - myHRP.Position).Magnitude
+                        -- Chỉ bring mob phụ trong phạm vi 300 stud tính từ player
+                        if dist <= 300 then
+                            table.insert(allSame, { rp = rootPart, dist = dist })
+                        end
+                    end
+                end
+            end
+            -- Sort gần → xa
+            table.sort(allSame, function(a, b) return a.dist < b.dist end)
+
+            local candidates = {}
+            for i = 1, math.min(maxExtra, #allSame) do
+                table.insert(candidates, allSame[i].rp)
+            end
+
+            -- ── Bring mob farm (luôn bring, kể cả khi không có mob phụ) ─
+            local farmHRP = targetMob:FindFirstChild("HumanoidRootPart")
+            local farmHum = targetMob:FindFirstChild("Humanoid")
+            if farmHRP and farmHum and farmHum.Health > 0 then
+                farmHRP.CFrame = bringCF
+                sethiddenproperty(Player, "SimulationRadius", math.huge)
+            end
+
+            -- ── Bring mob phụ (gần nhất, không giới hạn khoảng cách) ───
+            for _, rp in ipairs(candidates) do
+                rp.CFrame = bringCF
+                sethiddenproperty(Player, "SimulationRadius", math.huge)
+            end
+        end)
+    end
+end)
+
+SetAutoFarm:AddToggle("BringMob", {
+    Title = "Bring Mob tween",
+    Default = true,
+    Callback = function(Value)
+        _B = Value
+    end
+})
+--// ================= BRING MOB LOGIC =================
+
+--------------------------------------------------------------------
+--------------------------------------------------------------------
+-- BRING MOBS - Logic Bring Mob Mới
+-- Tính năng:
+--   - Bring mob cùng loại về vị trí mob farm (thay vì vị trí trung bình)
+--   - Phạm vi bring: 350 studs quanh mob farm
+--   - Check TargetPlayer: nếu có player khác 500 studs quanh localplayer → không bring
+--   - Teleport + Tween dựa theo FlySpeed ÷ 1.5
+--   - Anti-lag: SimulationRadius gọi 1 lần, chỉ destroy Animator khi cần
+-- MaxBring: giới hạn số mob được bring qua getgenv().MaxBringCount
+--------------------------------------------------------------------
+task.spawn(function()
+    while task.wait(0.5) do
+        pcall(function()
+            if not getgenv().BringMob then return end
+            if not getgenv().IsFarming then return end
+
+            -- Lấy mob đang farm làm mốc bring
+            local targetMob = getgenv().CurrentTargetMob
+            if not targetMob then return end
+            local targetHRP = targetMob:FindFirstChild("HumanoidRootPart")
+            local targetHum = targetMob:FindFirstChild("Humanoid")
+            if not targetHRP or not targetHum then return end
+            if targetHum.Health <= 0 then return end
+
+            --// CHECK TARGETPLAYER: 500 studs quanh localplayer
+            local myHRP = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+            if not myHRP then return end
+            local myPos = myHRP.Position
+            
+            -- Kiểm tra có TargetPlayer (player khác) trong 500 studs không
+            local hasTargetPlayer = false
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p ~= player and p.Character then
+                    local pHRP = p.Character:FindFirstChild("HumanoidRootPart")
+                    if pHRP and (pHRP.Position - myPos).Magnitude <= 500 then
+                        hasTargetPlayer = true
+                        break
+                    end
+                end
+            end
+            
+            -- Nếu có TargetPlayer thì không bring
+            if hasTargetPlayer then return end
+
+            -- Vị trí cố định của mob farm - tất cả mob bring về đây
+            local farmPos    = targetHRP.Position
+            local targetName = targetMob.Name
+            local maxBring   = getgenv().MaxBringCount or 2
+
+            -- Tính toán khoảng cách teleport + tween dựa theo FlySpeed
+            -- Formula: khoảng cách = FlySpeed ÷ 1.5
+            local flySpeed = getgenv().FlySpeed or 180
+            local teleportDistance = flySpeed / 1.5
+
+            -- SimulationRadius gọi 1 lần, không lặp trong loop mob
+            pcall(function()
+                sethiddenproperty(player, "SimulationRadius", math.huge)
+            end)
+
+            -- Bring mob cùng loại trong phạm vi 350 quanh mob farm
+            local brought = 0
+            for _, v in ipairs(workspace.Enemies:GetChildren()) do
+                if brought >= maxBring then break end
+                if v ~= targetMob and v.Name == targetName then
+                    local hum = v:FindFirstChild("Humanoid")
+                    local hrp = v:FindFirstChild("HumanoidRootPart")
+                    if hum and hrp and hum.Health > 0 then
+                        local dist = (hrp.Position - farmPos).Magnitude
+                        
+                        -- Kiểm tra mob nằm trong phạm vi 350 studs quanh mob farm
+                        if dist > 8 and dist <= 350 then
+                            task.spawn(function()
+                                pcall(function()
+                                    -- Nếu khoảng cách > teleportDistance: teleport trước
+                                    if dist > teleportDistance then
+                                        hrp.CFrame = CFrame.new(farmPos + Vector3.new(0, 3, 0))
+                                        task.wait(0.1)
+                                    end
+                                    
+                                    -- Tween từ vị trí hiện tại (hoặc sau teleport) về farmPos
+                                    local tweenInfo = TweenInfo.new(
+                                        0.2,
+                                        Enum.EasingStyle.Linear,
+                                        Enum.EasingDirection.Out
+                                    )
+                                    local tween = TweenService:Create(
+                                        hrp,
+                                        tweenInfo,
+                                        { CFrame = CFrame.new(farmPos + Vector3.new(0, 0, 0)) }
+                                    )
+                                    
+                                    -- Vô hiệu hóa tính năng của mob
+                                    hrp.CanCollide = false
+                                    hrp.Velocity = Vector3.zero
+                                    hum.WalkSpeed = 0
+                                    hum.JumpPower = 0
+                                    
+                                    -- Destroy Animator nếu tồn tại
+                                    local anim = hum:FindFirstChild("Animator")
+                                    if anim then anim:Destroy() end
+                                    
+                                    tween:Play()
+                                    task.wait(0.25)
+                                end)
+                            end)
+                            brought = brought + 1
+                        end
+                    end
+                end
+            end
+        end)
+    end
+end)
+
 SetAutoFarm:AddToggle("ObservationOpen", {
     Title = "Teleport Y if low hearth",
     Default = false,
@@ -4147,125 +4366,233 @@ end)
 
 -- Farm Bones
 spawn(function()
-    while task.wait(1) do
-        if _G.StartFarm and _G.MethodSelect == "Farm Bones" then
-            pcall(function()        
-                local player = game.Players.LocalPlayer
-                local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-                local questUI = player.PlayerGui:FindFirstChild("Main") and 
-                                player.PlayerGui.Main:FindFirstChild("Quest")
-                local BonesTable = {"Reborn Skeleton","Living Zombie","Demonic Soul","Posessed Mummy"}
-                
-                if not root then return end
-                
-                local bone = GetConnectionEnemies(BonesTable)
-                if bone then
-                    if _G.AcceptQuestC and questUI and not questUI.Visible then
-                        local questPos = CFrame.new(-9516.99316, 172.017181, 6078.46533, 0, 0, -1, 0, 1, 0, 1, 0, 0)
-                        _tp(questPos)
-                        
-                        local attempts = 0
-                        while attempts < 50 and (questPos.Position - root.Position).Magnitude > 50 do
-                            task.wait(0.2)
-                            attempts = attempts + 1
-                        end
-                        
-                        local randomQuest = math.random(1, 4)
-                        local questData = {
-                            [1] = {"StartQuest", "HauntedQuest2", 2},
-                            [2] = {"StartQuest", "HauntedQuest2", 1},
-                            [3] = {"StartQuest", "HauntedQuest1", 1},
-                            [4] = {"StartQuest", "HauntedQuest1", 2}
-                        }                    
-                        
-                        pcall(function()
-                            game.ReplicatedStorage.Remotes.CommF_:InvokeServer(unpack(questData[randomQuest]))
-                        end)
-                    end
-                    
-                    repeat 
-                        task.wait() 
-                        Attack.Kill(bone, _G.StartFarm) 
-                    until not _G.StartFarm or not bone or not bone.Parent or 
-                          (bone.Humanoid and bone.Humanoid.Health <= 0) or 
-                          (_G.AcceptQuestC and questUI and not questUI.Visible)
-                else
-                    _tp(CFrame.new(-9495.6806640625, 453.58624267578125, 5977.3486328125))
+    while task.wait(0.2) do
+        pcall(function()
+
+            if not _G.StartFarm then
+                stopBoneTracking()
+                stopHover()
+
+                if _activeTween then
+                    pcall(function()
+                        _activeTween:Cancel()
+                    end)
+                    _activeTween = nil
                 end
-            end)
-        end
+
+                getgenv().CurrentTargetMob = nil
+                return
+            end
+
+            if _G.MethodFarm ~= "Farm Bone" then
+                stopBoneTracking()
+                stopHover()
+
+                if _activeTween then
+                    pcall(function()
+                        _activeTween:Cancel()
+                    end)
+                    _activeTween = nil
+                end
+
+                getgenv().CurrentTargetMob = nil
+                return
+            end
+
+            local char = Player.Character
+            if not char then return end
+
+            local hrp = char:FindFirstChild("HumanoidRootPart")
+            if not hrp then return end
+
+            -- Sea 3 -> đảo Haunted Castle
+            local BoneFarmPos = CFrame.new(-9517.12793, 142.130615, 5566.37354)
+
+            -- Check target cũ
+            local currentTarget = getgenv().CurrentTargetMob
+
+            if currentTarget and currentTarget.Parent then
+                local hum = currentTarget:FindFirstChild("Humanoid")
+                local targetHRP = currentTarget:FindFirstChild("HumanoidRootPart")
+
+                if hum and hum.Health > 0 and targetHRP then
+
+                    -- đứng trên đầu quái 25 stud
+                    hrp.CFrame = targetHRP.CFrame * CFrame.new(0,25,0)
+
+                    -- attack
+                    pcall(function()
+                        local CombatFramework =
+                            require(Player.PlayerScripts.CombatFramework)
+
+                        local activeController =
+                            CombatFramework.activeController
+
+                        if activeController then
+                            activeController.hitboxMagnitude = 60
+                            activeController.timeToNextAttack = 0
+                            activeController.increment = 3
+
+                            activeController:attack()
+                        end
+                    end)
+
+                    return
+                end
+            end
+
+            -- reset
+            getgenv().CurrentTargetMob = nil
+
+            -- tìm mob bone gần nhất
+            local nearest = nil
+            local distance = math.huge
+
+            for _,v in pairs(workspace.Enemies:GetChildren()) do
+                if (
+                    v.Name == "Reborn Skeleton" or
+                    v.Name == "Living Zombie" or
+                    v.Name == "Demonic Soul" or
+                    v.Name == "Posessed Mummy"
+                )
+                and v:FindFirstChild("Humanoid")
+                and v.Humanoid.Health > 0
+                and v:FindFirstChild("HumanoidRootPart") then
+
+                    local mag = (v.HumanoidRootPart.Position - hrp.Position).Magnitude
+
+                    if mag < distance then
+                        distance = mag
+                        nearest = v
+                    end
+                end
+            end
+
+            if nearest then
+                getgenv().CurrentTargetMob = nearest
+            else
+                -- không có mob -> tween tới đảo bone
+                startHover()
+
+                tweenToFixedPos(
+                    hrp,
+                    BoneFarmPos,
+                    50
+                )
+            end
+
+        end)
     end
 end)
 
 -- Farm Katakuri
 spawn(function()
-    while task.wait(1) do
-        if _G.StartFarm and _G.MethodSelect == "Farm Katakuri" then
-            pcall(function()
-                local player = game.Players.LocalPlayer
-                local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-                local questUI = player.PlayerGui:FindFirstChild("Main") and 
-                                player.PlayerGui.Main:FindFirstChild("Quest")
-                local enemies = workspace.Enemies
-                local bigMirror = workspace.Map.CakeLoaf.BigMirror
-                
-                if not root then return end
-                if not bigMirror:FindFirstChild("Other") then
-                    _tp(CFrame.new(-2077, 252, -12373))
-                end        
-                
-                if bigMirror.Other.Transparency == 0 or enemies:FindFirstChild("Cake Prince") then
-                    local v = GetConnectionEnemies("Cake Prince")
-                    if v then
-                        repeat 
-                            wait() 
-                            Attack.Kill2(v, _G.StartFarm)  -- Sửa: dùng _G.StartFarm thay vì _G.Auto_Cake_Prince
-                        until not _G.StartFarm or not v.Parent or v.Humanoid.Health <= 0
-                    else
-                        if bigMirror.Other.Transparency == 0 and (CFrame.new(-1990.67, 4533, -14973.67).Position - root.Position).Magnitude >= 2000 then
-                            _tp(CFrame.new(-2151.82, 149.32, -12404.91))
-                        end
-                    end
-                else
-                    local CakePrince = {"Cookie Crafter","Cake Guard","Baking Staff","Head Baker"}
-                    local v = GetConnectionEnemies(CakePrince)
-                    if v then
-                        if _G.AcceptQuestC and questUI and not questUI.Visible then
-                            local questPos = CFrame.new(-1927.92, 37.8, -12842.54)
-                            _tp(questPos)
-                            
-                            local attempts = 0
-                            while attempts < 50 and (questPos.Position - root.Position).Magnitude > 50 do
-                                wait(0.2)
-                                attempts = attempts + 1
-                            end
-                            
-                            local randomQuest = math.random(1, 4)
-                            local questData = {
-                                [1] = {"StartQuest", "CakeQuest2", 2},
-                                [2] = {"StartQuest", "CakeQuest2", 1},
-                                [3] = {"StartQuest", "CakeQuest1", 1},
-                                [4] = {"StartQuest", "CakeQuest1", 2}
-                            }                    
-                            
-                            pcall(function()
-                                game.ReplicatedStorage.Remotes.CommF_:InvokeServer(unpack(questData[randomQuest]))
-                            end)
-                        end
-                        
-                        repeat 
-                            wait() 
-                            Attack.Kill(v, _G.StartFarm)  -- Sửa: dùng _G.StartFarm
-                        until not _G.StartFarm or not v or not v.Parent or 
-                              (v.Humanoid and v.Humanoid.Health <= 0) or 
-                              bigMirror.Other.Transparency == 0 or 
-                              (_G.AcceptQuestC and questUI and not questUI.Visible)
-                    else
-                        _tp(CFrame.new(-2077, 252, -12373))
-                    end
+    while task.wait(0.2) do
+        pcall(function()
+
+            if not _G.StartFarm then
+                stopBoneTracking()
+                stopHover()
+
+                if _activeTween then
+                    pcall(function()
+                        _activeTween:Cancel()
+                    end)
+                    _activeTween = nil
                 end
-            end)
-        end
+
+                getgenv().CurrentKatakuri = nil
+                return
+            end
+
+            if _G.MethodFarm ~= "Farm Katakuri" then
+                stopBoneTracking()
+                stopHover()
+
+                if _activeTween then
+                    pcall(function()
+                        _activeTween:Cancel()
+                    end)
+                    _activeTween = nil
+                end
+
+                getgenv().CurrentKatakuri = nil
+                return
+            end
+
+            local char = Player.Character
+            if not char then return end
+
+            local hrp = char:FindFirstChild("HumanoidRootPart")
+            if not hrp then return end
+
+            -- đảo spawn katakuri
+            local KatakuriPos = CFrame.new(-678.648804, 381.353943, -11114.2012)
+
+            -- check target cũ
+            local currentTarget = getgenv().CurrentKatakuri
+
+            if currentTarget and currentTarget.Parent then
+                local hum = currentTarget:FindFirstChild("Humanoid")
+                local targetHRP = currentTarget:FindFirstChild("HumanoidRootPart")
+
+                if hum and hum.Health > 0 and targetHRP then
+
+                    -- đứng trên đầu boss 25 stud
+                    hrp.CFrame = targetHRP.CFrame * CFrame.new(0,25,0)
+
+                    -- attack
+                    pcall(function()
+                        local CombatFramework =
+                            require(Player.PlayerScripts.CombatFramework)
+
+                        local activeController =
+                            CombatFramework.activeController
+
+                        if activeController then
+                            activeController.hitboxMagnitude = 60
+                            activeController.timeToNextAttack = 0
+                            activeController.increment = 3
+
+                            activeController:attack()
+                        end
+                    end)
+
+                    return
+                end
+            end
+
+            -- reset
+            getgenv().CurrentKatakuri = nil
+
+            -- tìm katakuri
+            local katakuri = nil
+
+            for _,v in pairs(workspace.Enemies:GetChildren()) do
+                if v.Name == "Cake Queen"
+                and v:FindFirstChild("Humanoid")
+                and v.Humanoid.Health > 0
+                and v:FindFirstChild("HumanoidRootPart") then
+
+                    katakuri = v
+                    break
+                end
+            end
+
+            if katakuri then
+                getgenv().CurrentKatakuri = katakuri
+            else
+                -- không có boss -> tween tới đảo chờ
+                startHover()
+
+                tweenToFixedPos(
+                    hrp,
+                    KatakuriPos,
+                    50
+                )
+            end
+
+        end)
     end
 end)
 
