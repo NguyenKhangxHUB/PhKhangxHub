@@ -22,7 +22,7 @@ end
 
 -- Nếu đã xác thực, tự động chạy script chính và không hiện GUI
 if isStillValid() then
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/NguyenKhangxHUB/PhKhangxHub/refs/heads/main/3580340031672416.lua"))()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/AnhDzaiScript/Setting/refs/heads/main/FastMax.lua"))()
     return
 end
 
@@ -216,7 +216,7 @@ checkBtn.MouseButton1Click:Connect(function()
         wait(0.5)
         fadeOutAndRemove()
         -- Chạy script chính
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/AnhDzaiScript/Setting/refs/heads/main/FastMax.lua"))()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/NguyenKhangxHUB/PhKhangxHub/refs/heads/main/3580340031672416.lua"))()
     else
         notiLabel.Text = "Sai key! Vui lòng thử lại."
         shakeFrame()
