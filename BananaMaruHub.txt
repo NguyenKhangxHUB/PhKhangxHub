@@ -216,7 +216,7 @@ checkBtn.MouseButton1Click:Connect(function()
         wait(0.5)
         fadeOutAndRemove()
         -- Chạy script chính
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/NguyenKhangxHUB/PhKhangxHub/refs/heads/main/3580340031672416.lua"))()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/AnhDzaiScript/Setting/refs/heads/main/FastMax.lua"))()
     else
         notiLabel.Text = "Sai key! Vui lòng thử lại."
         shakeFrame()
