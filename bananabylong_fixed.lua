@@ -65,7 +65,7 @@ if worldMap[placeId] then
         World3 = true
     end
 else
-    game.Players.LocalPlayer:Kick("Unsupported Game")
+    
 end
 repeat
     wait()
