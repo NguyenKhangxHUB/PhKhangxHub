@@ -4442,303 +4442,182 @@ spawn(function()
 end)
 
 -- Farm Katakuri
--- ============================================
--- AUTO FARM KATAKURI - Bỏ chọn skill
--- ============================================
-
--- Kiểm tra xem toggle đã tồn tại chưa
-if _G.AutoFarmKatakuri == nil then
-    _G.AutoFarmKatakuri = false
-end
-
--- Cấu hình farm
-local KatakuriConfig = {
-    -- Vị trí các bãi quái trên đảo bánh
-    FarmingSpots = {
-        {Name = "Cookie Crafter Area", CFrame = CFrame.new(-2024, 38, -12026), Mobs = {"Cookie Crafter", "Cake Guard"}},
-        {Name = "Baking Staff Area", CFrame = CFrame.new(-1932, 38, -12848), Mobs = {"Baking Staff", "Head Baker"}},
-        {Name = "Cocoa Warrior Area", CFrame = CFrame.new(95, 73, -12309), Mobs = {"Cocoa Warrior", "Chocolate Bar Battler"}},
-        {Name = "Sweet Thief Area", CFrame = CFrame.new(116, 36, -12478), Mobs = {"Sweet Thief", "Candy Rebel"}},
-        {Name = "Cake Prince Area", CFrame = CFrame.new(-1990, 38, -12030), Mobs = {"Cake Prince", "Dough King"}},
-        {Name = "Ice Cream Area", CFrame = CFrame.new(-877, 118, -11032), Mobs = {"Ice Cream Chef", "Ice Cream Commander"}},
-        {Name = "Peanut Area", CFrame = CFrame.new(-1993, 187, -10103), Mobs = {"Peanut Scout", "Peanut President"}}
-    },
-    -- Độ cao khi đứng trên đầu quái
-    AttackHeight = 32,
-    -- Bán kính farm
-    FarmRadius = 150,
-    -- Thời gian chờ respawn
-    RespawnWait = 2
-}
-
--- Hàm kiểm tra Sea 3
-local function IsSea3()
-    local placeId = game.PlaceId
-    return placeId == 7449423635 or placeId == 85211729168715 or placeId == 73902483975735
-}
-
--- Hàm kiểm tra quái còn sống
-local function IsMobAlive(mob)
-    if not mob or not mob.Parent then return false end
-    local humanoid = mob:FindFirstChild("Humanoid")
-    local rootPart = mob:FindFirstChild("HumanoidRootPart")
-    return humanoid and rootPart and humanoid.Health > 0
-end
-
--- Hàm lấy tất cả quái Katakuri trong bán kính
-local function GetNearbyKatakuriMobs(position, radius)
-    local mobs = {}
-    local enemies = workspace:FindFirstChild("Enemies")
-    if not enemies then return mobs end
-    
-    local KatakuriMobs = {
+spawn(function()
+    local KatakuriMobNames = {
         "Cookie Crafter", "Cake Guard", "Baking Staff", "Head Baker",
         "Cocoa Warrior", "Chocolate Bar Battler", "Sweet Thief", "Candy Rebel",
-        "Cake Prince", "Dough King", "Ice Cream Chef", "Ice Cream Commander",
-        "Peanut Scout", "Peanut President"
+        "Ice Cream Chef", "Ice Cream Commander", "Peanut Scout", "Peanut President",
     }
-    
-    for _, mob in pairs(enemies:GetChildren()) do
-        if IsMobAlive(mob) then
-            for _, mobName in pairs(KatakuriMobs) do
-                if mob.Name == mobName then
-                    local rootPart = mob:FindFirstChild("HumanoidRootPart")
-                    if rootPart then
-                        local dist = (rootPart.Position - position).Magnitude
-                        if dist <= radius then
-                            table.insert(mobs, mob)
-                        end
-                    end
-                    break
+
+    local KatakuriSpawns = {
+        CFrame.new(-2021, 38, -12028),
+        CFrame.new(-1932, 38, -12848),
+        CFrame.new(95, 73, -12309),
+        CFrame.new(647, 42, -12401),
+        CFrame.new(116, 36, -12478),
+        CFrame.new(47, 61, -12889),
+        CFrame.new(-877, 118, -11032),
+        CFrame.new(-2215, 159, -10474),
+    }
+
+    local CakeIslandCF = CFrame.new(-1932, 38, -12848)
+    local SPAWN_RADIUS = 350
+    local BRING_RADIUS = 300
+    local STAND_Y = 30
+
+    local function IsKatakuri(name)
+        for _, n in pairs(KatakuriMobNames) do
+            if n == name then return true end
+        end
+        return false
+    end
+
+    local function FindNearestMob(fromPos)
+        local nearest, nearestDist = nil, math.huge
+        for _, v in pairs(workspace.Enemies:GetChildren()) do
+            if v:IsA("Model") and v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart")
+                and v.Humanoid.Health > 0 and IsKatakuri(v.Name) then
+                local d = (v.HumanoidRootPart.Position - fromPos).Magnitude
+                if d < nearestDist then nearestDist = d; nearest = v end
+            end
+        end
+        return nearest
+    end
+
+    local function FindActiveSpawn()
+        for _, spawnCF in pairs(KatakuriSpawns) do
+            local mob = FindNearestMob(spawnCF.Position)
+            if mob and (mob.HumanoidRootPart.Position - spawnCF.Position).Magnitude <= SPAWN_RADIUS then
+                return spawnCF, mob
+            end
+        end
+        return nil, nil
+    end
+
+    local function CountMobs(spawnPos)
+        local count = 0
+        for _, v in pairs(workspace.Enemies:GetChildren()) do
+            if v:IsA("Model") and v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart")
+                and v.Humanoid.Health > 0 and IsKatakuri(v.Name)
+                and (v.HumanoidRootPart.Position - spawnPos).Magnitude <= SPAWN_RADIUS then
+                count = count + 1
+            end
+        end
+        return count
+    end
+
+    local function BringKatakuri(centerPos)
+        if not _B then return end
+        for _, v in pairs(workspace.Enemies:GetChildren()) do
+            if v:IsA("Model") and v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart")
+                and v.Humanoid.Health > 0 and IsKatakuri(v.Name)
+                and (v.HumanoidRootPart.Position - centerPos).Magnitude <= BRING_RADIUS then
+                pcall(function()
+                    v.HumanoidRootPart.CFrame = CFrame.new(centerPos)
+                    v.Humanoid.WalkSpeed = 0
+                    v.Humanoid.JumpPower = 0
+                    if v.Humanoid:FindFirstChild("Animator") then v.Humanoid.Animator:Destroy() end
+                    plr.SimulationRadius = math.huge
+                end)
+            end
+        end
+    end
+
+    local function TweenWait(targetCF, timeout)
+        timeout = timeout or 30
+        if not _G.FarmKatakuri then return end
+        _tp(targetCF)
+        local t = 0
+        repeat
+            wait(0.2); t = t + 0.2
+            if not _G.FarmKatakuri then return end
+        until not plr.Character or not plr.Character:FindFirstChild("HumanoidRootPart")
+            or (plr.Character.HumanoidRootPart.Position - targetCF.Position).Magnitude < 120
+            or t >= timeout
+    end
+
+    shouldTween = true
+    _G.FarmKatakuri = true
+
+    -- Tween đến đảo bánh
+    TweenWait(CakeIslandCF, 60)
+    wait(1)
+
+    local currentSpawnPos = nil
+
+    while _G.FarmKatakuri do
+        pcall(function()
+            if not plr.Character or not plr.Character:FindFirstChild("HumanoidRootPart") then
+                wait(1); return
+            end
+
+            -- Tìm bãi có quái
+            local spawnCF, _ = FindActiveSpawn()
+            if not spawnCF then
+                wait(3); return
+            end
+
+            local spawnPos = spawnCF.Position
+
+            -- Tween sang bãi mới nếu khác bãi cũ
+            if currentSpawnPos == nil or (currentSpawnPos - spawnPos).Magnitude > 50 then
+                currentSpawnPos = spawnPos
+                TweenWait(CFrame.new(spawnPos.X, spawnPos.Y + STAND_Y, spawnPos.Z), 20)
+                wait(0.5)
+                if not _G.FarmKatakuri then return end
+            end
+
+            -- Tìm mob gần nhất
+            local mob = FindNearestMob(spawnPos)
+            if not mob or mob.Humanoid.Health <= 0 then
+                currentSpawnPos = nil; wait(1); return
+            end
+
+            -- Lock và đứng trên đầu mob
+            if not mob:GetAttribute("Locked") then
+                mob:SetAttribute("Locked", mob.HumanoidRootPart.CFrame)
+            end
+            PosMon = mob.HumanoidRootPart.Position
+            local topCF = CFrame.new(PosMon.X, PosMon.Y + STAND_Y, PosMon.Z)
+            block.CFrame = topCF
+            _tp(topCF)
+
+            -- Gom quái
+            BringKatakuri(PosMon)
+
+            -- Đánh
+            EquipWeapon(_G.SelectWeapon)
+            wait(0.05)
+            local equipped = plr.Character:FindFirstChildOfClass("Tool")
+            if equipped then
+                local tip = equipped.ToolTip or ""
+                if tip == "Blox Fruit" then
+                    _tp(mob.HumanoidRootPart.CFrame * CFrame.new(0, 10, 0) * CFrame.Angles(0, math.rad(90), 0))
+                    Useskills("Blox Fruit", "Z"); wait(0.1)
+                    Useskills("Blox Fruit", "X"); wait(0.1)
+                    Useskills("Blox Fruit", "C")
+                else
+                    _tp(mob.HumanoidRootPart.CFrame * CFrame.new(0, STAND_Y, 0) * CFrame.Angles(0, math.rad(180), 0))
                 end
             end
-        end
-    end
-    
-    return mobs
-end
 
--- Hàm tìm bãi quái có quái đang tồn tại
-local function GetSpotWithMobs()
-    for _, spot in pairs(KatakuriConfig.FarmingSpots) do
-        local mobs = GetNearbyKatakuriMobs(spot.CFrame.Position, KatakuriConfig.FarmRadius)
-        if #mobs > 0 then
-            return spot
-        end
-    end
-    return nil
-end
-
--- Hàm di chuyển mượt mà
-local function TweenToPosition(targetCFrame)
-    local character = game.Players.LocalPlayer.Character
-    if not character then return end
-    
-    local rootPart = character:FindFirstChild("HumanoidRootPart")
-    if not rootPart then return end
-    
-    local distance = (rootPart.Position - targetCFrame.Position).Magnitude
-    local tweenInfo = TweenInfo.new(distance / (getgenv().TweenSpeed or 300), Enum.EasingStyle.Linear)
-    
-    local block = workspace:FindFirstChild("Rip_Indra")
-    if not block then
-        block = Instance.new("Part", workspace)
-        block.Name = "Rip_Indra"
-        block.Size = Vector3.new(1, 1, 1)
-        block.Anchored = true
-        block.CanCollide = false
-        block.Transparency = 1
-    end
-    
-    block.CFrame = targetCFrame
-    
-    local tween = game:GetService("TweenService"):Create(block, tweenInfo, {CFrame = targetCFrame})
-    tween:Play()
-    
-    while tween.PlaybackState == Enum.PlaybackState.Playing do
-        if not _G.AutoFarmKatakuri then
-            tween:Cancel()
-            break
-        end
-        task.wait(0.1)
-    end
-end
-
--- Hàm di chuyển đến đảo bánh
-local function GoToCakeIsland()
-    local character = game.Players.LocalPlayer.Character
-    if not character then return end
-    
-    local rootPart = character:FindFirstChild("HumanoidRootPart")
-    if not rootPart then return end
-    
-    local cakeIslandCF = CFrame.new(-2024, 38, -12026)
-    
-    if (rootPart.Position - cakeIslandCF.Position).Magnitude > 500 then
-        if not getgenv().OnFarm then
-            shouldTween = true
-            getgenv().OnFarm = true
-        end
-        
-        TweenToPosition(cakeIslandCF)
-        
-        local timeout = 30
-        local startTime = tick()
-        while tick() - startTime < timeout do
-            if not _G.AutoFarmKatakuri then break end
-            local newRoot = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-            if newRoot and (newRoot.Position - cakeIslandCF.Position).Magnitude <= 100 then
-                break
+            -- Giữ block trên đầu mob không rơi
+            if mob and mob:FindFirstChild("HumanoidRootPart") and mob.Humanoid.Health > 0 then
+                local p = mob.HumanoidRootPart.Position
+                block.CFrame = CFrame.new(p.X, p.Y + STAND_Y, p.Z)
             end
-            task.wait(0.5)
-        end
-    end
-end
 
--- Hàm đứng trên đầu quái và tấn công
-local function AttackMob(mob)
-    if not IsMobAlive(mob) then return end
-    
-    local character = game.Players.LocalPlayer.Character
-    if not character then return end
-    
-    local mobRoot = mob:FindFirstChild("HumanoidRootPart")
-    if not mobRoot then return end
-    
-    -- Trang bị vũ khí đã chọn
-    if _G.SelectWeapon and game.Players.LocalPlayer.Backpack:FindFirstChild(_G.SelectWeapon) then
-        local tool = game.Players.LocalPlayer.Backpack[_G.SelectWeapon]
-        character.Humanoid:EquipTool(tool)
-    end
-    
-    -- Bật Haki nếu cần
-    if getgenv().AutoHakiBuso then
-        pcall(function()
-            if not character:FindFirstChild("HasBuso") then
-                game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("Buso")
+            -- Hết quái thì đổi bãi
+            if CountMobs(spawnPos) == 0 then
+                currentSpawnPos = nil; wait(1)
             end
         end)
-    end
-    
-    -- Đứng trên đầu quái
-    local standPosition = mobRoot.CFrame * CFrame.new(0, KatakuriConfig.AttackHeight, 0)
-    if _tp then
-        _tp(standPosition)
-    else
-        character.HumanoidRootPart.CFrame = standPosition
-    end
-    
-    -- Khóa quái
-    pcall(function()
-        mobRoot.CanCollide = false
-        if mob:FindFirstChild("Humanoid") then
-            mob.Humanoid.WalkSpeed = 0
-            mob.Humanoid.JumpPower = 0
-        end
-    end)
-    
-    -- Tấn công liên tục
-    local lastClick = 0
-    while IsMobAlive(mob) and _G.AutoFarmKatakuri do
-        -- Click chuột trái để tấn công
-        if tick() - lastClick >= 0.05 then
-            lastClick = tick()
-            pcall(function()
-                game:GetService("VirtualInputManager"):SendMouseButtonEvent(0, 0, 0, true, game, 1)
-                task.wait(0.02)
-                game:GetService("VirtualInputManager"):SendMouseButtonEvent(0, 0, 0, false, game, 1)
-            end)
-        end
-        task.wait(0.05)
-    end
-end
 
--- Hàm farm toàn bộ quái trong khu vực
-local function FarmMobsInArea(spot)
-    local hasMobs = false
-    
-    -- Lấy tất cả quái trong khu vực
-    local mobsToFarm = GetNearbyKatakuriMobs(spot.CFrame.Position, KatakuriConfig.FarmRadius)
-    
-    if #mobsToFarm > 0 then
-        hasMobs = true
-        
-        -- Di chuyển đến khu vực
-        local character = game.Players.LocalPlayer.Character
-        local rootPart = character and character:FindFirstChild("HumanoidRootPart")
-        
-        if rootPart and (rootPart.Position - spot.CFrame.Position).Magnitude > 50 then
-            TweenToPosition(spot.CFrame)
-        end
-        
-        -- Farm từng quái
-        for _, mob in pairs(mobsToFarm) do
-            if not _G.AutoFarmKatakuri then break end
-            if IsMobAlive(mob) then
-                AttackMob(mob)
-            end
-        end
+        wait(0.15)
     end
-    
-    return hasMobs
-end
 
--- Main loop
-spawn(function()
-    while task.wait(0.5) do
-        pcall(function()
-            if not _G.AutoFarmKatakuri then
-                if shouldTween then
-                    shouldTween = false
-                    getgenv().OnFarm = false
-                end
-                break
-            end
-            
-            -- Kiểm tra Sea 3
-            if not IsSea3() then
-                task.wait(1)
-                break
-            end
-            
-            -- Bật tween mode
-            if not shouldTween then
-                shouldTween = true
-                getgenv().OnFarm = true
-            end
-            
-            -- Di chuyển đến đảo bánh
-            GoToCakeIsland()
-            
-            if not _G.AutoFarmKatakuri then break end
-            
-            -- Tìm bãi có quái và farm
-            local spotWithMobs = GetSpotWithMobs()
-            
-            if spotWithMobs then
-                FarmMobsInArea(spotWithMobs)
-            else
-                -- Không có quái, đứng yên
-                local character = game.Players.LocalPlayer.Character
-                if character and character:FindFirstChild("Humanoid") then
-                    character.Humanoid:MoveTo(character.HumanoidRootPart.Position)
-                end
-                task.wait(KatakuriConfig.RespawnWait)
-            end
-        end)
-    end
+    shouldTween = false
 end)
-
--- Xử lý respawn
-game.Players.LocalPlayer.CharacterAdded:Connect(function(character)
-    task.wait(2)
-    if _G.AutoFarmKatakuri then
-        shouldTween = true
-        getgenv().OnFarm = true
-    end
-end)
-
-print("Auto Farm Katakuri đã sẵn sàng!")
 
 -- Farm Tyrant of the Skies
 spawn(function()
