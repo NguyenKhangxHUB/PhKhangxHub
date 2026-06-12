@@ -4442,107 +4442,141 @@ spawn(function()
 end)
 
 -- Farm Katakuri
--- Tạo biến điều khiển bật/tắt tính năng farm 4 loại quái Katakuri
-getgenv().AutoFarmKatakuriSea3 = true -- Đổi thành false nếu muốn tắt
+-- Khai báo biến global điều khiển (Bạn hãy gán biến này vào Toggle của bạn)
+-- Khi Bật Toggle thì set: getgenv().AutoFarmKatakuri = true
+-- Khi Tắt Toggle thì set: getgenv().AutoFarmKatakuri = false
+getgenv().AutoFarmKatakuri = false 
 
--- Các thiết lập đồng bộ theo file BananaHub của bạn
-_B = true -- Bật gom quái (Bring Mob)
-_G.SelectWeapon = _G.SelectWeapon or "Melee" -- Vũ khí sử dụng (Melee/Sword/Blox Fruit)
-getgenv().TweenSpeed = getgenv().TweenSpeed or 300 -- Tốc độ tween di chuyển
-
--- Danh sách chỉ gom đúng 4 loại quái tại Đảo Bánh theo yêu cầu
-local Katakuri4Mobs = {
-    "Peanut Scout",
-    "Peanut President",
-    "Ice Cream Chef",
-    "Ice Cream Commander"
+-- Danh sách các bãi quái Katakuri trên Đảo Bánh (Sea 3) để xoay tua liên tục
+local KatakuriMobs = {
+    {Name = "Baking Staff", Pos = CFrame.new(-1932, 38, -12848)},
+    {Name = "Head Baker", Pos = CFrame.new(-1932, 38, -12848)},
+    {Name = "Cake Guard", Pos = CFrame.new(-2024, 38, -12026)},
+    {Name = "Cookie Crafter", Pos = CFrame.new(-2021, 38, -12028)}
 }
 
--- Tọa độ trung tâm đảo bánh ngọt Sea 3 để chờ quái spawn
-local IslandCenterCFrame = CFrame.new(-1932, 38, -12848) 
-
--- Kiểm tra xem có đang ở Sea 3 hay không
-local function IsInSea3()
-    return game.PlaceId == 7449423635 or 85211729168715 or 73902483975735
+-- Hàm tạo bục đứng trên đầu quái để chống lỗi rơi tự do
+local function CreateFarmPlatform()
+    if not workspace:FindFirstChild("Katakuri_Platform") then
+        local Plate = Instance.new("Part")
+        Plate.Name = "Katakuri_Platform"
+        Plate.Size = Vector3.new(10, 1, 10)
+        Plate.Transparency = 1 -- Ẩn đi để không chắn tầm nhìn
+        Plate.Anchored = true
+        Plate.CanCollide = true
+        Plate.Parent = workspace
+    end
 end
 
--- Vòng lặp xử lý logic farm chính
-task.spawn(function()
+-- Vòng lặp chính xử lý Farm Katakuri
+spawn(function()
     while task.wait(0.1) do
-        if getgenv().AutoFarmKatakuriSea3 then
+        if getgenv().AutoFarmKatakuri then
             pcall(function()
-                -- 1. Kiểm tra vị trí thế giới (Sea 3)
-                if not IsInSea3() then
-                    print("Tính năng này chỉ hoạt động ở Sea 3!")
-                    return
-                end
-
-                local player = game.Players.LocalPlayer
-                local character = player.Character
-                if not character or not character:FindFirstChild("HumanoidRootPart") or character.Humanoid.Health <= 0 then 
+                -- 1. KIỂM TRA THẾ GIỚI (Chỉ hoạt động khi ở Sea 3)
+                if not game.PlaceId == 7449423635 or game.PlaceId == 85211729168715 or game.PlaceId == 73902483975735 then 
+                    -- Nếu không phải Sea 3, bạn có thể thêm logic chuyển Sea tại đây nếu cần
                     return 
                 end
-
-                local rootPart = character.HumanoidRootPart
-                local targetMob = nil
-
-                -- 2. Tìm kiếm 1 trong 4 loại quái yêu cầu còn sống
-                for _, mobName in ipairs(Katakuri4Mobs) do
-                    for _, enemy in pairs(workspace.Enemies:GetChildren()) do
-                        if enemy.Name == mobName and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 and enemy:FindFirstChild("HumanoidRootPart") then
-                            targetMob = enemy
-                            break
+                
+                local Player = game:GetService("Players").LocalPlayer
+                local Character = Player.Character or Player.CharacterAdded:Wait()
+                local Root = Character:FindFirstChild("HumanoidRootPart")
+                local Humanoid = Character:FindFirstChild("Humanoid")
+                
+                if not Root or not Humanoid or Humanoid.Health <= 0 then return end
+                
+                -- Tạo bục đứng bảo vệ
+                CreateFarmPlatform()
+                local Platform = workspace:FindFirstChild("Katakuri_Platform")
+                
+                -- Khởi tạo công cụ gom quái (Bring Mob) theo file gốc
+                _B = true 
+                
+                -- 2. TÌM QUÁI HIỆN CÓ TRÊN ĐẢO BÁNH
+                local TargetMob = nil
+                local CurrentConfig = nil
+                
+                for _, config in ipairs(KatakuriMobs) do
+                    local mob = game.Workspace.Enemies:FindFirstChild(config.Name)
+                    if mob and mob:FindFirstChild("Humanoid") and mob.Humanoid.Health > 0 and mob:FindFirstChild("HumanoidRootPart") then
+                        TargetMob = mob
+                        CurrentConfig = config
+                        break
+                    end
+                end
+                
+                -- 3. LOGIC DI CHUYỂN VÀ FARM
+                if TargetMob and CurrentConfig then
+                    local MobRoot = TargetMob:FindFirstChild("HumanoidRootPart")
+                    if MobRoot then
+                        -- Tọa độ đứng trên đầu quái (Cách 45-50 stud mượt mà, chống lỗi rớt)
+                        local FarmCFrame = MobRoot.CFrame * CFrame.new(0, 48, 0)
+                        
+                        -- Cập nhật vị trí bục bảo vệ ngay dưới chân người chơi để không bao giờ bị rơi
+                        if Platform then
+                            Platform.CFrame = FarmCFrame * CFrame.new(0, -3.5, 0)
+                        end
+                        
+                        -- Nếu ở quá xa bãi quái (Vừa từ đảo khác đến hoặc di chuyển giữa các bãi)
+                        if (Root.Position - FarmCFrame.Position).Magnitude > 15 then
+                            _tp(FarmCFrame) -- Gọi hàm Tween mượt có sẵn của file BananaHub
+                        else
+                            -- Đã đến điểm Farm: Khóa vị trí đứng cố định trên đầu quái
+                            Root.CFrame = FarmCFrame
+                            
+                            -- Trang bị vũ khí tự động (Sử dụng cấu trúc lựa chọn vũ khí của file gốc)
+                            if _G.SelectWeapon then
+                                EquipWeapon(_G.SelectWeapon)
+                            else
+                                -- Mặc định dùng Melee nếu chưa chọn vũ khí cụ thể
+                                weaponSc("Melee")
+                            end
+                            
+                            -- Kích hoạt gom quái (BringEnemy) hoạt động liên tục dựa theo tài nguyên có sẵn
+                            if _B then
+                                -- Thiết lập vị trí mục tiêu khóa để hàm BringEnemy hút full bãi quái về một điểm dưới chân bạn
+                                if not TargetMob:GetAttribute("Locked") then 
+                                    TargetMob:SetAttribute("Locked", MobRoot.CFrame) 
+                                end
+                                PosMon = TargetMob:GetAttribute("Locked").Position
+                                BringEnemy()
+                            end
+                            
+                            -- Tự động xả Skill (Click chuột / Sử dụng skill Z, X, C...)
+                            local Tool = Character:FindFirstChildOfClass("Tool")
+                            if Tool then
+                                Tool:Activate() -- Auto Click Đánh thường
+                            end
+                            
+                            -- Thực hiện dùng thêm skill để gom quái nhanh (Tùy chọn)
+                            Useskills("Melee", "Z")
+                            Useskills("Melee", "X")
                         end
                     end
-                    if targetMob then break end
-                end
-
-                -- 3. Di chuyển, khóa vị trí trên đầu quái và tấn công
-                if targetMob then
-                    -- Lưu vị trí gốc phục vụ hàm gom quái (BringEnemy) của BananaHub
-                    if not targetMob:GetAttribute("Locked") then 
-                        targetMob:SetAttribute("Locked", targetMob.HumanoidRootPart.CFrame) 
-                    end
-                    PosMon = targetMob:GetAttribute("Locked").Position
-                    
-                    if BringEnemy then 
-                        BringEnemy() -- Gọi hàm gom quái có sẵn trong script gốc
-                    end
-
-                    if EquipWeapon then 
-                        EquipWeapon(_G.SelectWeapon) -- Tự động cầm vũ khí lên
-                    end
-
-                    -- KHÓA CHẶT TRÊN ĐẦU QUÁI: Cách đầu quái 30 Studs và hướng thẳng xuống dưới
-                    local SafeHeight = 30 
-                    local FarmCFrame = targetMob.HumanoidRootPart.CFrame * CFrame.new(0, SafeHeight, 0) * CFrame.Angles(math.rad(-90), 0, 0)
-                    
-                    shouldTween = true
-                    if _tp then
-                        _tp(FarmCFrame) -- Sử dụng hàm di chuyển tween có sẵn trong file của bạn
-                    else
-                        rootPart.CFrame = FarmCFrame -- Dự phòng nếu hàm _tp chưa được khai báo
-                    end
-
-                    -- Tự động click tấn công quái vật liên tục
-                    local tool = character:FindFirstChildOfClass("Tool")
-                    if tool and tool:FindFirstChild("RemoteEvent") then
-                        tool.RemoteEvent:FireServer("Mouse1", targetMob.HumanoidRootPart.Position)
-                    end
                 else
-                    -- Nếu chưa có hoặc quái chưa kịp spawn, tự động tween về trung tâm đảo để đợi
-                    shouldTween = true
-                    if (IslandCenterCFrame.Position - rootPart.Position).Magnitude > 150 then
-                        if _tp then
-                            _tp(IslandCenterCFrame)
-                        else
-                            rootPart.CFrame = IslandCenterCFrame
+                    -- 4. LOGIC KHI HẾT QUÁI TRÊN ĐẢO (Di chuyển tuần tra qua các bãi đợi spawn)
+                    if Platform then
+                        Platform.CFrame = CFrame.new(0, -999, 0) -- Giấu bục khi không farm
+                    end
+                    
+                    -- Đi tuần tra xoay vòng mượt mà qua các bãi để quét quái liên tục
+                    for _, config in ipairs(KatakuriMobs) do
+                        if (Root.Position - config.Pos.Position).Magnitude > 20 then
+                            _tp(config.Pos * CFrame.new(0, 40, 0))
+                            task.wait(0.5)
+                            break
                         end
                     end
                 end
             end)
         else
-            shouldTween = false -- Ngừng di chuyển khi tắt tính năng farm
+            -- Dọn dẹp bục đứng khi tắt Toggle để không lỗi game
+            local Platform = workspace:FindFirstChild("Katakuri_Platform")
+            if Platform then
+                Platform:Destroy()
+            end
+            task.wait(1)
         end
     end
 end)
