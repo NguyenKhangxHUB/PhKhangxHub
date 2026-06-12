@@ -3947,6 +3947,225 @@ SetAutoFarm:AddToggle("BringMob", {
     end
 })
 
+SetAutoFarm:AddToggle("BringMob", {
+    Title = "Bring Mob New",
+    Default = false,
+    Callback = function(Value)
+        _B = Value
+    end
+})
+-- ============================================================
+-- BRING MOB — bring CẢ mob farm + mob phụ về _lockedBringPos mỗi 0.1s
+-- Không bring nếu có player khác trong phạm vi 500 stud quanh player
+-- ============================================================
+spawn(function()
+    while task.wait(0.1) do
+        pcall(function()
+            -- Đồng bộ getgenv với _G
+            getgenv().IsFarming     = _G.StartFarm
+            getgenv().MaxBringCount = _G.BringCount or 2
+            getgenv().BringMob      = _G.AutoBring
+
+            -- Guard
+            if not getgenv().BringMob  then return end
+            if not getgenv().IsFarming then return end
+
+            local targetMob = getgenv().CurrentTargetMob
+            if not targetMob or not targetMob.Parent then return end
+
+            -- Phải có vị trí đã chốt (tức là tracking đã teleport ít nhất 1 lần)
+            local bringCF = _lockedBringPos
+            if not bringCF then return end
+
+            local myChar = Player.Character
+            if not myChar then return end
+            local myHRP = myChar:FindFirstChild("HumanoidRootPart")
+            if not myHRP then return end
+
+            -- ── CHECK PLAYER KHÁC trong 500 stud — nếu có thì KHÔNG bring ──
+            for _, otherPlayer in ipairs(Players:GetPlayers()) do
+                if otherPlayer == Player then continue end  -- bỏ qua bản thân
+                local otherChar = otherPlayer.Character
+                if not otherChar then continue end
+                local otherHRP = otherChar:FindFirstChild("HumanoidRootPart")
+                if not otherHRP then continue end
+                local distToOther = (otherHRP.Position - myHRP.Position).Magnitude
+                if distToOther <= 500 then
+                    return  -- có player khác gần → bỏ bring lần này
+                end
+            end
+
+            local mobName  = targetMob.Name
+            --   BringCount = 2 → bring thêm 1 (tổng 2 con dưới chân)
+            --   BringCount = 3 → bring thêm 2 (tổng 3 con)
+            local maxExtra = math.max(0, (getgenv().MaxBringCount or 2) - 1)
+
+            -- ── Tìm mob phụ cùng loại, KHÔNG giới hạn khoảng cách ──────
+            -- Collect tất cả mob cùng tên, sort theo khoảng cách gần nhất, lấy maxExtra con
+            local allSame = {}
+            for _, enemy in ipairs(workspace.Enemies:GetChildren()) do
+                if enemy == targetMob then continue end
+                local humanoid = enemy:FindFirstChild("Humanoid")
+                local rootPart = enemy:FindFirstChild("HumanoidRootPart")
+                if humanoid and rootPart and humanoid.Health > 0 and rootPart.Parent then
+                    if enemy.Name == mobName then
+                        local dist = (rootPart.Position - myHRP.Position).Magnitude
+                        -- Chỉ bring mob phụ trong phạm vi 300 stud tính từ player
+                        if dist <= 300 then
+                            table.insert(allSame, { rp = rootPart, dist = dist })
+                        end
+                    end
+                end
+            end
+            -- Sort gần → xa
+            table.sort(allSame, function(a, b) return a.dist < b.dist end)
+
+            local candidates = {}
+            for i = 1, math.min(maxExtra, #allSame) do
+                table.insert(candidates, allSame[i].rp)
+            end
+
+            -- ── Bring mob farm (luôn bring, kể cả khi không có mob phụ) ─
+            local farmHRP = targetMob:FindFirstChild("HumanoidRootPart")
+            local farmHum = targetMob:FindFirstChild("Humanoid")
+            if farmHRP and farmHum and farmHum.Health > 0 then
+                farmHRP.CFrame = bringCF
+                sethiddenproperty(Player, "SimulationRadius", math.huge)
+            end
+
+            -- ── Bring mob phụ (gần nhất, không giới hạn khoảng cách) ───
+            for _, rp in ipairs(candidates) do
+                rp.CFrame = bringCF
+                sethiddenproperty(Player, "SimulationRadius", math.huge)
+            end
+        end)
+    end
+end)
+
+SetAutoFarm:AddToggle("BringMob", {
+    Title = "Bring Mob Tween",
+    Default = false,
+    Callback = function(Value)
+        _B = Value
+    end
+})
+--// ================= BRING MOB LOGIC =================
+
+--------------------------------------------------------------------
+--------------------------------------------------------------------
+-- BRING MOBS - Logic Bring Mob Mới
+-- Tính năng:
+--   - Bring mob cùng loại về vị trí mob farm (thay vì vị trí trung bình)
+--   - Phạm vi bring: 350 studs quanh mob farm
+--   - Check TargetPlayer: nếu có player khác 500 studs quanh localplayer → không bring
+--   - Teleport + Tween dựa theo FlySpeed ÷ 1.5
+--   - Anti-lag: SimulationRadius gọi 1 lần, chỉ destroy Animator khi cần
+-- MaxBring: giới hạn số mob được bring qua getgenv().MaxBringCount
+--------------------------------------------------------------------
+task.spawn(function()
+    while task.wait(0.5) do
+        pcall(function()
+            if not getgenv().BringMob then return end
+            if not getgenv().IsFarming then return end
+
+            -- Lấy mob đang farm làm mốc bring
+            local targetMob = getgenv().CurrentTargetMob
+            if not targetMob then return end
+            local targetHRP = targetMob:FindFirstChild("HumanoidRootPart")
+            local targetHum = targetMob:FindFirstChild("Humanoid")
+            if not targetHRP or not targetHum then return end
+            if targetHum.Health <= 0 then return end
+
+            --// CHECK TARGETPLAYER: 500 studs quanh localplayer
+            local myHRP = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+            if not myHRP then return end
+            local myPos = myHRP.Position
+            
+            -- Kiểm tra có TargetPlayer (player khác) trong 500 studs không
+            local hasTargetPlayer = false
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p ~= player and p.Character then
+                    local pHRP = p.Character:FindFirstChild("HumanoidRootPart")
+                    if pHRP and (pHRP.Position - myPos).Magnitude <= 500 then
+                        hasTargetPlayer = true
+                        break
+                    end
+                end
+            end
+            
+            -- Nếu có TargetPlayer thì không bring
+            if hasTargetPlayer then return end
+
+            -- Vị trí cố định của mob farm - tất cả mob bring về đây
+            local farmPos    = targetHRP.Position
+            local targetName = targetMob.Name
+            local maxBring   = getgenv().MaxBringCount or 2
+
+            -- Tính toán khoảng cách teleport + tween dựa theo FlySpeed
+            -- Formula: khoảng cách = FlySpeed ÷ 1.5
+            local flySpeed = getgenv().FlySpeed or 180
+            local teleportDistance = flySpeed / 1.5
+
+            -- SimulationRadius gọi 1 lần, không lặp trong loop mob
+            pcall(function()
+                sethiddenproperty(player, "SimulationRadius", math.huge)
+            end)
+
+            -- Bring mob cùng loại trong phạm vi 350 quanh mob farm
+            local brought = 0
+            for _, v in ipairs(workspace.Enemies:GetChildren()) do
+                if brought >= maxBring then break end
+                if v ~= targetMob and v.Name == targetName then
+                    local hum = v:FindFirstChild("Humanoid")
+                    local hrp = v:FindFirstChild("HumanoidRootPart")
+                    if hum and hrp and hum.Health > 0 then
+                        local dist = (hrp.Position - farmPos).Magnitude
+                        
+                        -- Kiểm tra mob nằm trong phạm vi 350 studs quanh mob farm
+                        if dist > 8 and dist <= 350 then
+                            task.spawn(function()
+                                pcall(function()
+                                    -- Nếu khoảng cách > teleportDistance: teleport trước
+                                    if dist > teleportDistance then
+                                        hrp.CFrame = CFrame.new(farmPos + Vector3.new(0, 3, 0))
+                                        task.wait(0.1)
+                                    end
+                                    
+                                    -- Tween từ vị trí hiện tại (hoặc sau teleport) về farmPos
+                                    local tweenInfo = TweenInfo.new(
+                                        0.2,
+                                        Enum.EasingStyle.Linear,
+                                        Enum.EasingDirection.Out
+                                    )
+                                    local tween = TweenService:Create(
+                                        hrp,
+                                        tweenInfo,
+                                        { CFrame = CFrame.new(farmPos + Vector3.new(0, 0, 0)) }
+                                    )
+                                    
+                                    -- Vô hiệu hóa tính năng của mob
+                                    hrp.CanCollide = false
+                                    hrp.Velocity = Vector3.zero
+                                    hum.WalkSpeed = 0
+                                    hum.JumpPower = 0
+                                    
+                                    -- Destroy Animator nếu tồn tại
+                                    local anim = hum:FindFirstChild("Animator")
+                                    if anim then anim:Destroy() end
+                                    
+                                    tween:Play()
+                                    task.wait(0.25)
+                                end)
+                            end)
+                            brought = brought + 1
+                        end
+                    end
+                end
+            end
+        end)
+    end
+end)
+
 SetAutoFarm:AddToggle("ObservationOpen", {
     Title = "Teleport Y if low hearth",
     Default = false,
@@ -4442,141 +4661,73 @@ spawn(function()
 end)
 
 -- Farm Katakuri
--- Khai báo biến global điều khiển (Bạn hãy gán biến này vào Toggle của bạn)
--- Khi Bật Toggle thì set: getgenv().AutoFarmKatakuri = true
--- Khi Tắt Toggle thì set: getgenv().AutoFarmKatakuri = false
-getgenv().AutoFarmKatakuri = false 
-
--- Danh sách các bãi quái Katakuri trên Đảo Bánh (Sea 3) để xoay tua liên tục
-local KatakuriMobs = {
-    {Name = "Baking Staff", Pos = CFrame.new(-1932, 38, -12848)},
-    {Name = "Head Baker", Pos = CFrame.new(-1932, 38, -12848)},
-    {Name = "Cake Guard", Pos = CFrame.new(-2024, 38, -12026)},
-    {Name = "Cookie Crafter", Pos = CFrame.new(-2021, 38, -12028)}
-}
-
--- Hàm tạo bục đứng trên đầu quái để chống lỗi rơi tự do
-local function CreateFarmPlatform()
-    if not workspace:FindFirstChild("Katakuri_Platform") then
-        local Plate = Instance.new("Part")
-        Plate.Name = "Katakuri_Platform"
-        Plate.Size = Vector3.new(10, 1, 10)
-        Plate.Transparency = 1 -- Ẩn đi để không chắn tầm nhìn
-        Plate.Anchored = true
-        Plate.CanCollide = true
-        Plate.Parent = workspace
-    end
-end
-
--- Vòng lặp chính xử lý Farm Katakuri
 spawn(function()
-    while task.wait(0.1) do
-        if getgenv().AutoFarmKatakuri then
+    while task.wait(1) do
+        if _G.StartFarm and _G.MethodSelect == "Farm Katakuri" then
             pcall(function()
-                -- 1. KIỂM TRA THẾ GIỚI (Chỉ hoạt động khi ở Sea 3)
-                if not game.PlaceId == 7449423635 or game.PlaceId == 85211729168715 or game.PlaceId == 73902483975735 then 
-                    -- Nếu không phải Sea 3, bạn có thể thêm logic chuyển Sea tại đây nếu cần
-                    return 
-                end
+                local player = game.Players.LocalPlayer
+                local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+                local questUI = player.PlayerGui:FindFirstChild("Main") and 
+                                player.PlayerGui.Main:FindFirstChild("Quest")
+                local enemies = workspace.Enemies
+                local bigMirror = workspace.Map.CakeLoaf.BigMirror
                 
-                local Player = game:GetService("Players").LocalPlayer
-                local Character = Player.Character or Player.CharacterAdded:Wait()
-                local Root = Character:FindFirstChild("HumanoidRootPart")
-                local Humanoid = Character:FindFirstChild("Humanoid")
+                if not root then return end
+                if not bigMirror:FindFirstChild("Other") then
+                    _tp(CFrame.new(-2077, 252, -12373))
+                end        
                 
-                if not Root or not Humanoid or Humanoid.Health <= 0 then return end
-                
-                -- Tạo bục đứng bảo vệ
-                CreateFarmPlatform()
-                local Platform = workspace:FindFirstChild("Katakuri_Platform")
-                
-                -- Khởi tạo công cụ gom quái (Bring Mob) theo file gốc
-                _B = true 
-                
-                -- 2. TÌM QUÁI HIỆN CÓ TRÊN ĐẢO BÁNH
-                local TargetMob = nil
-                local CurrentConfig = nil
-                
-                for _, config in ipairs(KatakuriMobs) do
-                    local mob = game.Workspace.Enemies:FindFirstChild(config.Name)
-                    if mob and mob:FindFirstChild("Humanoid") and mob.Humanoid.Health > 0 and mob:FindFirstChild("HumanoidRootPart") then
-                        TargetMob = mob
-                        CurrentConfig = config
-                        break
-                    end
-                end
-                
-                -- 3. LOGIC DI CHUYỂN VÀ FARM
-                if TargetMob and CurrentConfig then
-                    local MobRoot = TargetMob:FindFirstChild("HumanoidRootPart")
-                    if MobRoot then
-                        -- Tọa độ đứng trên đầu quái (Cách 45-50 stud mượt mà, chống lỗi rớt)
-                        local FarmCFrame = MobRoot.CFrame * CFrame.new(0, 48, 0)
-                        
-                        -- Cập nhật vị trí bục bảo vệ ngay dưới chân người chơi để không bao giờ bị rơi
-                        if Platform then
-                            Platform.CFrame = FarmCFrame * CFrame.new(0, -3.5, 0)
-                        end
-                        
-                        -- Nếu ở quá xa bãi quái (Vừa từ đảo khác đến hoặc di chuyển giữa các bãi)
-                        if (Root.Position - FarmCFrame.Position).Magnitude > 15 then
-                            _tp(FarmCFrame) -- Gọi hàm Tween mượt có sẵn của file BananaHub
-                        else
-                            -- Đã đến điểm Farm: Khóa vị trí đứng cố định trên đầu quái
-                            Root.CFrame = FarmCFrame
-                            
-                            -- Trang bị vũ khí tự động (Sử dụng cấu trúc lựa chọn vũ khí của file gốc)
-                            if _G.SelectWeapon then
-                                EquipWeapon(_G.SelectWeapon)
-                            else
-                                -- Mặc định dùng Melee nếu chưa chọn vũ khí cụ thể
-                                weaponSc("Melee")
-                            end
-                            
-                            -- Kích hoạt gom quái (BringEnemy) hoạt động liên tục dựa theo tài nguyên có sẵn
-                            if _B then
-                                -- Thiết lập vị trí mục tiêu khóa để hàm BringEnemy hút full bãi quái về một điểm dưới chân bạn
-                                if not TargetMob:GetAttribute("Locked") then 
-                                    TargetMob:SetAttribute("Locked", MobRoot.CFrame) 
-                                end
-                                PosMon = TargetMob:GetAttribute("Locked").Position
-                                BringEnemy()
-                            end
-                            
-                            -- Tự động xả Skill (Click chuột / Sử dụng skill Z, X, C...)
-                            local Tool = Character:FindFirstChildOfClass("Tool")
-                            if Tool then
-                                Tool:Activate() -- Auto Click Đánh thường
-                            end
-                            
-                            -- Thực hiện dùng thêm skill để gom quái nhanh (Tùy chọn)
-                            Useskills("Melee", "Z")
-                            Useskills("Melee", "X")
+                if bigMirror.Other.Transparency == 0 or enemies:FindFirstChild("Cake Prince") then
+                    local v = GetConnectionEnemies("Cake Prince")
+                    if v then
+                        repeat 
+                            wait() 
+                            Attack.Kill2(v, _G.StartFarm)  -- Sửa: dùng _G.StartFarm thay vì _G.Auto_Cake_Prince
+                        until not _G.StartFarm or not v.Parent or v.Humanoid.Health <= 0
+                    else
+                        if bigMirror.Other.Transparency == 0 and (CFrame.new(-1990.67, 4533, -14973.67).Position - root.Position).Magnitude >= 2000 then
+                            _tp(CFrame.new(-2151.82, 149.32, -12404.91))
                         end
                     end
                 else
-                    -- 4. LOGIC KHI HẾT QUÁI TRÊN ĐẢO (Di chuyển tuần tra qua các bãi đợi spawn)
-                    if Platform then
-                        Platform.CFrame = CFrame.new(0, -999, 0) -- Giấu bục khi không farm
-                    end
-                    
-                    -- Đi tuần tra xoay vòng mượt mà qua các bãi để quét quái liên tục
-                    for _, config in ipairs(KatakuriMobs) do
-                        if (Root.Position - config.Pos.Position).Magnitude > 20 then
-                            _tp(config.Pos * CFrame.new(0, 40, 0))
-                            task.wait(0.5)
-                            break
+                    local CakePrince = {"Cookie Crafter","Cake Guard","Baking Staff","Head Baker"}
+                    local v = GetConnectionEnemies(CakePrince)
+                    if v then
+                        if _G.AcceptQuestC and questUI and not questUI.Visible then
+                            local questPos = CFrame.new(-1927.92, 37.8, -12842.54)
+                            _tp(questPos)
+                            
+                            local attempts = 0
+                            while attempts < 50 and (questPos.Position - root.Position).Magnitude > 50 do
+                                wait(0.2)
+                                attempts = attempts + 1
+                            end
+                            
+                            local randomQuest = math.random(1, 4)
+                            local questData = {
+                                [1] = {"StartQuest", "CakeQuest2", 2},
+                                [2] = {"StartQuest", "CakeQuest2", 1},
+                                [3] = {"StartQuest", "CakeQuest1", 1},
+                                [4] = {"StartQuest", "CakeQuest1", 2}
+                            }                    
+                            
+                            pcall(function()
+                                game.ReplicatedStorage.Remotes.CommF_:InvokeServer(unpack(questData[randomQuest]))
+                            end)
                         end
+                        
+                        repeat 
+                            wait() 
+                            Attack.Kill(v, _G.StartFarm)  -- Sửa: dùng _G.StartFarm
+                        until not _G.StartFarm or not v or not v.Parent or 
+                              (v.Humanoid and v.Humanoid.Health <= 0) or 
+                              bigMirror.Other.Transparency == 0 or 
+                              (_G.AcceptQuestC and questUI and not questUI.Visible)
+                    else
+                        _tp(CFrame.new(-2077, 252, -12373))
                     end
                 end
             end)
-        else
-            -- Dọn dẹp bục đứng khi tắt Toggle để không lỗi game
-            local Platform = workspace:FindFirstChild("Katakuri_Platform")
-            if Platform then
-                Platform:Destroy()
-            end
-            task.wait(1)
         end
     end
 end)
@@ -6212,6 +6363,235 @@ spawn(function()
                     _tp(Nearest:GetPivot()) 
                 end
             end)
+        end
+    end
+end)
+
+-- ============================================
+-- CHEST BYPASS - TELEPORT TỨC THỜI
+-- Auto reset sau 15 chest
+-- Tự động dừng khi có God's Chalice / Fist of Darkness
+-- ============================================
+
+local ChestBypassEnabled = false
+local ChestCount = 0
+local CHEST_RESET_LIMIT = 15  -- Reset sau 15 chest
+
+-- Các item cần dừng lại
+local STOP_ITEMS = {
+    "God's Chalice",
+    "Sweet Chalice", 
+    "Fist of Darkness"
+}
+
+-- Hàm kiểm tra có item cần dừng không
+local function HasStopItem()
+    for _, itemName in ipairs(STOP_ITEMS) do
+        if getgenv().GetBP and getgenv().GetBP(itemName) then
+            return true, itemName
+        end
+    end
+    return false, nil
+end
+
+-- Hàm teleport tức thời (không tween)
+local function InstantTeleport(cframe)
+    local char = game.Players.LocalPlayer.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        -- Tắt noclip tạm thời để teleport
+        local oldCollide = {}
+        for _, part in pairs(char:GetDescendants()) do
+            if part:IsA("BasePart") then
+                oldCollide[part] = part.CanCollide
+                part.CanCollide = false
+            end
+        end
+        
+        -- Teleport tức thì
+        char.HumanoidRootPart.CFrame = cframe
+        
+        -- Khôi phục collide
+        task.wait(0.05)
+        for part, canCollide in pairs(oldCollide) do
+            if part and part.Parent then
+                part.CanCollide = canCollide
+            end
+        end
+        return true
+    end
+    return false
+end
+
+-- Hàm reset server (rejoin)
+local function ResetServer()
+    local player = game.Players.LocalPlayer
+    local teleportService = game:GetService("TeleportService")
+    local placeId = game.PlaceId
+    
+    print("[Chest Bypass] 🔄 Đang reset server...")
+    ChestCount = 0
+    task.wait(0.5)
+    teleportService:Teleport(placeId, player)
+end
+
+-- Hàm thu thập chest
+local function CollectChest(chest)
+    pcall(function()
+        -- Teleport đến chest
+        local chestPos = chest:GetPivot()
+        InstantTeleport(chestPos)
+        
+        -- Fire proximity prompt
+        local prompt = chest:FindFirstChildOfClass("ProximityPrompt")
+        if prompt then
+            fireproximityprompt(prompt, 100)
+        end
+        
+        -- Tăng số chest đã nhặt
+        ChestCount = ChestCount + 1
+        print("[Chest Bypass] 📦 Đã nhặt chest #" .. ChestCount)
+        
+        -- Kiểm tra reset
+        if ChestCount >= CHEST_RESET_LIMIT then
+            ResetServer()
+        end
+    end)
+end
+
+-- Hàm chính - tìm và nhặt chest
+local function ChestBypassLoop()
+    while ChestBypassEnabled and task.wait(0.05) do
+        pcall(function()
+            -- Kiểm tra item cần dừng
+            local hasItem, itemName = HasStopItem()
+            if hasItem then
+                print("[Chest Bypass] 🛑 Phát hiện " .. itemName .. " - Dừng lại!")
+                ChestBypassEnabled = false
+                break
+            end
+            
+            -- Lấy tất cả chest trong game
+            local collectionService = game:GetService("CollectionService")
+            local chests = collectionService:GetTagged("_ChestTagged")
+            local player = game.Players.LocalPlayer
+            local character = player.Character
+            
+            if not character or not character:FindFirstChild("HumanoidRootPart") then
+                task.wait(0.5)
+                return
+            end
+            
+            local myPos = character.HumanoidRootPart.Position
+            local nearestChest = nil
+            local nearestDist = math.huge
+            
+            -- Tìm chest gần nhất
+            for _, chest in ipairs(chests) do
+                if chest and chest.Parent then
+                    local chestPos = chest:GetPivot().Position
+                    local dist = (myPos - chestPos).Magnitude
+                    
+                    -- Kiểm tra chest có thể nhặt được (không bị disabled)
+                    local isDisabled = chest:GetAttribute("IsDisabled")
+                    if not isDisabled and dist < nearestDist then
+                        nearestDist = dist
+                        nearestChest = chest
+                    end
+                end
+            end
+            
+            -- Nhặt chest gần nhất
+            if nearestChest then
+                CollectChest(nearestChest)
+            end
+        end)
+    end
+end
+
+-- ============================================
+-- THÊM VÀO UI (CHÈN VÀO TAB "Farming Other")
+-- ============================================
+
+-- Tìm tab "Farming Other" hoặc tạo mới
+local FarmingOther = Window:FindTab("Farming Other")
+if not FarmingOther then
+    FarmingOther = Window:AddTab("Farming Other")
+end
+
+-- Tạo groupbox cho Chest Bypass
+local ChestBypassGroup = FarmingOther:AddLeftGroupbox("⚡ Chest Bypass")
+
+-- Thông báo trạng thái
+local ChestStatusLabel = ChestBypassGroup:AddLabel("Status: ❌ Stopped")
+local ChestCounterLabel = ChestBypassGroup:AddLabel("Chest collected: 0 / 15")
+
+-- Slider chọn số chest trước khi reset
+ChestBypassGroup:AddSlider({
+    Title = "Reset after (chests)",
+    Description = "Auto reset after collecting this many chests",
+    Min = 5,
+    Max = 30,
+    Default = 15,
+    Rounding = 0,
+    Callback = function(Value)
+        CHEST_RESET_LIMIT = Value
+    end
+})
+
+-- Toggle chính
+ChestBypassGroup:AddToggle("ChestBypassToggle", {
+    Title = "⚡ Enable Chest Bypass",
+    Description = "Instant teleport to chests | Auto reset",
+    Default = false,
+    Callback = function(Value)
+        ChestBypassEnabled = Value
+        
+        if Value then
+            ChestCount = 0
+            ChestStatusLabel:SetText("Status: 🟢 Running")
+            ChestCounterLabel:SetText("Chest collected: 0 / " .. CHEST_RESET_LIMIT)
+            print("[Chest Bypass] 🚀 Đã bật! Teleport tức thời đến chest...")
+            
+            -- Chạy loop
+            task.spawn(ChestBypassLoop)
+        else
+            ChestStatusLabel:SetText("Status: ❌ Stopped")
+            print("[Chest Bypass] 🛑 Đã tắt!")
+        end
+    end
+})
+
+-- Nút reset thủ công
+ChestBypassGroup:AddButton({
+    Title = "Reset Server Now",
+    Callback = function()
+        ResetServer()
+    end
+})
+
+-- Nút reset counter
+ChestBypassGroup:AddButton({
+    Title = "Reset Chest Counter",
+    Callback = function()
+        ChestCount = 0
+        ChestCounterLabel:SetText("Chest collected: 0 / " .. CHEST_RESET_LIMIT)
+        print("[Chest Bypass] Counter reset to 0")
+    end
+})
+
+-- Cập nhật label counter liên tục
+task.spawn(function()
+    while task.wait(1) do
+        if ChestCounterLabel and ChestBypassEnabled then
+            ChestCounterLabel:SetText("Chest collected: " .. ChestCount .. " / " .. CHEST_RESET_LIMIT)
+            
+            -- Cập nhật status với thông tin item đặc biệt
+            local hasItem, itemName = HasStopItem()
+            if hasItem then
+                ChestStatusLabel:SetText("Status: 🛑 Stopped - Found " .. itemName)
+            else
+                ChestStatusLabel:SetText("Status: 🟢 Running")
+            end
         end
     end
 end)
