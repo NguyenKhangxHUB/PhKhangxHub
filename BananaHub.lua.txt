@@ -5657,7 +5657,7 @@ end)
 
 DarkbeardBoss = Stack:AddLeftGroupbox("Boss Darkbeard")
 DarkbeardBoss:AddToggle("DarkBreadNormal", {
-    Title = "Auto Darkbread",
+    Title = "Auto Darkbeard",
     Default = false,
     Callback = function(Value)
         _G.Auto_Def_DarkCoat = Value
@@ -5685,7 +5685,7 @@ spawn(function()
 end)
 
 DarkbeardBoss:AddToggle("DarkBreadHop", {
-    Title = "Auto Darkbread [ Hop Server ]",
+    Title = "Auto Darkbeard [ Hop Server ]",
     Default = false,
     Callback = function(Value)
         _G.DarkbreadHop = Value
@@ -5710,6 +5710,97 @@ spawn(function()
             end)
         end
     end
+end)
+
+FindIsland = Window:AddTab("FindIsland")
+
+FindIsland = Items:AddLeftGroupbox("Mirage Island")
+FindIsland:AddToggle("MirageIslandFind", {
+    Title = "Auto Find Mirage Island",
+    Default = false,
+    Callback = function(Value)
+        _G.FindMirage = Value
+     end
+})
+spawn(function()
+	while wait() do
+		if _G.FindMirage then
+			pcall(function()
+				if not workspace._WorldOrigin.Locations:FindFirstChild("Mirage Island", true) then
+					local Y = CheckBoat();
+					if not Y then
+						local Y = CFrame.new(-16927.451, 9.086, 433.864);
+						TeleportToTarget(Y);
+						if (Y.Position - d.Character.HumanoidRootPart.Position).Magnitude <= 10 then
+							Q.Remotes.CommF_:InvokeServer("BuyBoat", _G.SelectedBoat);
+						end;
+					else
+						if d.Character.Humanoid.Sit == false then
+							local d = Y.VehicleSeat.CFrame * CFrame.new(0, 1, 0);
+							_tp(d);
+						else
+							repeat
+								wait();
+								local Y = CFrame.new(-10000000, 31, 37016.25);
+								if CheckEnemiesBoat() or CheckTerrorShark() or CheckPirateGrandBrigade() then
+									_tp(CFrame.new(-10000000, 150, 37016.25));
+								else
+									_tp(CFrame.new(-10000000, 31, 37016.25));
+								end;
+							until not _G.FindMirage or (Y.Position - d.Character.HumanoidRootPart.Position).Magnitude <= 10 or workspace._WorldOrigin.Locations:FindFirstChild("Mirage Island") or d.Character.Humanoid.Sit == false;
+							d.Character.Humanoid.Sit = false;
+						end;
+					end;
+				else
+					_tp(workspace.Map.MysticIsland.Center.CFrame * CFrame.new(0, 300, 0));
+				end;
+			end);
+		end;
+	end;
+end)
+
+FindIsland:AddToggle("KitsuneIslandFind", {
+    Title = "Auto Find Kitsune Island",
+    Default = false,
+    Callback = function(Value)
+        _G.AutofindKitIs = Value
+    end
+})
+spawn(function()
+	while wait() do
+		if _G.AutofindKitIs then
+			pcall(function()
+				if not workspace._WorldOrigin.Locations:FindFirstChild("Kitsune Island", true) then
+					local Y = CheckBoat();
+					if not Y then
+						local Y = CFrame.new(-16927.451, 9.086, 433.864);
+						TeleportToTarget(Y);
+						if (Y.Position - d.Character.HumanoidRootPart.Position).Magnitude <= 10 then
+							Q.Remotes.CommF_:InvokeServer("BuyBoat", _G.SelectedBoat);
+						end;
+					else
+						if d.Character.Humanoid.Sit == false then
+							local d = Y.VehicleSeat.CFrame * CFrame.new(0, 1, 0);
+							_tp(d);
+						else
+							local Y = CFrame.new(-10000000, 31, 37016.25);
+							repeat
+								wait();
+								if CheckEnemiesBoat() or CheckTerrorShark() or CheckPirateGrandBrigade() then
+									_tp(CFrame.new(-10000000, 150, 37016.25));
+								else
+									_tp(CFrame.new(-10000000, 31, 37016.25));
+								end;
+							until not _G.AutofindKitIs or (Y.Position - d.Character.HumanoidRootPart.Position).Magnitude <= 10 or workspace._WorldOrigin.Locations:FindFirstChild("Kitsune Island") or d.Character.Humanoid.Sit == false;
+							d.Character.Humanoid.Sit = false;
+						end;
+					end;
+				else
+					_tp((workspace._WorldOrigin.Locations:FindFirstChild("Kitsune Island")).CFrame * CFrame.new(0, 500, 0));
+				end;
+			end);
+		end;
+	end;
 end)
 
 Other = Window:AddTab("Farming Other")
@@ -6367,235 +6458,6 @@ spawn(function()
     end
 end)
 
--- ============================================
--- CHEST BYPASS - TELEPORT TỨC THỜI
--- Auto reset sau 15 chest
--- Tự động dừng khi có God's Chalice / Fist of Darkness
--- ============================================
-
-local ChestBypassEnabled = false
-local ChestCount = 0
-local CHEST_RESET_LIMIT = 15  -- Reset sau 15 chest
-
--- Các item cần dừng lại
-local STOP_ITEMS = {
-    "God's Chalice",
-    "Sweet Chalice", 
-    "Fist of Darkness"
-}
-
--- Hàm kiểm tra có item cần dừng không
-local function HasStopItem()
-    for _, itemName in ipairs(STOP_ITEMS) do
-        if getgenv().GetBP and getgenv().GetBP(itemName) then
-            return true, itemName
-        end
-    end
-    return false, nil
-end
-
--- Hàm teleport tức thời (không tween)
-local function InstantTeleport(cframe)
-    local char = game.Players.LocalPlayer.Character
-    if char and char:FindFirstChild("HumanoidRootPart") then
-        -- Tắt noclip tạm thời để teleport
-        local oldCollide = {}
-        for _, part in pairs(char:GetDescendants()) do
-            if part:IsA("BasePart") then
-                oldCollide[part] = part.CanCollide
-                part.CanCollide = false
-            end
-        end
-        
-        -- Teleport tức thì
-        char.HumanoidRootPart.CFrame = cframe
-        
-        -- Khôi phục collide
-        task.wait(0.05)
-        for part, canCollide in pairs(oldCollide) do
-            if part and part.Parent then
-                part.CanCollide = canCollide
-            end
-        end
-        return true
-    end
-    return false
-end
-
--- Hàm reset server (rejoin)
-local function ResetServer()
-    local player = game.Players.LocalPlayer
-    local teleportService = game:GetService("TeleportService")
-    local placeId = game.PlaceId
-    
-    print("[Chest Bypass] 🔄 Đang reset server...")
-    ChestCount = 0
-    task.wait(0.5)
-    teleportService:Teleport(placeId, player)
-end
-
--- Hàm thu thập chest
-local function CollectChest(chest)
-    pcall(function()
-        -- Teleport đến chest
-        local chestPos = chest:GetPivot()
-        InstantTeleport(chestPos)
-        
-        -- Fire proximity prompt
-        local prompt = chest:FindFirstChildOfClass("ProximityPrompt")
-        if prompt then
-            fireproximityprompt(prompt, 100)
-        end
-        
-        -- Tăng số chest đã nhặt
-        ChestCount = ChestCount + 1
-        print("[Chest Bypass] 📦 Đã nhặt chest #" .. ChestCount)
-        
-        -- Kiểm tra reset
-        if ChestCount >= CHEST_RESET_LIMIT then
-            ResetServer()
-        end
-    end)
-end
-
--- Hàm chính - tìm và nhặt chest
-local function ChestBypassLoop()
-    while ChestBypassEnabled and task.wait(0.05) do
-        pcall(function()
-            -- Kiểm tra item cần dừng
-            local hasItem, itemName = HasStopItem()
-            if hasItem then
-                print("[Chest Bypass] 🛑 Phát hiện " .. itemName .. " - Dừng lại!")
-                ChestBypassEnabled = false
-                break
-            end
-            
-            -- Lấy tất cả chest trong game
-            local collectionService = game:GetService("CollectionService")
-            local chests = collectionService:GetTagged("_ChestTagged")
-            local player = game.Players.LocalPlayer
-            local character = player.Character
-            
-            if not character or not character:FindFirstChild("HumanoidRootPart") then
-                task.wait(0.5)
-                return
-            end
-            
-            local myPos = character.HumanoidRootPart.Position
-            local nearestChest = nil
-            local nearestDist = math.huge
-            
-            -- Tìm chest gần nhất
-            for _, chest in ipairs(chests) do
-                if chest and chest.Parent then
-                    local chestPos = chest:GetPivot().Position
-                    local dist = (myPos - chestPos).Magnitude
-                    
-                    -- Kiểm tra chest có thể nhặt được (không bị disabled)
-                    local isDisabled = chest:GetAttribute("IsDisabled")
-                    if not isDisabled and dist < nearestDist then
-                        nearestDist = dist
-                        nearestChest = chest
-                    end
-                end
-            end
-            
-            -- Nhặt chest gần nhất
-            if nearestChest then
-                CollectChest(nearestChest)
-            end
-        end)
-    end
-end
-
--- ============================================
--- THÊM VÀO UI (CHÈN VÀO TAB "Farming Other")
--- ============================================
-
--- Tìm tab "Farming Other" hoặc tạo mới
-local FarmingOther = Window:FindTab("Farming Other")
-if not FarmingOther then
-    FarmingOther = Window:AddTab("Farming Other")
-end
-
--- Tạo groupbox cho Chest Bypass
-local ChestBypassGroup = FarmingOther:AddLeftGroupbox("⚡ Chest Bypass")
-
--- Thông báo trạng thái
-local ChestStatusLabel = ChestBypassGroup:AddLabel("Status: ❌ Stopped")
-local ChestCounterLabel = ChestBypassGroup:AddLabel("Chest collected: 0 / 15")
-
--- Slider chọn số chest trước khi reset
-ChestBypassGroup:AddSlider({
-    Title = "Reset after (chests)",
-    Description = "Auto reset after collecting this many chests",
-    Min = 5,
-    Max = 30,
-    Default = 15,
-    Rounding = 0,
-    Callback = function(Value)
-        CHEST_RESET_LIMIT = Value
-    end
-})
-
--- Toggle chính
-ChestBypassGroup:AddToggle("ChestBypassToggle", {
-    Title = "⚡ Enable Chest Bypass",
-    Description = "Instant teleport to chests | Auto reset",
-    Default = false,
-    Callback = function(Value)
-        ChestBypassEnabled = Value
-        
-        if Value then
-            ChestCount = 0
-            ChestStatusLabel:SetText("Status: 🟢 Running")
-            ChestCounterLabel:SetText("Chest collected: 0 / " .. CHEST_RESET_LIMIT)
-            print("[Chest Bypass] 🚀 Đã bật! Teleport tức thời đến chest...")
-            
-            -- Chạy loop
-            task.spawn(ChestBypassLoop)
-        else
-            ChestStatusLabel:SetText("Status: ❌ Stopped")
-            print("[Chest Bypass] 🛑 Đã tắt!")
-        end
-    end
-})
-
--- Nút reset thủ công
-ChestBypassGroup:AddButton({
-    Title = "Reset Server Now",
-    Callback = function()
-        ResetServer()
-    end
-})
-
--- Nút reset counter
-ChestBypassGroup:AddButton({
-    Title = "Reset Chest Counter",
-    Callback = function()
-        ChestCount = 0
-        ChestCounterLabel:SetText("Chest collected: 0 / " .. CHEST_RESET_LIMIT)
-        print("[Chest Bypass] Counter reset to 0")
-    end
-})
-
--- Cập nhật label counter liên tục
-task.spawn(function()
-    while task.wait(1) do
-        if ChestCounterLabel and ChestBypassEnabled then
-            ChestCounterLabel:SetText("Chest collected: " .. ChestCount .. " / " .. CHEST_RESET_LIMIT)
-            
-            -- Cập nhật status với thông tin item đặc biệt
-            local hasItem, itemName = HasStopItem()
-            if hasItem then
-                ChestStatusLabel:SetText("Status: 🛑 Stopped - Found " .. itemName)
-            else
-                ChestStatusLabel:SetText("Status: 🟢 Running")
-            end
-        end
-    end
-end)
-
 FullRaidLaw = Other:AddLeftGroupbox("Raid Law")
 
 FullRaidLaw:AddToggle("FullRaidLawOk", {
@@ -7142,6 +7004,34 @@ spawn(function()
     while wait(Sec) do
       if _G.Raiding then  
         if plr.PlayerGui.Main.TopHUDList.RaidTimer.Visible == true then          
+          local islands = {"Island5","Island 4", "Island 3", "Island 2", "Island 1"}
+          for _, island in ipairs(islands) do
+          local location = game:GetService("Workspace")["_WorldOrigin"].Locations:FindFirstChild(island)
+            if location then
+              for i,v in pairs(workspace.Enemies:GetChildren()) do
+                if v:FindFirstChild("Humanoid") or v:FindFirstChild("HumanoidRootPart") then
+                  if v.Humanoid.Health > 0 then
+                    repeat wait() Attack.Kill(v,_G.Raiding) NextIs=false until not _G.Raiding or not v.Parent or v.Humanoid.Health <= 0 NextIs=true
+                  end
+                end
+              end
+            end
+          end
+        else
+          NextIs = false
+        end
+      else
+        NextIs = false
+      end
+    end
+  end)
+end)
+
+spawn(function()
+  pcall(function() 
+    while wait(Sec) do
+      if _G.Raiding then  
+        if plr.PlayerGui.Main.TopHUDList.RaidTimer.Visible == true then          
           -- Raid: kill all enemies có trong workspace.Enemies
           for i,v in pairs(workspace.Enemies:GetChildren()) do
             if v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") then
@@ -7165,6 +7055,84 @@ spawn(function()
   end)
 end)
 
+spawn(function()
+	pcall(function()
+		while wait(T) do
+			if _G.Raiding then
+				if d.PlayerGui.Main.TopHUDList.RaidTimer.Visible == true then
+					local Y = {
+							"Island5",
+							"Island 4",
+							"Island 3",
+							"Island 2",
+							"Island 1",
+						};
+					for Y, d in ipairs(Y) do
+						local R = (game:GetService("Workspace"))._WorldOrigin.Locations:FindFirstChild(d);
+						if R then
+							for Y, d in pairs(workspace.Enemies:GetChildren()) do
+								if d:FindFirstChild("Humanoid") or d:FindFirstChild("HumanoidRootPart") then
+									if d.Humanoid.Health > 0 then
+										repeat
+											wait();
+											f.Kill(d, _G.Raiding);
+											NextIs = false;
+										until not _G.Raiding or not d.Parent or d.Humanoid.Health <= 0;
+										NextIs = true;
+									end;
+								end;
+							end;
+						end;
+					end;
+				else
+					NextIs = false;
+				end;
+			else
+				NextIs = false;
+			end;
+		end;
+	end);
+end)
+
+spawn(function()
+	while wait(T) do
+		if _G.KillH then
+			for Y, R in pairs(workspace.Enemies:GetChildren()) do
+				if f.Alive(R) then
+					pcall(function()
+						repeat
+							wait(T);
+							sethiddenproperty(d, "SimulationRadius", math.huge);
+							R:BreakJoints();
+							R.Humanoid.Health = 0;
+							R.HumanoidRootPart.CanCollide = false;
+						until not _G.KillH or not R.Parent or R.Humanoid.Health <= 0;
+					end);
+				end;
+			end;
+		end;
+	end;
+end)
+
+spawn(function()
+	while wait(T) do
+		if NextIs then
+			if d.PlayerGui.Main.TopHUDList.RaidTimer.Visible == true then
+				if workspace._WorldOrigin.Locations:FindFirstChild("Island 5") then
+					_tp((workspace._WorldOrigin.Locations:FindFirstChild("Island 5")).CFrame * CFrame.new(0, 50, 100));
+				elseif workspace._WorldOrigin.Locations:FindFirstChild("Island 4") then
+					_tp((workspace._WorldOrigin.Locations:FindFirstChild("Island 4")).CFrame * CFrame.new(0, 50, 100));
+				elseif workspace._WorldOrigin.Locations:FindFirstChild("Island 3") then
+					_tp((workspace._WorldOrigin.Locations:FindFirstChild("Island 3")).CFrame * CFrame.new(0, 50, 100));
+				elseif workspace._WorldOrigin.Locations:FindFirstChild("Island 2") then
+					_tp((workspace._WorldOrigin.Locations:FindFirstChild("Island 2")).CFrame * CFrame.new(0, 50, 100));
+				elseif workspace._WorldOrigin.Locations:FindFirstChild("Island 1") then
+					_tp((workspace._WorldOrigin.Locations:FindFirstChild("Island 1")).CFrame * CFrame.new(0, 50, 100));
+				end;
+			end;
+		end;
+	end;
+end)
 RaidOpen:AddToggle("AwakenFruits", {
     Title = "Auto Awaken Fruit",
     Default = false,
@@ -9915,13 +9883,33 @@ VolcanoFarm:AddToggle("CraftVolcanicMagnet", {
 })
 
 spawn(function()
-  while wait(Sec) do
-    pcall(function()
-      if _G.CraftVolcanicMagnet then
-        replicated.Remotes.CommF_:InvokeServer("CraftItem", "Craft", "Volcanic Magnet")
-      end
-    end)
-  end
+	while wait(T) do
+		pcall(function()
+			if _G.CraftVM then
+				if GetM("Volcanic Magnet") < 1 then
+					if GetM("Scrap Metal") >= 10 and GetM("Blaze Ember") >= 15 then
+						Q.Remotes.CommF_:InvokeServer("CraftItem", "Craft", "Volcanic Magnet");
+					elseif GetM("Scrap Metal") < 10 then
+						local Y = GetConnectionEnemies("Forest Pirate");
+						if Y then
+							repeat
+								wait();
+								f.Kill(Y, _G.CraftVM);
+							until not _G.CraftVM or not Y.Parent or Y.Humanoid.Health <= 0 or GetM("Scrap Metal") >= 10;
+						else
+							_tp(CFrame.new(-13206.452148438, 425.89199829102, -7964.5537109375));
+						end;
+					elseif GetM("Blaze Ember") < 15 then
+						repeat
+							wait();
+							_G.FarmBlazeEM = true;
+						until not _G.CraftVM or GetM("Blaze Ember") >= 15;
+						_G.FarmBlazeEM = false;
+					end;
+				end;
+			end;
+		end);
+	end;
 end)
 
 IslandFindLabel = VolcanoFarm:AddLabel("Island Hunt: Idle")
