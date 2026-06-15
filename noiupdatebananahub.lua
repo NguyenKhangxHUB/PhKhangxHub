@@ -7513,7 +7513,6 @@ spawn(function()
   end
 end)
 spawn(function()while wait(Sec)do pcall(function()for a,b in pairs(workspace.Boats:GetChildren())do for c,d in pairs(workspace.Boats[b.Name]:GetDescendants())do if d:IsA("BasePart")then if _G.SailBoats or _G.Prehis_Find or _G.FindMirage or _G.SailBoat_Hydra or _G.AutofindKitIs then d.CanCollide=false else d.CanCollide=true end end end end end)end end)
-
 KitsuneSection = Sea:AddLeftGroupbox("Kitsune Event")
 
 KitsuneSection:AddToggle("KitsuneToggle", {
