@@ -4301,69 +4301,90 @@ end)
 
 -- Farm Katakuri
 spawn(function()
-	while wait() do
-		if _G.Auto_Cake_Prince then
-			pcall(function()
-				local Y = game.Players.LocalPlayer;
-				local d = Y.Character and Y.Character:FindFirstChild("HumanoidRootPart");
-				local R = Y.PlayerGui.Main.Quest;
-				local Q = workspace.Enemies;
-				local r = workspace.Map.CakeLoaf.BigMirror;
-				if not d then
-					return;
-				end;
-				if not r:FindFirstChild("Other") then
-					_tp(CFrame.new(-2077, 252, -12373));
-				end;
-				if r.Other.Transparency == 0 or Q:FindFirstChild("Cake Prince") then
-					local Y = GetConnectionEnemies("Cake Prince");
-					if Y then
-						repeat
-							wait();
-							f.Kill2(Y, _G.Auto_Cake_Prince);
-						until not _G.Auto_Cake_Prince or not Y.Parent or Y.Humanoid.Health <= 0;
-					else
-						if r.Other.Transparency == 0 and ((CFrame.new(-1990.67, 4533, -14973.67)).Position - d.Position).Magnitude >= 2000 then
-							_tp(CFrame.new(-2151.82, 149.32, -12404.91));
-						end;
-					end;
-				else
-					local Y = {
-							"Cookie Crafter",
-							"Cake Guard",
-							"Baking Staff",
-							"Head Baker",
-						};
-					local Q = GetConnectionEnemies(Y);
-					if Q then
-						if _G.AcceptQuestC and not R.Visible then
-							local Y = CFrame.new(-1927.92, 37.8, -12842.54);
-							_tp(Y);
-							while (Y.Position - d.Position).Magnitude > 50 do
-								wait(.2);
-							end;
-							local R = math.random(1, 4);
-							local Q = {
-									[1] = { "StartQuest", "CakeQuest2", 2 },
-									[2] = { "StartQuest", "CakeQuest2", 1 },
-									[3] = { "StartQuest", "CakeQuest1", 1 },
-									[4] = { "StartQuest", "CakeQuest1", 2 },
-								};
-							local r, a = pcall(function()
-									return game.ReplicatedStorage.Remotes.CommF_:InvokeServer(unpack(Q[R]));
-								end);
-						end;
-						repeat
-							wait();
-							f.Kill(Q, _G.Auto_Cake_Prince);
-						until not _G.Auto_Cake_Prince or Q.Humanoid.Health <= 0 or r.Other.Transparency == 0 or _G.AcceptQuestC and not R.Visible;
-					else
-						_tp(CFrame.new(-2077, 252, -12373));
-					end;
-				end;
-			end);
-		end;
-	end;
+    while task.wait(1) do
+        if _G.StartFarm and _G.MethodSelect == "Farm Katakuri" then
+            local ok, err = pcall(function()
+                local player = game.Players.LocalPlayer
+                local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+                if not root then return end
+
+                local questUI = player.PlayerGui:FindFirstChild("Main")
+                    and player.PlayerGui.Main:FindFirstChild("Quest")
+                local enemies = workspace.Enemies
+
+                local mapFolder = workspace:FindFirstChild("Map")
+                local cakeLoaf = mapFolder and mapFolder:FindFirstChild("CakeLoaf")
+                local bigMirror = cakeLoaf and cakeLoaf:FindFirstChild("BigMirror")
+                local mirrorOther = bigMirror and bigMirror:FindFirstChild("Other")
+
+                if not mirrorOther then
+                    _tp(CFrame.new(-2077, 252, -12373))
+                    return
+                end
+
+                if mirrorOther.Transparency == 0 or enemies:FindFirstChild("Cake Prince") then
+                    local v = GetConnectionEnemies("Cake Prince")
+                    if v then
+                        repeat
+                            wait()
+                            Attack.Kill2(v, _G.StartFarm)
+                        until not _G.StartFarm
+                            or not v.Parent
+                            or not v:FindFirstChild("Humanoid")
+                            or v.Humanoid.Health <= 0
+                    else
+                        if mirrorOther.Transparency == 0
+                           and (CFrame.new(-1990.67, 4533, -14973.67).Position - root.Position).Magnitude >= 2000 then
+                            _tp(CFrame.new(-2151.82, 149.32, -12404.91))
+                        end
+                    end
+                else
+                    local mobNames = {"Cookie Crafter", "Cake Guard", "Baking Staff", "Head Baker"}
+                    local v = GetConnectionEnemies(mobNames)
+
+                    if v then
+                        if _G.AcceptQuestC and questUI and not questUI.Visible then
+                            local questPos = CFrame.new(-1927.92, 37.8, -12842.54)
+                            _tp(questPos)
+
+                            local attempts = 0
+                            while attempts < 50 and (questPos.Position - root.Position).Magnitude > 50 do
+                                wait(0.2)
+                                attempts += 1
+                            end
+
+                            local questData = {
+                                {"StartQuest", "CakeQuest2", 2},
+                                {"StartQuest", "CakeQuest2", 1},
+                                {"StartQuest", "CakeQuest1", 1},
+                                {"StartQuest", "CakeQuest1", 2},
+                            }
+                            pcall(function()
+                                game.ReplicatedStorage.Remotes.CommF_:InvokeServer(unpack(questData[math.random(1, 4)]))
+                            end)
+                        end
+
+                        repeat
+                            wait()
+                            Attack.Kill(v, _G.StartFarm)
+                        until not _G.StartFarm
+                            or not v
+                            or not v.Parent
+                            or (v:FindFirstChild("Humanoid") and v.Humanoid.Health <= 0)
+                            or mirrorOther.Transparency == 0
+                            or enemies:FindFirstChild("Cake Prince")
+                            or (_G.AcceptQuestC and questUI and not questUI.Visible)
+                    else
+                        _tp(CFrame.new(-2077, 252, -12373))
+                    end
+                end
+            end)
+
+            if not ok then
+                warn("[Farm Katakuri] Lỗi:", err)
+            end
+        end
+    end
 end)
 
 -- Farm Tyrant of the Skies
