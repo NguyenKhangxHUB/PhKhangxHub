@@ -3701,12 +3701,13 @@ spawn(function()
 end)
 
 SetAutoFarm:AddToggle("AttackNoAnimation", {
-    Title = "Attack No Animation",
+    Title = "Attack",
     Default = false,
     Callback = function(Value)
         getgenv().AttackNoAnimation = Value
     end
 })
+loadstring(game:HttpGet("https://raw.githubusercontent.com/luyenphamdinh81-hash/Nguyenkhang-hub/refs/heads/main/Fast%20attack"))()
 
 SetAutoFarm:AddToggle("KillAuraOnlyRaidAndVolcano", {
     Title = "Kill Aura Only Raid And Volcano",
@@ -7180,9 +7181,8 @@ SettingsSea = Sea:AddLeftGroupbox("Setting")
 
 SettingsSea:AddDropdown("SelectZone", {
     Title = "Select Zone",
-    Values = {"Zone 1", "Zone 2", "Zone 3", "Zone 4", "Zone 5", "Zone 6",},
-    Default = nil,
-    Multi = true,
+    Values = {"Lv 1", "Lv 2", "Lv 3", "Lv 4", "Lv 5", "Lv 6", "Lv Infinite"},
+    Default = "Lv 1",
     Callback = function(Value)
         _G.DangerSc = Value
     end
@@ -7190,21 +7190,29 @@ SettingsSea:AddDropdown("SelectZone", {
 
 SettingsSea:AddDropdown("SelectSeaEvent", {
     Title = "Select Sea Events",
-    Values = {"Zone 1", "Zone 2", "Zone 3", "Zone 4", "Zone 5", "Zone 6",},
+    Values = {"Shark", "Piranha", "Terror Shark", "Fish Crew Member", "Haunted Crew Member", "Sea Beast", "Leviathan", "Pirate Grand Brigade", "Fish Boat"},
     Default = nil,
-    Multi = true,
     Callback = function(Value)
         _G.SelectSeaEvent = Value
+        -- Auto set event flags khi chọn
+        _G.Shark = (Value == "Shark")
+        _G.Piranha = (Value == "Piranha")
+        _G.TerrorShark = (Value == "Terror Shark")
+        _G.MobCrew = (Value == "Fish Crew Member")
+        _G.HCM = (Value == "Haunted Crew Member")
+        _G.SeaBeast1 = (Value == "Sea Beast")
+        _G.Leviathan1 = (Value == "Leviathan")
+        _G.PGB = (Value == "Pirate Grand Brigade")
+        _G.FishBoat = (Value == "Fish Boat")
     end
 })
 
 SettingsSea:AddDropdown("SelectBoat", {
     Title = "Select Boat",
     Values = {"Guardian", "PirateGrandBrigade", "MarineGrandBrigade", "PirateBrigade", "MarineBrigade", "PirateSloop", "MarineSloop", "Beast Hunter"},
-    Default = nil,
-    Multi = true,
+    Default = "Guardian",
     Callback = function(Value)
-        _G.SelectSeaEvent = Value
+        _G.SelectedBoat = Value
     end
 })
 
@@ -7379,38 +7387,40 @@ spawn(function()
                 
             -- Sea Beast
             elseif selected == "Sea Beast" then
+                if not workspace.SeaBeasts:FindFirstChild("SeaBeast1") then
+                    task.wait(1)
+                end
                 if workspace.SeaBeasts:FindFirstChild("SeaBeast1") then
                     for a, b in pairs(workspace.SeaBeasts:GetChildren()) do
-                        if b:FindFirstChild("HumanoidRootPart") and b:FindFirstChild("Health") and b.Health.Value > 0 then
+                        if b.Name == "SeaBeast1" and b:FindFirstChild("HumanoidRootPart") and b:FindFirstChild("Health") and b.Health.Value > 0 then
+                            local waterY = workspace.Map["WaterBase-Plane"].Position.Y
                             repeat
-                                task.wait()
-                                spawn(function()
-                                    _tp(CFrame.new(b.HumanoidRootPart.Position.X, game:GetService("Workspace").Map["WaterBase-Plane"].Position.Y + 200, b.HumanoidRootPart.Position.Z))
-                                end)
-                                if plr:DistanceFromCharacter(b.HumanoidRootPart.CFrame.Position) <= 500 then
-                                    AitSeaSkill_Custom = b.HumanoidRootPart.CFrame
-                                    MousePos = AitSeaSkill_Custom.Position
-                                    if CheckF() then
-                                        weaponSc("Blox Fruit")
-                                        Useskills("Blox Fruit", "Z")
-                                        Useskills("Blox Fruit", "X")
-                                        Useskills("Blox Fruit", "C")
-                                    else
-                                        Useskills("Melee", "Z")
-                                        Useskills("Melee", "X")
-                                        Useskills("Melee", "C")
-                                        wait(.1)
-                                        Useskills("Sword", "Z")
-                                        Useskills("Sword", "X")
-                                        wait(.1)
-                                        Useskills("Blox Fruit", "Z")
-                                        Useskills("Blox Fruit", "X")
-                                        Useskills("Blox Fruit", "C")
-                                        wait(.1)
-                                        Useskills("Gun", "Z")
-                                        Useskills("Gun", "X")
+                                task.wait(0.1)
+                                pcall(function()
+                                    if not b or not b.Parent or not b:FindFirstChild("HumanoidRootPart") then return end
+                                    local targetY = waterY + 250
+                                    local bPos = b.HumanoidRootPart.Position
+                                    -- Luôn đứng trên sea beast
+                                    _tp(CFrame.new(bPos.X, targetY, bPos.Z))
+                                    if plr:DistanceFromCharacter(bPos) <= 600 then
+                                        AitSeaSkill_Custom = b.HumanoidRootPart.CFrame
+                                        MousePos = bPos
+                                        if CheckF() then
+                                            weaponSc("Blox Fruit")
+                                            Useskills("Blox Fruit", "Z")
+                                            wait(0.05) Useskills("Blox Fruit", "X")
+                                            wait(0.05) Useskills("Blox Fruit", "C")
+                                        else
+                                            Useskills("Melee", "Z")
+                                            Useskills("Melee", "X")
+                                            Useskills("Sword", "Z")
+                                            Useskills("Sword", "X")
+                                            Useskills("Blox Fruit", "Z")
+                                            Useskills("Blox Fruit", "X")
+                                            Useskills("Gun", "Z")
+                                        end
                                     end
-                                end
+                                end)
                             until _G.SelectSeaEvent ~= "Sea Beast" or not b:FindFirstChild("HumanoidRootPart") or not b.Parent or b.Health.Value <= 0
                         end
                     end
@@ -7493,8 +7503,36 @@ SettingsSea:AddToggle("SeaFarm", {
     Default = false,
     Callback = function(Value)
         _G.SailBoats = Value
+        if Value then
+            SeaEventLabel:SetText("Sea Status: 🟢 Active [" .. (tostring(_G.SelectSeaEvent) or "None") .. "]")
+        else
+            SeaEventLabel:SetText("Sea Status: ❌ Stopped")
+        end
     end
 })
+
+-- Status cập nhật liên tục
+spawn(function()
+    while task.wait(2) do
+        pcall(function()
+            if _G.SailBoats and SeaEventLabel then
+                local evt = tostring(_G.SelectSeaEvent or "None")
+                local zone = tostring(_G.DangerSc or "None")
+                if CheckLeviathan() then
+                    SeaEventLabel:SetText("Sea Status: 🔵 LEVIATHAN FOUND!")
+                elseif CheckSeaBeast() then
+                    SeaEventLabel:SetText("Sea Status: 🔴 Sea Beast Active!")
+                elseif CheckEnemiesBoat() then
+                    SeaEventLabel:SetText("Sea Status: 🟠 Fish Boat Active!")
+                elseif CheckPirateGrandBrigade() then
+                    SeaEventLabel:SetText("Sea Status: 🟡 PGB Active!")
+                else
+                    SeaEventLabel:SetText("Sea Status: 🟢 Sailing [" .. zone .. "]")
+                end
+            end
+        end)
+    end
+end)
 
 spawn(function()
   while wait() do
@@ -7542,6 +7580,50 @@ KitsuneSection:AddToggle("KitsuneToggle", {
         _G.tweenKitsune = Value
     end
 })
+
+KitsuneSection:AddToggle("KitsuneToggle", {
+    Title = "Find Kitsune Island",
+    Default = false,
+    Callback = function(Value)
+        _G.AutofindKitIs = Value
+    end
+})
+spawn(function()
+	while wait() do
+		if _G.AutofindKitIs then
+			pcall(function()
+				if not workspace._WorldOrigin.Locations:FindFirstChild("Kitsune Island", true) then
+					local Y = CheckBoat();
+					if not Y then
+						local Y = CFrame.new(-16927.451, 9.086, 433.864);
+						TeleportToTarget(Y);
+						if (Y.Position - d.Character.HumanoidRootPart.Position).Magnitude <= 10 then
+							Q.Remotes.CommF_:InvokeServer("BuyBoat", _G.SelectedBoat);
+						end;
+					else
+						if d.Character.Humanoid.Sit == false then
+							local d = Y.VehicleSeat.CFrame * CFrame.new(0, 1, 0);
+							_tp(d);
+						else
+							local Y = CFrame.new(-10000000, 31, 37016.25);
+							repeat
+								wait();
+								if CheckEnemiesBoat() or CheckTerrorShark() or CheckPirateGrandBrigade() then
+									_tp(CFrame.new(-10000000, 150, 37016.25));
+								else
+									_tp(CFrame.new(-10000000, 31, 37016.25));
+								end;
+							until not _G.AutofindKitIs or (Y.Position - d.Character.HumanoidRootPart.Position).Magnitude <= 10 or workspace._WorldOrigin.Locations:FindFirstChild("Kitsune Island") or d.Character.Humanoid.Sit == false;
+							d.Character.Humanoid.Sit = false;
+						end;
+					end;
+				else
+					_tp((workspace._WorldOrigin.Locations:FindFirstChild("Kitsune Island")).CFrame * CFrame.new(0, 500, 0));
+				end;
+			end);
+		end;
+	end;
+end)
 
 KitsuneSection:AddToggle("SummonToggle", {
     Title = "Auto Summon Soul EmBer",
@@ -8001,11 +8083,11 @@ spawn(function()
 end)
 
 TrialRace:AddToggle("AncientClockToggle", {
-    Title = "Teleport Ancient Clock",
+  Title = "Teleport to Temple of Time",
     Default = false,
     Callback = function(Value)
-        _G.AcientOne = Value
-    end
+         _G.TpTemple = Value
+end
 })
 
 spawn(function()
@@ -8105,7 +8187,51 @@ spawn(function()
 end)
 
 TrialRace:AddToggle("MigareToggle", {
-    Title = "Teleport To Migare Island",
+    Title = "Find Mirage Island",
+    Default = false,
+    Callback = function(Value)
+        _G.FindMirage = Value -- Sửa tên biến
+    end
+})
+spawn(function()
+	while wait() do
+		if _G.FindMirage then
+			pcall(function()
+				if not workspace._WorldOrigin.Locations:FindFirstChild("Mirage Island", true) then
+					local Y = CheckBoat();
+					if not Y then
+						local Y = CFrame.new(-16927.451, 9.086, 433.864);
+						TeleportToTarget(Y);
+						if (Y.Position - d.Character.HumanoidRootPart.Position).Magnitude <= 10 then
+							Q.Remotes.CommF_:InvokeServer("BuyBoat", _G.SelectedBoat);
+						end;
+					else
+						if d.Character.Humanoid.Sit == false then
+							local d = Y.VehicleSeat.CFrame * CFrame.new(0, 1, 0);
+							_tp(d);
+						else
+							repeat
+								wait();
+								local Y = CFrame.new(-10000000, 31, 37016.25);
+								if CheckEnemiesBoat() or CheckTerrorShark() or CheckPirateGrandBrigade() then
+									_tp(CFrame.new(-10000000, 150, 37016.25));
+								else
+									_tp(CFrame.new(-10000000, 31, 37016.25));
+								end;
+							until not _G.FindMirage or (Y.Position - d.Character.HumanoidRootPart.Position).Magnitude <= 10 or workspace._WorldOrigin.Locations:FindFirstChild("Mirage Island") or d.Character.Humanoid.Sit == false;
+							d.Character.Humanoid.Sit = false;
+						end;
+					end;
+				else
+					_tp(workspace.Map.MysticIsland.Center.CFrame * CFrame.new(0, 300, 0));
+				end;
+			end);
+		end;
+	end;
+end)
+
+TrialRace:AddToggle("MigareToggle", {
+    Title = "Teleport To Mirage Island",
     Default = false,
     Callback = function(Value)
         _G.MigareIsland = Value -- Sửa tên biến
@@ -8234,20 +8360,30 @@ end)
 TrialRace:AddButton({
     Title = "Teleport To Trial Door",
     Callback = function()
-        local positions = {
-            Human = CFrame.new(29221.822, 14890.975, -205.991),
-            Skypiea = CFrame.new(28960.158, 14919.624, 235.039),
-            Fishman = CFrame.new(28231.175, 14890.975, -211.641),
-            Cyborg = CFrame.new(28502.681, 14895.975, -423.727),
-            Ghoul = CFrame.new(28674.244, 14890.676, 445.431),
-            Mink = CFrame.new(29012.341, 14890.975, -380.149)
-        }
-        local race = plr.Data.Race.Value
-        if positions[race] then
-            _tp(positions[race])
+        _G.TPDoor = Value
         end
-    end
 })
+spawn(function()
+	while wait(T) do
+		pcall(function()
+			if _G.TPDoor then
+				if tostring(d.Data.Race.Value) == "Mink" then
+					_tp(CFrame.new(29020.66015625, 14889.426757812, -379.2682800293));
+				elseif tostring(d.Data.Race.Value) == "Fishman" then
+					_tp(CFrame.new(28224.056640625, 14889.426757812, -210.58720397949));
+				elseif tostring(d.Data.Race.Value) == "Cyborg" then
+					_tp(CFrame.new(28492.4140625, 14894.426757812, -422.11001586914));
+				elseif tostring(d.Data.Race.Value) == "Skypiea" then
+					_tp(CFrame.new(28967.408203125, 14918.075195312, 234.31198120117));
+				elseif tostring(d.Data.Race.Value) == "Ghoul" then
+					_tp(CFrame.new(28672.720703125, 14889.127929688, 454.59616088867));
+				elseif tostring(d.Data.Race.Value) == "Human" then
+					_tp(CFrame.new(29237.294921875, 14889.426757812, -206.94955444336));
+				end;
+			end;
+		end);
+	end;
+end)
 
 TrialRace:AddToggle("TrialRaceToggle", {
     Title = "Auto Trial Race",
@@ -8256,57 +8392,105 @@ TrialRace:AddToggle("TrialRaceToggle", {
         _G.Complete_Trials = Value
     end
 })
-
--- Hàm teleport (cần định nghĩa hoặc sửa)
-local function BTP(cframe)
-    _tp(cframe) -- Hoặc logic teleport riêng
-end
-
+GetSeaBeastTrial = function()
+		if not workspace.Map:FindFirstChild("FishmanTrial") then
+			return nil;
+		end;
+		if workspace._WorldOrigin.Locations:FindFirstChild("Trial of Water") then
+			FishmanTrial = workspace._WorldOrigin.Locations:FindFirstChild("Trial of Water");
+		end;
+		if FishmanTrial then
+			for Y, d in next, workspace.SeaBeasts:GetChildren() do
+				if d:FindFirstChild("HumanoidRootPart") and (d.HumanoidRootPart.Position - FishmanTrial.Position).Magnitude <= 1500 then
+					if d.Health.Value > 0 then
+						return d;
+					end;
+				end;
+			end;
+		end;
+	end;
 spawn(function()
-    while wait(0.5) do
-        if _G.Complete_Trials then
-            pcall(function()
-                local race = plr.Data.Race.Value
-                if race == "Human" or race == "Ghoul" then
-                    for _, enemy in pairs(workspace.Enemies:GetChildren()) do
-                        if Attack.Alive(enemy) then
-                            repeat 
-                                wait() 
-                                Attack.Kill(enemy, _G.Complete_Trials) 
-                            until not _G.Complete_Trials or not enemy.Parent or enemy.Humanoid.Health <= 0
-                        end
-                    end
-                elseif race == "Skypiea" then
-                    local skyTrial = workspace.Map.SkyTrial.Model
-                    if skyTrial then
-                        for _, obj in pairs(skyTrial:GetDescendants()) do
-                            if obj.Name == "snowisland_Cylinder.081" then
-                                BTP(obj.CFrame)
-                                break
-                            end
-                        end
-                    end
-                elseif race == "Fishman" then
-                    local seaBeast = workspace.SeaBeasts:FindFirstChild("SeaBeast1")
-                    if seaBeast then
-                        repeat 
-                            wait() 
-                            Attack.KillSea(seaBeast, _G.Complete_Trials) 
-                        until not _G.Complete_Trials or not seaBeast.Parent or seaBeast.Humanoid.Health <= 0
-                    end
-                elseif race == "Cyborg" then
-                    _tp(CFrame.new(28654, 14898.7832, -30))
-                elseif race == "Mink" then
-                    for _, obj in pairs(workspace:GetDescendants()) do
-                        if obj.Name == "StartPoint" then
-                            _tp(obj.CFrame * CFrame.new(0, 10, 0))
-                            break
-                        end
-                    end
-                end
-            end)
-        end
-    end
+	while wait(T) do
+		pcall(function()
+			if _G.Complete_Trials then
+				if tostring(d.Data.Race.Value) == "Mink" then
+					notween(workspace.Map.MinkTrial.Ceiling.CFrame * CFrame.new(0, -20, 0));
+				end;
+			end;
+		end);
+	end;
+end)
+spawn(function()
+	while wait(T) do
+		pcall(function()
+			if _G.Complete_Trials then
+				if tostring(d.Data.Race.Value) == "Fishman" then
+					if GetSeaBeastTrial() then
+						repeat
+							task.wait();
+							spawn(function()
+								_tp(CFrame.new((GetSeaBeastTrial()).HumanoidRootPart.Position.X, (game:GetService("Workspace")).Map["WaterBase-Plane"].Position.Y + 300, (GetSeaBeastTrial()).HumanoidRootPart.Position.Z));
+							end);
+							MousePos = (GetSeaBeastTrial()).HumanoidRootPart.Position;
+							Useskills("Melee", "Z");
+							Useskills("Melee", "X");
+							Useskills("Melee", "C");
+							wait(.1);
+							Useskills("Sword", "Z");
+							Useskills("Sword", "X");
+							wait(.1);
+							Useskills("Blox Fruit", "Z");
+							Useskills("Blox Fruit", "X");
+							Useskills("Blox Fruit", "C");
+							wait(.1);
+							Useskills("Gun", "Z");
+							Useskills("Gun", "X");
+						until _G.Complete_Trials == false or not GetSeaBeastTrial();
+					end;
+				end;
+			end;
+		end);
+	end;
+end)
+spawn(function()
+	while wait(T) do
+		pcall(function()
+			if _G.Complete_Trials then
+				if tostring(d.Data.Race.Value) == "Cyborg" then
+					_tp(workspace.Map.CyborgTrial.Floor.CFrame * CFrame.new(0, 500, 0));
+				end;
+			end;
+		end);
+	end;
+end)
+spawn(function()
+	while wait(T) do
+		pcall(function()
+			if _G.Complete_Trials then
+				if tostring(d.Data.Race.Value) == "Skypiea" then
+					notween(workspace.Map.SkyTrial.Model.FinishPart.CFrame);
+				end;
+			end;
+		end);
+	end;
+end)
+spawn(function()
+	while wait(.1) do
+		pcall(function()
+			if _G.Complete_Trials then
+				if tostring(d.Data.Race.Value) == "Human" or tostring(d.Data.Race.Value) == "Ghoul" then
+					local Y = { "Ancient Vampire", "Ancient Zombie" };
+					local d = GetConnectionEnemies(Y);
+					if d then
+						repeat
+							wait();
+							f.Kill(d, _G.Complete_Trials);
+						until _G.Complete_Trials == false or not d.Parent or d.Humanoid.Health <= 0;
+					end;
+				end;
+			end;
+		end);
+	end;
 end)
 
 TrialRace:AddToggle("KillPlayerToggle", {
@@ -9287,6 +9471,24 @@ spawn(function()
   end
 end)
 
+IslandFindLabel = VolcanoFarm:AddLabel("Island Hunt: Idle")
+
+spawn(function()
+    while task.wait(2) do
+        pcall(function()
+            if not IslandFindLabel then return end
+            local found = workspace["_WorldOrigin"].Locations:FindFirstChild("Prehistoric Island")
+            if found then
+                IslandFindLabel:SetText("🏝️ Island: ✅ FOUND! Go now!")
+            elseif _G.Prehis_Find then
+                IslandFindLabel:SetText("🔍 Hunting island... Sailing")
+            else
+                IslandFindLabel:SetText("Island Hunt: Off")
+            end
+        end)
+    end
+end)
+
 VolcanoFarm:AddToggle("PrehistoricIslandFind", {
     Title = "Auto Find Prehistoric Island",
     Default = false,
@@ -9343,6 +9545,29 @@ spawn(function()
       end)
     end
   end
+end)
+
+VolcanoStatusLabel = VolcanoFarm:AddLabel("Volcano: Idle")
+
+spawn(function()
+    while task.wait(1) do
+        pcall(function()
+            if VolcanoStatusLabel then
+                local pi = workspace.Map:FindFirstChild("PrehistoricIsland")
+                if not pi then
+                    VolcanoStatusLabel:SetText("Volcano: Island Not Spawned")
+                elseif workspace.Enemies:FindFirstChild("Lava Golem") then
+                    VolcanoStatusLabel:SetText("🔴 Lava Golem Active!")
+                elseif _G.Prehis_Skills then
+                    VolcanoStatusLabel:SetText("🟠 Fixing Volcano Rocks...")
+                elseif _G.Prehis_Find then
+                    VolcanoStatusLabel:SetText("🟡 Searching Island...")
+                else
+                    VolcanoStatusLabel:SetText("Volcano: Standby")
+                end
+            end
+        end)
+    end
 end)
 
 VolcanoFarm:AddToggle("EventVolcanoStart", {
