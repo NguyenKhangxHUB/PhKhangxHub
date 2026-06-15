@@ -160,15 +160,13 @@ for _, fruitData in pairs(replicated.Remotes.CommF_:InvokeServer("GetFruits",fal
     end
 end
 
-if World1 then
-    Boss = {
+if Sea1 then
+    tableBoss = {
         "The Gorilla King",
         "Bobby",
-        "The Saw",
         "Yeti",
         "Mob Leader",
         "Vice Admiral",
-        "Saber Expert",
         "Warden",
         "Chief Warden",
         "Swan",
@@ -177,55 +175,63 @@ if World1 then
         "Wysper",
         "Thunder God",
         "Cyborg",
-        "Ice Admiral",
-        "Greybeard"
+        "Saber Expert"
     }
-elseif World2 then
-    Boss = {
+elseif Sea2 then
+    tableBoss = {
         "Diamond",
         "Jeremy",
         "Fajita",
         "Don Swan",
         "Smoke Admiral",
-        "Awakened Ice Admiral",
-        "Tide Keeper",
-        "Darkbeard",
         "Cursed Captain",
-        "Order"
+        "Darkbeard",
+        "Order",
+        "Awakened Ice Admiral",
+        "Tide Keeper"
     }
-elseif World3 then
-    Boss = {
-        "Tyrant of the Skies",
+elseif Sea3 then
+    tableBoss = {
         "Stone",
         "Hydra Leader",
         "Kilo Admiral",
         "Captain Elephant",
         "Beautiful Pirate",
-        "Cake Queen",
+        "rip_indra True Form",
         "Longma",
-        "Soul Reaper"
+        "Soul Reaper",
+        "Cake Queen"
     }
 end
-if World1 then
-    MaterialList = {"Leather + Scrap Metal", "Angel Wings", "Magma Ore", "Fish Tail"}
-elseif World2 then
+if Sea1 then
     MaterialList = {
-        "Leather + Scrap Metal",
+        "Scrap Metal",
+        "Leather",
+        "Angel Wings",
+        "Magma Ore",
+        "Fish Tail"
+    }
+elseif Sea2 then
+    MaterialList = {
+        "Scrap Metal",
+        "Leather",
         "Radioactive Material",
-        "Ectoplasm",
         "Mystic Droplet",
         "Magma Ore",
         "Vampire Fang"
     }
-elseif World3 then
+elseif Sea3 then
     MaterialList = {
         "Scrap Metal",
+        "Leather",
         "Demonic Wisp",
         "Conjured Cocoa",
         "Dragon Scale",
         "Gunpowder",
         "Fish Tail",
-        "Mini Tusk"
+        "Mini Tusk",
+        "Hydra Enforcer",
+        "Venomous Assailant"
     }
 end
 local DungeonTables = {
@@ -3211,6 +3217,24 @@ task.spawn(function()
     end
 end)
 
+NextSpawn = Status:AddLabel("Next Time Spawn Fist Of Darkness Or God's Chalice: 4h 0m 0s")
+            -- NEXT SPAWN (FIX RESET 4H)
+            local elapsed = tick() - JoinTime
+local TimeLeft = SpawnCycle - (math.floor(elapsed) % SpawnCycle)
+
+if TimeLeft <= 0 then
+    TimeLeft = SpawnCycle
+end
+
+local h = math.floor(TimeLeft / 3600)
+local m = math.floor((TimeLeft % 3600) / 60)
+local s = math.floor(TimeLeft % 60)
+
+NextSpawn:SetText(
+    "Next Time Spawn Fist Of Darkness Or God's Chalice: " ..
+    string.format("%dh %dm %ds", h, m, s)
+)
+
 Miragecheck = Status:AddLabel("Mirage Island:  ")
 
 lastMirageStatus = ""
@@ -3763,6 +3787,19 @@ Player:AddToggle("AutoSpawnCPToggle", {
         _G.AutoSpawnCP = v
     end
 })
+spawn(function()
+    while wait() do
+        if _G.SpawnCakePrince then
+            game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer(unpack({
+                "CakePrinceSpawner",
+                true
+            }))
+            game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer(unpack({
+                "CakePrinceSpawner"
+            }))
+        end
+    end
+end)
 
 Player:AddToggle("NoCLip", {
     Title = "No Clip",
@@ -3948,8 +3985,8 @@ SetAutoFarm:AddToggle("BringMob", {
 })
 
 SetAutoFarm:AddToggle("BringMob", {
-    Title = "Bring Mob New",
-    Default = false,
+    Title = "Bring Mob Banana",
+    Default = true,
     Callback = function(Value)
         _B = Value
     end
@@ -4043,8 +4080,8 @@ spawn(function()
 end)
 
 SetAutoFarm:AddToggle("BringMob", {
-    Title = "Bring Mob Tween",
-    Default = false,
+    Title = "Bring Mob tween",
+    Default = true,
     Callback = function(Value)
         _B = Value
     end
@@ -4662,75 +4699,148 @@ end)
 
 -- Farm Katakuri
 spawn(function()
-    while task.wait(1) do
-        if _G.StartFarm and _G.MethodSelect == "Farm Katakuri" then
-            pcall(function()
-                local player = game.Players.LocalPlayer
-                local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-                local questUI = player.PlayerGui:FindFirstChild("Main") and 
-                                player.PlayerGui.Main:FindFirstChild("Quest")
-                local enemies = workspace.Enemies
-                local bigMirror = workspace.Map.CakeLoaf.BigMirror
-                
-                if not root then return end
-                if not bigMirror:FindFirstChild("Other") then
-                    _tp(CFrame.new(-2077, 252, -12373))
-                end        
-                
-                if bigMirror.Other.Transparency == 0 or enemies:FindFirstChild("Cake Prince") then
-                    local v = GetConnectionEnemies("Cake Prince")
-                    if v then
-                        repeat 
-                            wait() 
-                            Attack.Kill2(v, _G.StartFarm)  -- Sửa: dùng _G.StartFarm thay vì _G.Auto_Cake_Prince
-                        until not _G.StartFarm or not v.Parent or v.Humanoid.Health <= 0
-                    else
-                        if bigMirror.Other.Transparency == 0 and (CFrame.new(-1990.67, 4533, -14973.67).Position - root.Position).Magnitude >= 2000 then
-                            _tp(CFrame.new(-2151.82, 149.32, -12404.91))
-                        end
-                    end
-                else
-                    local CakePrince = {"Cookie Crafter","Cake Guard","Baking Staff","Head Baker"}
-                    local v = GetConnectionEnemies(CakePrince)
-                    if v then
-                        if _G.AcceptQuestC and questUI and not questUI.Visible then
-                            local questPos = CFrame.new(-1927.92, 37.8, -12842.54)
-                            _tp(questPos)
-                            
-                            local attempts = 0
-                            while attempts < 50 and (questPos.Position - root.Position).Magnitude > 50 do
-                                wait(0.2)
-                                attempts = attempts + 1
+        while wait() do
+            if _G.Cake then
+                pcall(function()
+                    if game.ReplicatedStorage:FindFirstChild("Cake Prince") or (game:GetService("Workspace").Enemies:FindFirstChild("Cake Prince") or (game.ReplicatedStorage:FindFirstChild("Dough King") or game:GetService("Workspace").Enemies:FindFirstChild("Dough King"))) then
+                        if game:GetService("Workspace").Enemies:FindFirstChild("Cake Prince") or game:GetService("Workspace").Enemies:FindFirstChild("Dough King") then
+                            local v443, v444, v445 = pairs(game:GetService("Workspace").Enemies:GetChildren())
+                            while true do
+                                local v446
+                                v445, v446 = v443(v444, v445)
+                                if v445 == nil then
+                                    break
+                                end
+                                if v446.Name == "Cake Prince" or v446.Name == "Dough King" then
+                                    repeat
+                                        wait(_G.Fast_Delay)
+                                        AutoHaki()
+                                        EquipTool(SelectWeapon)
+                                        v446.HumanoidRootPart.CanCollide = false
+                                        v446.Humanoid.WalkSpeed = 0
+                                        v446.HumanoidRootPart.Size = Vector3.new(60, 60, 60)
+                                        local _mc40 = v446.HumanoidRootPart.CFrame * Pos
+                                        if (v446.HumanoidRootPart.CFrame.Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude > 5 then BKP(_mc40) end
+                                        AttackNoCoolDown()
+                                    until _G.Cake == false or (not v446.Parent or v446.Humanoid.Health <= 0)
+                                end
                             end
-                            
-                            local randomQuest = math.random(1, 4)
-                            local questData = {
-                                [1] = {"StartQuest", "CakeQuest2", 2},
-                                [2] = {"StartQuest", "CakeQuest2", 1},
-                                [3] = {"StartQuest", "CakeQuest1", 1},
-                                [4] = {"StartQuest", "CakeQuest1", 2}
-                            }                    
-                            
-                            pcall(function()
-                                game.ReplicatedStorage.Remotes.CommF_:InvokeServer(unpack(questData[randomQuest]))
-                            end)
+                        else
+                            Tween2(CFrame.new(- 2009.2802734375, 4532.97216796875, - 14937.3076171875))
                         end
-                        
-                        repeat 
-                            wait() 
-                            Attack.Kill(v, _G.StartFarm)  -- Sửa: dùng _G.StartFarm
-                        until not _G.StartFarm or not v or not v.Parent or 
-                              (v.Humanoid and v.Humanoid.Health <= 0) or 
-                              bigMirror.Other.Transparency == 0 or 
-                              (_G.AcceptQuestC and questUI and not questUI.Visible)
+                    elseif game.Workspace.Enemies:FindFirstChild("Baking Staff") or (game.Workspace.Enemies:FindFirstChild("Head Baker") or (game.Workspace.Enemies:FindFirstChild("Cake Guard") or game.Workspace.Enemies:FindFirstChild("Cookie Crafter"))) then
+                        local v447, v448, v449 = pairs(game:GetService("Workspace").Enemies:GetChildren())
+                        while true do
+                            local v450
+                            v449, v450 = v447(v448, v449)
+                            if v449 == nil then
+                                break
+                            end
+                            if (v450.Name == "Baking Staff" or (v450.Name == "Head Baker" or (v450.Name == "Cake Guard" or v450.Name == "Cookie Crafter"))) and v450.Humanoid.Health > 0 then
+                                repeat
+                                    wait(_G.Fast_Delay)
+                                    AutoHaki()
+                                    EquipTool(SelectWeapon)
+                                    bringmob = true
+                                    v450.HumanoidRootPart.Size = Vector3.new(60, 60, 60)
+                                    POSCAKE = v450.HumanoidRootPart.CFrame
+                                    local _mc41 = v450.HumanoidRootPart.CFrame * Pos
+                                    if (v450.HumanoidRootPart.CFrame.Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude > 5 then BKP(_mc41) end
+                                    AttackNoCoolDown()
+                                until _G.Cake == false or (game:GetService("ReplicatedStorage"):FindFirstChild("Cake Prince") or (game:GetService("ReplicatedStorage"):FindFirstChild("Dough King") or (not v450.Parent or v450.Humanoid.Health <= 0)))
+                            end
+                        end
                     else
-                        _tp(CFrame.new(-2077, 252, -12373))
+                        bringmob = false
+                        Tween2(CFrame.new(- 1579.9111328125, 329.7358703613281, - 12310.365234375))
+                    end
+                end)
+            end
+        end
+    end)
+    spawn(function()
+        game:GetService("RunService").Heartbeat:Connect(function()
+            pcall(function()
+                local v451, v452, v453 = pairs(game:GetService("Workspace").Enemies:GetChildren())
+                while true do
+                    local v454
+                    v453, v454 = v451(v452, v453)
+                    if v453 == nil then
+                        break
+                    end
+                    if _G.Cake and (bringmob and (v454.Name == "Cookie Crafter" or (v454.Name == "Cake Guard" or (v454.Name == "Baking Staff" or v454.Name == "Head Baker")))) and (v454.HumanoidRootPart.Position - POSCAKE.Position).magnitude <= 350 then
+                        v454.HumanoidRootPart.CFrame = POSCAKE
+                        v454.HumanoidRootPart.CanCollide = false
+                        v454.HumanoidRootPart.Size = Vector3.new(60, 60, 60)
+                        if v454.Humanoid:FindFirstChild("Animator") then
+                            v454.Humanoid.Animator:Destroy()
+                        end
+                        sethiddenproperty(game.Players.LocalPlayer, "SimulationRadius", math.huge)
                     end
                 end
             end)
+        end)
+    end)
+    spawn(function()
+        while wait() do
+            if _G.Cake then
+                pcall(function()
+                    if game.ReplicatedStorage:FindFirstChild("Cake Prince") or (game:GetService("Workspace").Enemies:FindFirstChild("Cake Prince") or (game.ReplicatedStorage:FindFirstChild("Dough King") or game:GetService("Workspace").Enemies:FindFirstChild("Dough King"))) then
+                        if game:GetService("Workspace").Enemies:FindFirstChild("Cake Prince") or game:GetService("Workspace").Enemies:FindFirstChild("Dough King") then
+                            local v455, v456, v457 = pairs(game:GetService("Workspace").Enemies:GetChildren())
+                            while true do
+                                local v458
+                                v457, v458 = v455(v456, v457)
+                                if v457 == nil then
+                                    break
+                                end
+                                if v458.Name == "Cake Prince" or v458.Name == "Dough King" then
+                                    repeat
+                                        wait(_G.Fast_Delay)
+                                        AutoHaki()
+                                        EquipTool(SelectWeapon)
+                                        v458.HumanoidRootPart.CanCollide = false
+                                        v458.Humanoid.WalkSpeed = 0
+                                        v458.HumanoidRootPart.Size = Vector3.new(60, 60, 60)
+                                        local _mc42 = v458.HumanoidRootPart.CFrame * Pos
+                                        if (v458.HumanoidRootPart.CFrame.Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude > 5 then BKP(_mc42) end
+                                        AttackNoCoolDown()
+                                    until _G.Cake == false or (not v458.Parent or v458.Humanoid.Health <= 0)
+                                end
+                            end
+                        else
+                            Tween2(CFrame.new(- 2009.2802734375, 4532.97216796875, - 14937.3076171875))
+                        end
+                    elseif game.Workspace.Enemies:FindFirstChild("Baking Staff") or (game.Workspace.Enemies:FindFirstChild("Head Baker") or (game.Workspace.Enemies:FindFirstChild("Cake Guard") or game.Workspace.Enemies:FindFirstChild("Cookie Crafter"))) then
+                        local v459, v460, v461 = pairs(game:GetService("Workspace").Enemies:GetChildren())
+                        while true do
+                            local v462
+                            v461, v462 = v459(v460, v461)
+                            if v461 == nil then
+                                break
+                            end
+                            if (v462.Name == "Baking Staff" or (v462.Name == "Head Baker" or (v462.Name == "Cake Guard" or v462.Name == "Cookie Crafter"))) and v462.Humanoid.Health > 0 then
+                                repeat
+                                    wait(_G.Fast_Delay)
+                                    AutoHaki()
+                                    EquipTool(SelectWeapon)
+                                    bringmob = true
+                                    v462.HumanoidRootPart.Size = Vector3.new(60, 60, 60)
+                                    POSCAKE = v462.HumanoidRootPart.CFrame
+                                    local _mc43 = v462.HumanoidRootPart.CFrame * Pos
+                                    if (v462.HumanoidRootPart.CFrame.Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude > 5 then BKP(_mc43) end
+                                    AttackNoCoolDown()
+                                until _G.Cake == false or (game:GetService("ReplicatedStorage"):FindFirstChild("Cake Prince") or (game:GetService("ReplicatedStorage"):FindFirstChild("Dough King") or (not v462.Parent or v462.Humanoid.Health <= 0)))
+                            end
+                        end
+                    else
+                        bringmob = false
+                        Tween2(CFrame.new(- 1579.9111328125, 329.7358703613281, - 12310.365234375))
+                    end
+                end)
+            end
         end
-    end
-end)
+    end)
 
 -- Farm Tyrant of the Skies
 spawn(function()
@@ -5657,7 +5767,7 @@ end)
 
 DarkbeardBoss = Stack:AddLeftGroupbox("Boss Darkbeard")
 DarkbeardBoss:AddToggle("DarkBreadNormal", {
-    Title = "Auto Darkbeard",
+    Title = "Auto Darkbread",
     Default = false,
     Callback = function(Value)
         _G.Auto_Def_DarkCoat = Value
@@ -5685,7 +5795,7 @@ spawn(function()
 end)
 
 DarkbeardBoss:AddToggle("DarkBreadHop", {
-    Title = "Auto Darkbeard [ Hop Server ]",
+    Title = "Auto Darkbread [ Hop Server ]",
     Default = false,
     Callback = function(Value)
         _G.DarkbreadHop = Value
@@ -6875,7 +6985,7 @@ spawn(function()
         end)
     end
 end)
-    
+
 RaidStatusLabel = RaidOpen:AddLabel("Raid: Idle")
 
 spawn(function()
@@ -6898,8 +7008,8 @@ spawn(function()
             end
         end)
     end
-end)  
-    
+end)
+
 RaidOpen:AddToggle("RaidFarming", {
     Title = "Auto Raid",
     Default = false,
@@ -6907,34 +7017,6 @@ RaidOpen:AddToggle("RaidFarming", {
         _G.Raiding = Value
     end
 })
-
-spawn(function()
-  pcall(function() 
-    while wait(Sec) do
-      if _G.Raiding then  
-        if plr.PlayerGui.Main.TopHUDList.RaidTimer.Visible == true then          
-          local islands = {"Island5","Island 4", "Island 3", "Island 2", "Island 1"}
-          for _, island in ipairs(islands) do
-          local location = game:GetService("Workspace")["_WorldOrigin"].Locations:FindFirstChild(island)
-            if location then
-              for i,v in pairs(workspace.Enemies:GetChildren()) do
-                if v:FindFirstChild("Humanoid") or v:FindFirstChild("HumanoidRootPart") then
-                  if v.Humanoid.Health > 0 then
-                    repeat wait() Attack.Kill(v,_G.Raiding) NextIs=false until not _G.Raiding or not v.Parent or v.Humanoid.Health <= 0 NextIs=true
-                  end
-                end
-              end
-            end
-          end
-        else
-          NextIs = false
-        end
-      else
-        NextIs = false
-      end
-    end
-  end)
-end)
 
 spawn(function()
   pcall(function() 
@@ -6964,84 +7046,6 @@ spawn(function()
   end)
 end)
 
-spawn(function()
-	pcall(function()
-		while wait(T) do
-			if _G.Raiding then
-				if d.PlayerGui.Main.TopHUDList.RaidTimer.Visible == true then
-					local Y = {
-							"Island5",
-							"Island 4",
-							"Island 3",
-							"Island 2",
-							"Island 1",
-						};
-					for Y, d in ipairs(Y) do
-						local R = (game:GetService("Workspace"))._WorldOrigin.Locations:FindFirstChild(d);
-						if R then
-							for Y, d in pairs(workspace.Enemies:GetChildren()) do
-								if d:FindFirstChild("Humanoid") or d:FindFirstChild("HumanoidRootPart") then
-									if d.Humanoid.Health > 0 then
-										repeat
-											wait();
-											f.Kill(d, _G.Raiding);
-											NextIs = false;
-										until not _G.Raiding or not d.Parent or d.Humanoid.Health <= 0;
-										NextIs = true;
-									end;
-								end;
-							end;
-						end;
-					end;
-				else
-					NextIs = false;
-				end;
-			else
-				NextIs = false;
-			end;
-		end;
-	end);
-end)
-
-spawn(function()
-	while wait(T) do
-		if _G.KillH then
-			for Y, R in pairs(workspace.Enemies:GetChildren()) do
-				if f.Alive(R) then
-					pcall(function()
-						repeat
-							wait(T);
-							sethiddenproperty(d, "SimulationRadius", math.huge);
-							R:BreakJoints();
-							R.Humanoid.Health = 0;
-							R.HumanoidRootPart.CanCollide = false;
-						until not _G.KillH or not R.Parent or R.Humanoid.Health <= 0;
-					end);
-				end;
-			end;
-		end;
-	end;
-end)
-
-spawn(function()
-	while wait(T) do
-		if NextIs then
-			if d.PlayerGui.Main.TopHUDList.RaidTimer.Visible == true then
-				if workspace._WorldOrigin.Locations:FindFirstChild("Island 5") then
-					_tp((workspace._WorldOrigin.Locations:FindFirstChild("Island 5")).CFrame * CFrame.new(0, 50, 100));
-				elseif workspace._WorldOrigin.Locations:FindFirstChild("Island 4") then
-					_tp((workspace._WorldOrigin.Locations:FindFirstChild("Island 4")).CFrame * CFrame.new(0, 50, 100));
-				elseif workspace._WorldOrigin.Locations:FindFirstChild("Island 3") then
-					_tp((workspace._WorldOrigin.Locations:FindFirstChild("Island 3")).CFrame * CFrame.new(0, 50, 100));
-				elseif workspace._WorldOrigin.Locations:FindFirstChild("Island 2") then
-					_tp((workspace._WorldOrigin.Locations:FindFirstChild("Island 2")).CFrame * CFrame.new(0, 50, 100));
-				elseif workspace._WorldOrigin.Locations:FindFirstChild("Island 1") then
-					_tp((workspace._WorldOrigin.Locations:FindFirstChild("Island 1")).CFrame * CFrame.new(0, 50, 100));
-				end;
-			end;
-		end;
-	end;
-end)
 RaidOpen:AddToggle("AwakenFruits", {
     Title = "Auto Awaken Fruit",
     Default = false,
@@ -8070,42 +8074,6 @@ LeviathanSection:AddToggle("LeviathanToggle", {
     end
 })
 
--- ========== BLACKBEARD KEY SPAWN STATUS ==========
-spawn(function()
-    -- Tìm label nếu KitsuneSection hoặc LeviathanSection đã có
-    -- Thêm status theo dõi spawn key râu đen trực tiếp vào Sea tab
-    local BBKeyLabel = nil
-    -- Tạo label mới sau khi Sea tab load
-    task.wait(2)
-    pcall(function()
-        if LeviathanSection then
-            BBKeyLabel = LeviathanSection:AddLabel("🗝️ Blackbeard Key: Checking...")
-        end
-    end)
-    while task.wait(3) do
-        pcall(function()
-            if not BBKeyLabel then return end
-            -- Kiểm tra Blackbeard trong Enemies/Replicated
-            local hasBlackbeard = workspace.Enemies:FindFirstChild("Darkbeard")
-                or replicated:FindFirstChild("Darkbeard")
-            -- Kiểm tra key có trong inventory
-            local hasFist = GetBP and (GetBP("Fist of Darkness") ~= nil)
-            -- Kiểm tra progress CDK
-            local cdkProgress = nil
-            pcall(function()
-                cdkProgress = replicated.Remotes.CommF_:InvokeServer("BlackbeardReward", "Check")
-            end)
-            if hasFist then
-                BBKeyLabel:SetText("🗝️ BB Key: ✅ Fist of Darkness IN BAG")
-            elseif hasBlackbeard then
-                BBKeyLabel:SetText("🗝️ BB Key: 🔴 Darkbeard SPAWNED - Go!")
-            else
-                BBKeyLabel:SetText("🗝️ BB Key: Darkbeard not spawned")
-            end
-        end)
-    end
-end)
-
 -- Spawn functions for Kitsune Event
 spawn(function()
     while wait(Sec) do
@@ -8196,38 +8164,18 @@ spawn(function()
             pcall(function()
                 for _, v in pairs(workspace.SeaBeasts:GetChildren()) do
                     if v.Name == "Leviathan" and v:FindFirstChild("HumanoidRootPart") then
-                        _G.SeaBeast1 = true
                         repeat
-                            wait(0.1)
-                            pcall(function()
-                                if not v or not v.Parent or not v:FindFirstChild("HumanoidRootPart") then return end
-                                local dist = (Root.Position - v.HumanoidRootPart.Position).Magnitude
-                                -- Giữ khoảng cách 300-500 trên không để farm an toàn
-                                local waterY = workspace.Map["WaterBase-Plane"].Position.Y
-                                local targetY = waterY + 300
-                                if dist > 600 then
-                                    _tp(CFrame.new(v.HumanoidRootPart.Position.X, targetY, v.HumanoidRootPart.Position.Z))
-                                end
-                                if not plr.Character:FindFirstChild("HasBuso") then
-                                    replicated.Remotes.CommF_:InvokeServer("Buso")
-                                end
-                                MousePos = v.HumanoidRootPart.Position
-                                -- Use all skills trực tiếp
-                                if CheckF() then
-                                    weaponSc("Blox Fruit")
-                                    Useskills("Blox Fruit", "Z")
-                                    Useskills("Blox Fruit", "X")
-                                    Useskills("Blox Fruit", "C")
-                                else
-                                    Useskills("Melee", "Z")
-                                    Useskills("Melee", "X")
-                                    Useskills("Sword", "Z")
-                                    Useskills("Sword", "X")
-                                    Useskills("Blox Fruit", "Z")
-                                    Useskills("Blox Fruit", "X")
-                                    Useskills("Gun", "Z")
-                                end
-                            end)
+                            wait(0.2)
+                            if (Root.Position - v.HumanoidRootPart.Position).Magnitude > 10 then
+                                _tp(v.HumanoidRootPart.CFrame * CFrame.new(0, 500, 0))
+                            end
+                            if not _G.SeaBeast1 then
+                                _G.SeaBeast1 = true
+                            end
+                            if not plr.Character:FindFirstChild("HasBuso") then
+                                replicated.Remotes.CommF_:InvokeServer("Buso")
+                            end
+                            MousePos = v.HumanoidRootPart.Position
                         until not v:FindFirstChild("HumanoidRootPart") or not _G.Leviathan1
                         _G.SeaBeast1 = false
                     end
@@ -8619,7 +8567,7 @@ spawn(function()
 end)
 
 TrialRace:AddToggle("MigareToggle", {
-    Title = "Teleport To Mirage Island",
+    Title = "Teleport To Migare Island",
     Default = false,
     Callback = function(Value)
         _G.MigareIsland = Value -- Sửa tên biến
@@ -9792,33 +9740,13 @@ VolcanoFarm:AddToggle("CraftVolcanicMagnet", {
 })
 
 spawn(function()
-	while wait(T) do
-		pcall(function()
-			if _G.CraftVM then
-				if GetM("Volcanic Magnet") < 1 then
-					if GetM("Scrap Metal") >= 10 and GetM("Blaze Ember") >= 15 then
-						Q.Remotes.CommF_:InvokeServer("CraftItem", "Craft", "Volcanic Magnet");
-					elseif GetM("Scrap Metal") < 10 then
-						local Y = GetConnectionEnemies("Forest Pirate");
-						if Y then
-							repeat
-								wait();
-								f.Kill(Y, _G.CraftVM);
-							until not _G.CraftVM or not Y.Parent or Y.Humanoid.Health <= 0 or GetM("Scrap Metal") >= 10;
-						else
-							_tp(CFrame.new(-13206.452148438, 425.89199829102, -7964.5537109375));
-						end;
-					elseif GetM("Blaze Ember") < 15 then
-						repeat
-							wait();
-							_G.FarmBlazeEM = true;
-						until not _G.CraftVM or GetM("Blaze Ember") >= 15;
-						_G.FarmBlazeEM = false;
-					end;
-				end;
-			end;
-		end);
-	end;
+  while wait(Sec) do
+    pcall(function()
+      if _G.CraftVolcanicMagnet then
+        replicated.Remotes.CommF_:InvokeServer("CraftItem", "Craft", "Volcanic Magnet")
+      end
+    end)
+  end
 end)
 
 IslandFindLabel = VolcanoFarm:AddLabel("Island Hunt: Idle")
