@@ -1386,7 +1386,7 @@ local Window = Fluent:CreateWindow({
     SubTitle = "[ Blox Fruits ]",
     Size = UDim2.fromOffset(495, 500),
     Acrylic = true,
-    Theme = "Dark",
+    Theme = "Darker",
     MinimizeKey = Enum.KeyCode.LeftControl,
     TabWidth = 160
 })
@@ -5224,6 +5224,143 @@ spawn(function()
 
 end)
 
+-- ====================================================================
+-- SYSTEM CONFIGURATION & MELEE DATA (Cấu hình dữ liệu)
+-- ====================================================================
+local MeleeConfig = {
+    ["Godhuman"] = {
+        NPCName = "Ancient Monk",
+        CFrame = CFrame.new(-2850, 6, -4930), -- Tọa độ Ancient Monk tại Floating Turtle
+        Cost = {Beli = 5000000, Fragment = 5000}
+    },
+    ["Dragon Talon"] = {
+        NPCName = "Uzoth",
+        CFrame = CFrame.new(-5240, 15, -450), -- Tọa độ Uzoth tại Haunted Castle
+        Cost = {Beli = 3000000, Fragment = 5000}
+    },
+    ["Electric Claw"] = {
+        NPCName = "Previous Hero",
+        CFrame = CFrame.new(-220, 12, -2600), -- Tọa độ Previous Hero tại Floating Turtle
+        Cost = {Beli = 3000000, Fragment = 5000}
+    },
+    ["Sharkman Karate"] = {
+        NPCName = "Daigrock the Sharkman",
+        CFrame = CFrame.new(-2820, 240, -10050), -- Tọa độ tại Sea 2
+        Cost = {Beli = 2500000, Fragment = 5000}
+    },
+    ["Death Step"] = {
+        NPCName = "Phoenicis",
+        CFrame = CFrame.new(-5410, 80, -2900), -- Tọa độ tại Sea 2
+        Cost = {Beli = 2500000, Fragment = 5000}
+    }
+}
+
+-- Khởi tạo biến toàn cục cho UI điều khiển
+_G.AutoBuyMelee = false 
+_G.SelectedMelee = "Godhuman" 
+
+-- ====================================================================
+-- CORE FUNCTIONS (Các hàm xử lý cốt lõi)
+-- ====================================================================
+
+-- 1. Hàm tự động kiểm tra và chuyển Sea
+local function CheckAndGoToSea3()
+    local currentPlaceId = game.PlaceId
+    
+    -- Kiểm tra nếu không ở Sea 3 (ID: 7449423635)
+    if currentPlaceId ~= 7449423635 then 
+        print("[System] Không ở Sea 3! Đang tự động chuyển Sea...")
+        
+        -- Nếu đang ở Sea 2 (ID: 4442272183) -> Di chuyển qua Sea 3
+        if currentPlaceId == 4442272183 then
+            game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("TravelThirdSea")
+        -- Nếu đang ở Sea 1 (ID: 2747839649) -> Qua Sea 2 trước
+        elseif currentPlaceId == 2747839649 then
+            game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("TravelMain")
+        end
+        
+        task.wait(5) -- Chờ server xử lý Teleport
+        return false
+    end
+    return true
+end
+
+-- 2. Hàm Tween mượt mà tích hợp Noclip chống kẹt
+local function SmoothTween(targetCFrame, speed)
+    local player = game.Players.LocalPlayer
+    if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then return end
+    
+    local hrp = player.Character.HumanoidRootPart
+    local distance = (hrp.Position - targetCFrame.Position).Magnitude
+    local duration = distance / (speed or 300) -- Tốc độ bay mặc định 300
+    
+    local tweenService = game:GetService("TweenService")
+    local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear)
+    local tween = tweenService:Create(hrp, tweenInfo, {CFrame = targetCFrame})
+    
+    -- Kích hoạt Noclip xuyên tường khi đang bay
+    local noclipConnection
+    noclipConnection = game:GetService("RunService").Stepped:Connect(function()
+        if player.Character then
+            for _, part in pairs(player.Character:GetChildren()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = false
+                end
+            end
+        end
+    end)
+    
+    tween:Play()
+    tween.Completed:Wait() -- Đợi bay tới đích
+    
+    -- Ngắt Noclip sau khi hoàn thành
+    if noclipConnection then noclipConnection:Disconnect() end
+end
+
+-- ====================================================================
+-- MAIN THREAD LOGIC (Vòng lặp chính chạy ngầm)
+-- ====================================================================
+task.spawn(function()
+    while true do
+        task.wait(0.5) -- Tránh spam quá mức gây lag log
+        
+        if _G.AutoBuyMelee then
+            -- Bước 1: Kiểm tra Sea
+            local isSea3 = CheckAndGoToSea3()
+            if not isSea3 then 
+                task.wait(2) -- Chờ map load nếu đang chuyển sea
+                continue 
+            end
+            
+            -- Bước 2: Kiểm tra dữ liệu Melee đã chọn
+            local meleeData = MeleeConfig[_G.SelectedMelee]
+            if meleeData then
+                local player = game.Players.LocalPlayer
+                local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+                
+                if hrp then
+                    local distanceToNPC = (hrp.Position - meleeData.CFrame.Position).Magnitude
+                    
+                    -- Bước 3: Nếu ở xa -> Tiến hành Tween tới NPC
+                    if distanceToNPC > 15 then
+                        print("[Auto Melee] Đang di chuyển tới NPC: " .. meleeData.NPCName)
+                        SmoothTween(meleeData.CFrame, 320) -- Tốc độ tối ưu 320
+                    else
+                        -- Bước 4: Đã đến sát NPC -> Thực hiện lệnh mua qua Remote
+                        print("[Auto Melee] Đã tiếp cận NPC! Đang mua " .. _G.SelectedMelee)
+                        
+                        -- Invoke lệnh mua lên Server Blox Fruits
+                        game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("Buy" .. _G.SelectedMelee)
+                        
+                        -- Tự động tắt sau khi hoàn thành để tránh spam lỗi
+                        _G.AutoBuyMelee = false
+                        print("[Auto Melee] Tiến trình hoàn tất thành công!")
+                    end
+                end
+            end
+        end
+    end
+end)
 
 
 Tabs.Quests:AddSection("Tushita + Yama")
