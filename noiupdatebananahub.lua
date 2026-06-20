@@ -131,6 +131,14 @@ local Sec = 0.1
 local ClickState = 0
 local Num_self = 25
 
+-- Team mặc định
+getgenv().Team = getgenv().Team or "Pirates"
+
+repeat 
+    local start = plr.PlayerGui:WaitForChild("Main"):WaitForChild("Loading") 
+    wait() 
+until start and game:IsLoaded()
+
 local fruitsOnSale = {}
 local function addCommas(number)
     local formatted = tostring(number)
@@ -2676,7 +2684,7 @@ local function GetRigType()
 end
 
 local DanceAnimation = Instance.new("Animation")
-DanceAnimation.AnimationId = (GetRigType() == "R15") and "rbxassetid://698251653" or "rbxassetid://72042024"
+DanceAnimation.AnimationId = (GetRigType() == "R15") and "rbxassetid://107947448141957" or "rbxassetid://107947448141957"
 
 local function DanceLoop()
     while isDancing do
@@ -2814,14 +2822,14 @@ Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/obiiyeuemmm
 Window = Library:CreateWindow({
     Title = "Banana Cat Hub",
     Subtitle = "- Blox Fruit",
-    Image = "rbxassetid://5009915795"
+    Image = "rbxassetid://107947448141957"
 })
 
 wait(1)
 
 Library:Notify({
     Title = "Ui Library",
-    Description = "The UI automatically hides once executed.\nPress the button at the bottom-left of the screen to show the GUI.",
+    Description = "Load thành công, chúc anh em chơi vui vẻ",
     Duration = 3
 })
 
