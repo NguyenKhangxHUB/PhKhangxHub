@@ -5223,145 +5223,136 @@ spawn(function()
   end
 
 end)
-
--- ====================================================================
--- SYSTEM CONFIGURATION & MELEE DATA (Cấu hình dữ liệu)
--- ====================================================================
-local MeleeConfig = {
-    ["Godhuman"] = {
-        NPCName = "Ancient Monk",
-        CFrame = CFrame.new(-2850, 6, -4930), -- Tọa độ Ancient Monk tại Floating Turtle
-        Cost = {Beli = 5000000, Fragment = 5000}
-    },
-    ["Dragon Talon"] = {
-        NPCName = "Uzoth",
-        CFrame = CFrame.new(-5240, 15, -450), -- Tọa độ Uzoth tại Haunted Castle
-        Cost = {Beli = 3000000, Fragment = 5000}
-    },
-    ["Electric Claw"] = {
-        NPCName = "Previous Hero",
-        CFrame = CFrame.new(-220, 12, -2600), -- Tọa độ Previous Hero tại Floating Turtle
-        Cost = {Beli = 3000000, Fragment = 5000}
-    },
-    ["Sharkman Karate"] = {
-        NPCName = "Daigrock the Sharkman",
-        CFrame = CFrame.new(-2820, 240, -10050), -- Tọa độ tại Sea 2
-        Cost = {Beli = 2500000, Fragment = 5000}
-    },
-    ["Death Step"] = {
-        NPCName = "Phoenicis",
-        CFrame = CFrame.new(-5410, 80, -2900), -- Tọa độ tại Sea 2
-        Cost = {Beli = 2500000, Fragment = 5000}
-    }
-}
-
--- Khởi tạo biến toàn cục cho UI điều khiển
-_G.AutoBuyMelee = false 
-_G.SelectedMelee = "Godhuman" 
-
--- ====================================================================
--- CORE FUNCTIONS (Các hàm xử lý cốt lõi)
--- ====================================================================
-
--- 1. Hàm tự động kiểm tra và chuyển Sea
-local function CheckAndGoToSea3()
-    local currentPlaceId = game.PlaceId
-    
-    -- Kiểm tra nếu không ở Sea 3 (ID: 7449423635)
-    if currentPlaceId ~= 7449423635 then 
-        print("[System] Không ở Sea 3! Đang tự động chuyển Sea...")
-        
-        -- Nếu đang ở Sea 2 (ID: 4442272183) -> Di chuyển qua Sea 3
-        if currentPlaceId == 4442272183 then
-            game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("TravelThirdSea")
-        -- Nếu đang ở Sea 1 (ID: 2747839649) -> Qua Sea 2 trước
-        elseif currentPlaceId == 2747839649 then
-            game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("TravelMain")
-        end
-        
-        task.wait(5) -- Chờ server xử lý Teleport
-        return false
+-- ==================== THÊM VÀO TAB FIGHTING STYLE ====================
+-- Tìm tab Fighting Style
+local MeleeTab = nil
+for _, tab in pairs(Tabs) do
+    if tab.Title == "Fighting Style" then
+        MeleeTab = tab
+        break
     end
-    return true
 end
 
--- 2. Hàm Tween mượt mà tích hợp Noclip chống kẹt
-local function SmoothTween(targetCFrame, speed)
-    local player = game.Players.LocalPlayer
-    if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then return end
+if MeleeTab then
+    -- Danh sách Melee có thể mua
+    local MeleeList = {"Superhuman", "Death Step", "Sharkman Karate", "Electric Claw", "Dragon Talon", "Godhuman", "Sanguine Art"}
     
-    local hrp = player.Character.HumanoidRootPart
-    local distance = (hrp.Position - targetCFrame.Position).Magnitude
-    local duration = distance / (speed or 300) -- Tốc độ bay mặc định 300
+    -- Dropdown chọn Melee
+    local SelectMelee = MeleeTab:AddDropdown("SelectMelee", {
+        Title = "Select Melee to Buy",
+        Values = MeleeList,
+        Multi = false,
+        Default = 1
+    })
     
-    local tweenService = game:GetService("TweenService")
-    local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear)
-    local tween = tweenService:Create(hrp, tweenInfo, {CFrame = targetCFrame})
-    
-    -- Kích hoạt Noclip xuyên tường khi đang bay
-    local noclipConnection
-    noclipConnection = game:GetService("RunService").Stepped:Connect(function()
-        if player.Character then
-            for _, part in pairs(player.Character:GetChildren()) do
-                if part:IsA("BasePart") then
-                    part.CanCollide = false
-                end
-            end
-        end
+    SelectMelee:OnChanged(function(Value)
+        _G.SelectedMelee = Value
     end)
     
-    tween:Play()
-    tween.Completed:Wait() -- Đợi bay tới đích
+    -- Toggle Auto Buy
+    local AutoBuyMelee = MeleeTab:AddToggle("AutoBuyMelee", {
+        Title = "Auto Buy Melee",
+        Description = "Auto travel to NPC and buy selected melee",
+        Default = false
+    })
     
-    -- Ngắt Noclip sau khi hoàn thành
-    if noclipConnection then noclipConnection:Disconnect() end
+    AutoBuyMelee:OnChanged(function(Value)
+        _G.AutoBuyMelee = Value
+    end)
 end
 
--- ====================================================================
--- MAIN THREAD LOGIC (Vòng lặp chính chạy ngầm)
--- ====================================================================
+-- ==================== LOGIC AUTO BUY ====================
+-- Hàm kiểm tra đang ở Sea 3
+local function IsSea3()
+    return game.PlaceId == 7449423635 or game.PlaceId == 100117331123089
+end
+
+-- Hàm di chuyển đến Sea 3
+local function GoToSea3()
+    if not IsSea3() then
+        replicated.Remotes.CommF_:InvokeServer("TravelZou")
+        task.wait(2)
+    end
+end
+
+-- Hàm Tween đến vị trí (dùng chung với script)
+local function TweenToPos(cframe)
+    if not Root then return end
+    _tp(cframe)
+end
+
+-- Hàm mua Melee
+local function BuyMelee(meleeName)
+    local player = game.Players.LocalPlayer
+    
+    -- Kiểm tra đã có chưa
+    if player.Backpack:FindFirstChild(meleeName) or player.Character:FindFirstChild(meleeName) then
+        print("Da co " .. meleeName)
+        _G.AutoBuyMelee = false
+        return
+    end
+    
+    -- Vị trí NPC và cách mua
+    local npcData = {
+        ["Superhuman"] = {
+            pos = CFrame.new(-2451.98, 73.07, -3226.11),
+            buy = function() replicated.Remotes.CommF_:InvokeServer("BuySuperhuman") end
+        },
+        ["Death Step"] = {
+            pos = CFrame.new(6412.89, 302.92, -6887.69),
+            buy = function() replicated.Remotes.CommF_:InvokeServer("BuyDeathStep") end
+        },
+        ["Sharkman Karate"] = {
+            pos = CFrame.new(-3352.90, 285.01, -10534.84),
+            buy = function() replicated.Remotes.CommF_:InvokeServer("BuySharkmanKarate") end
+        },
+        ["Electric Claw"] = {
+            pos = CFrame.new(-7994.98, 5761.02, -2088.64),
+            buy = function() replicated.Remotes.CommF_:InvokeServer("BuyElectricClaw") end
+        },
+        ["Dragon Talon"] = {
+            pos = CFrame.new(5661.89, 1211.31, 864.83),
+            buy = function() replicated.Remotes.CommF_:InvokeServer("BuyDragonTalon") end
+        },
+        ["Godhuman"] = {
+            pos = CFrame.new(-12543.00, 336.00, -7484.00),
+            buy = function() replicated.Remotes.CommF_:InvokeServer("BuyGodhuman") end
+        },
+        ["Sanguine Art"] = {
+            pos = CFrame.new(-8761.31, 164.85, 6161.15),
+            buy = function() replicated.Remotes.CommF_:InvokeServer("BuySanguineArt") end
+        }
+    }
+    
+    local data = npcData[meleeName]
+    if not data then return end
+    
+    -- Di chuyển đến Sea 3
+    GoToSea3()
+    
+    -- Tween đến NPC
+    TweenToPos(data.pos)
+    
+    -- Chờ đến gần NPC
+    task.wait(1)
+    
+    -- Mua
+    data.buy()
+    print("Da mua " .. meleeName)
+end
+
+-- Vòng lặp chính
 task.spawn(function()
-    while true do
-        task.wait(0.5) -- Tránh spam quá mức gây lag log
-        
-        if _G.AutoBuyMelee then
-            -- Bước 1: Kiểm tra Sea
-            local isSea3 = CheckAndGoToSea3()
-            if not isSea3 then 
-                task.wait(2) -- Chờ map load nếu đang chuyển sea
-                continue 
+    while task.wait(2) do
+        pcall(function()
+            if _G.AutoBuyMelee and _G.SelectedMelee then
+                BuyMelee(_G.SelectedMelee)
             end
-            
-            -- Bước 2: Kiểm tra dữ liệu Melee đã chọn
-            local meleeData = MeleeConfig[_G.SelectedMelee]
-            if meleeData then
-                local player = game.Players.LocalPlayer
-                local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-                
-                if hrp then
-                    local distanceToNPC = (hrp.Position - meleeData.CFrame.Position).Magnitude
-                    
-                    -- Bước 3: Nếu ở xa -> Tiến hành Tween tới NPC
-                    if distanceToNPC > 15 then
-                        print("[Auto Melee] Đang di chuyển tới NPC: " .. meleeData.NPCName)
-                        SmoothTween(meleeData.CFrame, 320) -- Tốc độ tối ưu 320
-                    else
-                        -- Bước 4: Đã đến sát NPC -> Thực hiện lệnh mua qua Remote
-                        print("[Auto Melee] Đã tiếp cận NPC! Đang mua " .. _G.SelectedMelee)
-                        
-                        -- Invoke lệnh mua lên Server Blox Fruits
-                        game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("Buy" .. _G.SelectedMelee)
-                        
-                        -- Tự động tắt sau khi hoàn thành để tránh spam lỗi
-                        _G.AutoBuyMelee = false
-                        print("[Auto Melee] Tiến trình hoàn tất thành công!")
-                    end
-                end
-            end
-        end
+        end)
     end
 end)
 
+print("Auto Buy Melee da duoc tai!")
 
 Tabs.Quests:AddSection("Tushita + Yama")
 
