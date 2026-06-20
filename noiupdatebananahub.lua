@@ -131,23 +131,6 @@ local Sec = 0.1
 local ClickState = 0
 local Num_self = 25
 
--- Team mặc định
-getgenv().Team = getgenv().Team or "Pirates"
-
-repeat 
-    local start = plr.PlayerGui:WaitForChild("Main"):WaitForChild("Loading") 
-    wait() 
-until start and game:IsLoaded()
-
--- Thiết lập team
-if getgenv().Team == "Pirates" then
-    replicated.Remotes.CommF_:InvokeServer("SetTeam", "Pirates")
-elseif getgenv().Team == "Marines" then
-    replicated.Remotes.CommF_:InvokeServer("SetTeam", "Marines")
-else
-    replicated.Remotes.CommF_:InvokeServer("SetTeam", "Pirates")
-end
-
 local fruitsOnSale = {}
 local function addCommas(number)
     local formatted = tostring(number)
@@ -382,116 +365,6 @@ weaponSc = function(weapon)
         end
     end
 end
-
--- BLOX FRUIT ATTACK
-local Players = game:GetService("Players")
-local player = Players.LocalPlayer
-
-_G.SelectWeapon = nil
-
-function GetFruit()
-    for _, v in pairs(player.Backpack:GetChildren()) do
-        if v:IsA("Tool") and v.ToolTip == "Blox Fruit" then
-            _G.SelectWeapon = v.Name
-            return
-        end
-    end
-end
-
-function EquipFruit()
-    pcall(function()
-        if _G.SelectWeapon
-        and player.Backpack:FindFirstChild(_G.SelectWeapon)
-        and player.Character
-        and player.Character:FindFirstChild("Humanoid") then
-
-            player.Character.Humanoid:EquipTool(
-                player.Backpack[_G.SelectWeapon]
-            )
-        end
-    end)
-end
-
-task.spawn(function()
-    while task.wait() do
-        if _G.ChooseWP == "Blox Fruit" then
-            GetFruit()
-            EquipFruit()
-        end
-    end
-end)
-
-player.CharacterAdded:Connect(function(char)
-    repeat task.wait() until char:FindFirstChild("HumanoidRootPart")
-
-    if _G.ChooseWP == "Blox Fruit" then
-        GetFruit()
-        EquipFruit()
-    end
-end)
-
-task.spawn(function()
-    task.wait(1)
-
-    loadstring(game:HttpGet(
-        "https://raw.githubusercontent.com/TopiHub1909/TopiHub/refs/heads/main/Attack"
-    ))()
-end)
-
--- BLOX FRUIT ATTACK
-local Players = game:GetService("Players")
-local player = Players.LocalPlayer
-
-_G.SelectWeapon = nil
-
-function GetFruit()
-    for _, v in pairs(player.Backpack:GetChildren()) do
-        if v:IsA("Tool") and v.ToolTip == "Blox Fruit" then
-            _G.SelectWeapon = v.Name
-            return
-        end
-    end
-end
-
-function EquipFruit()
-    pcall(function()
-        if _G.SelectWeapon
-        and player.Backpack:FindFirstChild(_G.SelectWeapon)
-        and player.Character
-        and player.Character:FindFirstChild("Humanoid") then
-
-            player.Character.Humanoid:EquipTool(
-                player.Backpack[_G.SelectWeapon]
-            )
-        end
-    end)
-end
-
-task.spawn(function()
-    while task.wait() do
-        if _G.ChooseWP == "Blox Fruit" then
-            GetFruit()
-            EquipFruit()
-        end
-    end
-end)
-
-player.CharacterAdded:Connect(function(char)
-    repeat task.wait() until char:FindFirstChild("HumanoidRootPart")
-
-    if _G.ChooseWP == "Blox Fruit" then
-        GetFruit()
-        EquipFruit()
-    end
-end)
-
-task.spawn(function()
-    task.wait(1)
-
-    loadstring(game:HttpGet(
-        "https://raw.githubusercontent.com/TopiHub1909/TopiHub/refs/heads/main/Attack"
-    ))()
-end)
 
 -- BLOX FRUIT ATTACK
 local Players = game:GetService("Players")
@@ -2936,7 +2809,7 @@ local function ShootLoop()
     end
 end
 
-Library = loadstring(game:HttpGet("https://pastefy.app/ohugHERr/raw"))()
+Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/obiiyeuemmm/BananaCatHub/refs/heads/main/ObiiBananaCatHub.txt"))()
 
 Window = Library:CreateWindow({
     Title = "Banana Cat Hub",
