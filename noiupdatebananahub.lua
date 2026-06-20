@@ -2936,7 +2936,7 @@ local function ShootLoop()
     end
 end
 
-Library = loadstring(game:HttpGet("https://pastefy.app/Pp1rGbfm/raw"))()
+Library = loadstring(game:HttpGet("https://pastefy.app/ohugHERr/raw"))()
 
 Window = Library:CreateWindow({
     Title = "Banana Cat Hub",
