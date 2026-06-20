@@ -282,6 +282,8 @@ World2 = game.PlaceId == 4442272183 or game.PlaceId == 79091703265657
 
 World3 = game.PlaceId == 7449423635 or game.PlaceId == 100117331123089
 
+Sea = World1 or World2 or World3 or plr:Kick("❌ Error : A[12]Blox Fruits ❌ Incorrect place ID, please wait for an update. ")
+
 Marines = function() replicated.Remotes.CommF_:InvokeServer("SetTeam","Marines") end
 
 Pirates = function() replicated.Remotes.CommF_:InvokeServer("SetTeam","Pirates") end
@@ -2987,7 +2989,7 @@ spawn(function()
 
 end)
 
-local Q = Tabs.Main:AddToggle("Q", {Title = "Farm Katakuri", Description = "", Default = false})
+local Q = Tabs.Main:AddToggle("Q", {Title = "Auto Cake Prince", Description = "", Default = false})
 
 Q:OnChanged(function(Value)
 
@@ -2995,228 +2997,111 @@ Q:OnChanged(function(Value)
 
 end)
 
--- ============================================
--- AUTO FARM KATAKURI (CAKE PRINCE)
--- Dành cho Maru Hub Premium
--- Đứng trên đầu quái, auto đánh, auto triệu hồi
--- ============================================
+spawn(function()
 
-local player = game.Players.LocalPlayer
-local character = player.Character
-local root = character and character:FindFirstChild("HumanoidRootPart")
-local replicated = game:GetService("ReplicatedStorage")
-local enemies = workspace.Enemies
-local bigMirror = workspace.Map and workspace.Map.CakeLoaf and workspace.Map.CakeLoaf:FindFirstChild("BigMirror")
+  while wait() do
 
-if not bigMirror then
-    warn("Không tìm thấy BigMirror! Hãy ở Sea 3 và đến Candy Land.")
-    return
-end
+    if _G.Auto_Cake_Prince then
 
--- ============================================
--- HÀM HỖ TRỢ
--- ============================================
+      pcall(function()
 
--- Teleport không tween (nhảy thẳng)
-local function teleportPos(cframe)
-    if root then
-        root.CFrame = cframe
-    end
-end
+        local player = game.Players.LocalPlayer
 
--- Teleport có tween (mượt mà)
-local function tweenPos(cframe)
-    if root and game:GetService("TweenService") then
-        local tween = game:GetService("TweenService"):Create(
-            root,
-            TweenInfo.new((root.Position - cframe.Position).Magnitude / 350, Enum.EasingStyle.Linear),
-            {CFrame = cframe}
-        )
-        tween:Play()
-        return tween
-    end
-end
+        local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 
--- Kiểm tra enemy còn sống
-local function isAlive(enemy)
-    local humanoid = enemy and enemy:FindFirstChild("Humanoid")
-    return humanoid and humanoid.Health > 0
-end
+        local questUI = player.PlayerGui.Main.Quest
 
--- Lấy enemy theo tên
-local function getEnemy(name)
-    for _, v in pairs(enemies:GetChildren()) do
-        if v.Name == name and isAlive(v) then
-            return v
-        end
-    end
-    return nil
-end
+        local enemies = workspace.Enemies
 
--- Trang bị vũ khí từ Backpack
-local function equipWeapon(weaponName)
-    if not weaponName then return end
-    local backpack = player.Backpack
-    local char = player.Character
-    if backpack:FindFirstChild(weaponName) then
-        char.Humanoid:EquipTool(backpack:FindFirstChild(weaponName))
-    end
-end
+        local bigMirror = workspace.Map.CakeLoaf.BigMirror
 
--- Auto click M1
-local function autoClick()
-    local tool = character:FindFirstChildOfClass("Tool")
-    if tool and tool:FindFirstChild("LeftClickRemote") then
-        tool.LeftClickRemote:FireServer(Vector3.new(0, -500, 0), 1, true)
-        tool.LeftClickRemote:FireServer(false)
-    end
-end
+        if not root then return end
 
--- Kích hoạt skill
-local function useSkill(key)
-    local vim = game:GetService("VirtualInputManager")
-    vim:SendKeyEvent(true, key, false, game)
-    task.wait(0.05)
-    vim:SendKeyEvent(false, key, false, game)
-end
-
--- ============================================
--- HÀM CHÍNH: FARM KATAKURI
--- ============================================
-
-local function farmKatakuri()
-    pcall(function()
-        -- Nếu chưa có mirror thì đi farm quái để triệu hồi
         if not bigMirror:FindFirstChild("Other") then
-            -- Farm quái ở Candy Land
-            local mobs = {"Cookie Crafter", "Cake Guard", "Baking Staff", "Head Baker"}
-            local target = nil
-            
-            for _, mobName in ipairs(mobs) do
-                target = getEnemy(mobName)
-                if target then break end
+
+          _tp(CFrame.new(-2077, 252, -12373))
+
+        end        
+
+        if bigMirror.Other.Transparency == 0 or enemies:FindFirstChild("Cake Prince") then
+
+          local v = GetConnectionEnemies("Cake Prince")
+
+          if v then
+
+            repeat wait() Attack.Kill2(v, _G.Auto_Cake_Prince)until not _G.Auto_Cake_Prince or not v.Parent or v.Humanoid.Health <= 0
+
+          else
+
+            if bigMirror.Other.Transparency == 0 and (CFrame.new(-1990.67, 4533, -14973.67).Position - root.Position).Magnitude >= 2000 then
+
+              _tp(CFrame.new(-2151.82, 149.32, -12404.91))
+
             end
-            
-            if target then
-                -- Đứng trên đầu quái
-                local targetPos = target.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0)
-                tweenPos(targetPos)
-                equipWeapon("Superhuman") -- hoặc vũ khí bạn có
-                autoClick()
-            else
-                -- Không có quái -> tới vị trí spawn
-                tweenPos(CFrame.new(-2077, 252, -12373))
-                task.wait(1)
-            end
-            return
-        end
-        
-        -- ============================================
-        -- KHI ĐÃ CÓ MIRROR (ĐÃ TRIỆU HỒI)
-        -- ============================================
-        
-        -- Kiểm tra Cake Prince có tồn tại không
-        local cakePrince = getEnemy("Cake Prince")
-        
-        if cakePrince then
-            -- ============================================
-            -- ĐÁNH CAKE PRINCE - ĐỨNG TRÊN ĐẦU
-            -- ============================================
-            
-            print("Đang đánh Cake Prince...")
-            
-            -- Lưu vị trí gốc để né nếu cần
-            local bossPos = cakePrince.HumanoidRootPart.CFrame
-            
-            -- Đứng trên đầu quái (cao 30-35)
-            local standPos = bossPos * CFrame.new(0, 35, 0)
-            tweenPos(standPos)
-            
-            -- Trang bị vũ khí mạnh nhất
-            -- Ưu tiên: Blox Fruit -> Melee -> Sword -> Gun
-            local weaponPriority = {"Blox Fruit", "Melee", "Sword", "Gun"}
-            for _, wpType in ipairs(weaponPriority) do
-                for _, tool in pairs(player.Backpack:GetChildren()) do
-                    if tool:IsA("Tool") and tool.ToolTip == wpType then
-                        equipWeapon(tool.Name)
-                        break
-                    end
-                end
-            end
-            
-            -- Vòng lặp đánh boss
-            local loopCount = 0
-            while isAlive(cakePrince) do
-                loopCount = loopCount + 1
-                
-                -- Cập nhật vị trí liên tục (bám theo boss)
-                if cakePrince and cakePrince:FindFirstChild("HumanoidRootPart") then
-                    local newPos = cakePrince.HumanoidRootPart.CFrame * CFrame.new(0, 35, 0)
-                    if (root.Position - newPos.Position).Magnitude > 5 then
-                        tweenPos(newPos)
-                    end
-                end
-                
-                -- Auto M1
-                autoClick()
-                
-                -- Xài skill mỗi 0.5s
-                if loopCount % 3 == 0 then
-                    useSkill("Z")
-                end
-                if loopCount % 5 == 0 then
-                    useSkill("X")
-                end
-                if loopCount % 7 == 0 and player.Backpack:FindFirstChild("Dough-Dough") then
-                    useSkill("C")
-                end
-                
-                -- Xài V nếu có (skill đặc biệt)
-                if loopCount % 10 == 0 then
-                    useSkill("V")
-                end
-                
-                task.wait(0.1)
-            end
-            
-            print("Đã hạ Cake Prince!")
-            task.wait(0.5)
-            
+
+          end
+
         else
-            -- ============================================
-            -- CHƯA CÓ BOSS -> VÀO MIRROR HOẶC ĐỢI
-            -- ============================================
-            
-            if bigMirror.Other and bigMirror.Other.Transparency == 0 then
-                -- Mirror đang mở -> teleport vào
-                local mirrorPos = CFrame.new(-1990.67, 4533, -14973.67)
-                tweenPos(mirrorPos)
-                task.wait(1)
-                
-                -- Tìm boss sau khi vào mirror
-                task.wait(2)
-            else
-                -- Mirror chưa sẵn sàng -> đợi
-                print("Đang đợi Mirror mở...")
-                task.wait(1)
+
+          local CakePrince = {"Cookie Crafter","Cake Guard","Baking Staff","Head Baker"}
+
+          local v = GetConnectionEnemies(CakePrince)
+
+          if v then
+
+            if _G.AcceptQuestC and not questUI.Visible then
+
+              local questPos = CFrame.new(-1927.92, 37.8, -12842.54)
+
+              _tp(questPos)
+
+              while (questPos.Position - root.Position).Magnitude > 50 do
+
+                wait(0.2)
+
+              end
+
+              local randomQuest = math.random(1, 4)
+
+              local questData = {
+
+                [1] = {"StartQuest", "CakeQuest2", 2},
+
+                [2] = {"StartQuest", "CakeQuest2", 1},
+
+                [3] = {"StartQuest", "CakeQuest1", 1},
+
+                [4] = {"StartQuest", "CakeQuest1", 2}
+
+              }                    
+
+              local success, response = pcall(function()
+
+                return game.ReplicatedStorage.Remotes.CommF_:InvokeServer(unpack(questData[randomQuest]))
+
+              end)
+
             end
+
+            repeat wait() Attack.Kill(v, _G.Auto_Cake_Prince) until not _G.Auto_Cake_Prince or v.Humanoid.Health <= 0 or bigMirror.Other.Transparency == 0 or (_G.AcceptQuestC and not questUI.Visible)                
+
+          else
+
+            _tp(CFrame.new(-2077, 252, -12373))
+
+          end
+
         end
-        
-    end)
-end
 
--- ============================================
--- VÒNG LẶP CHÍNH
--- ============================================
+      end)
 
-print("=== AUTO FARM KATAKURI ===")
-print("Bắt đầu farm Cake Prince...")
+    end
 
-while task.wait(0.5) do
-    farmKatakuri()
-end
+  end
 
-local Q = Tabs.Main:AddToggle("Q", {Title = "Farm Bones", Description = "", Default = false})
+end)
+
+local Q = Tabs.Main:AddToggle("Q", {Title = "Auto Bones", Description = "", Default = false})
 
 Q:OnChanged(function(Value)
 
