@@ -2952,7 +2952,7 @@ spawn(function()
 
 end)
 
-local Q = Tabs.Main:AddToggle("Q", {Title = "Auto Cake Prince", Description = "", Default = false})
+local Q = Tabs.Main:AddToggle("Q", {Title = "Farm Katakuri", Description = "", Default = false})
 
 Q:OnChanged(function(Value)
 
@@ -2961,107 +2961,90 @@ Q:OnChanged(function(Value)
 end)
 
 spawn(function()
+    while task.wait(1) do
+        if _G.StartFarm and _G.MethodSelect == "Farm Katakuri" then
+            local ok, err = pcall(function()
+                local player = game.Players.LocalPlayer
+                local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+                if not root then return end
 
-  while wait() do
+                local questUI = player.PlayerGui:FindFirstChild("Main")
+                    and player.PlayerGui.Main:FindFirstChild("Quest")
+                local enemies = workspace.Enemies
 
-    if _G.Auto_Cake_Prince then
+                local mapFolder = workspace:FindFirstChild("Map")
+                local cakeLoaf = mapFolder and mapFolder:FindFirstChild("CakeLoaf")
+                local bigMirror = cakeLoaf and cakeLoaf:FindFirstChild("BigMirror")
+                local mirrorOther = bigMirror and bigMirror:FindFirstChild("Other")
 
-      pcall(function()
+                if not mirrorOther then
+                    _tp(CFrame.new(-2077, 252, -12373))
+                    return
+                end
 
-        local player = game.Players.LocalPlayer
+                if mirrorOther.Transparency == 0 or enemies:FindFirstChild("Cake Prince") then
+                    local v = GetConnectionEnemies("Cake Prince")
+                    if v then
+                        repeat
+                            wait()
+                            Attack.Kill2(v, _G.StartFarm)
+                        until not _G.StartFarm
+                            or not v.Parent
+                            or not v:FindFirstChild("Humanoid")
+                            or v.Humanoid.Health <= 0
+                    else
+                        if mirrorOther.Transparency == 0
+                           and (CFrame.new(-1990.67, 4533, -14973.67).Position - root.Position).Magnitude >= 2000 then
+                            _tp(CFrame.new(-2151.82, 149.32, -12404.91))
+                        end
+                    end
+                else
+                    local mobNames = {"Cookie Crafter", "Cake Guard", "Baking Staff", "Head Baker"}
+                    local v = GetConnectionEnemies(mobNames)
 
-        local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+                    if v then
+                        if _G.AcceptQuestC and questUI and not questUI.Visible then
+                            local questPos = CFrame.new(-1927.92, 37.8, -12842.54)
+                            _tp(questPos)
 
-        local questUI = player.PlayerGui.Main.Quest
+                            local attempts = 0
+                            while attempts < 50 and (questPos.Position - root.Position).Magnitude > 50 do
+                                wait(0.2)
+                                attempts += 1
+                            end
 
-        local enemies = workspace.Enemies
+                            local questData = {
+                                {"StartQuest", "CakeQuest2", 2},
+                                {"StartQuest", "CakeQuest2", 1},
+                                {"StartQuest", "CakeQuest1", 1},
+                                {"StartQuest", "CakeQuest1", 2},
+                            }
+                            pcall(function()
+                                game.ReplicatedStorage.Remotes.CommF_:InvokeServer(unpack(questData[math.random(1, 4)]))
+                            end)
+                        end
 
-        local bigMirror = workspace.Map.CakeLoaf.BigMirror
+                        repeat
+                            wait()
+                            Attack.Kill(v, _G.StartFarm)
+                        until not _G.StartFarm
+                            or not v
+                            or not v.Parent
+                            or (v:FindFirstChild("Humanoid") and v.Humanoid.Health <= 0)
+                            or mirrorOther.Transparency == 0
+                            or enemies:FindFirstChild("Cake Prince")
+                            or (_G.AcceptQuestC and questUI and not questUI.Visible)
+                    else
+                        _tp(CFrame.new(-2077, 252, -12373))
+                    end
+                end
+            end)
 
-        if not root then return end
-
-        if not bigMirror:FindFirstChild("Other") then
-
-          _tp(CFrame.new(-2077, 252, -12373))
-
-        end        
-
-        if bigMirror.Other.Transparency == 0 or enemies:FindFirstChild("Cake Prince") then
-
-          local v = GetConnectionEnemies("Cake Prince")
-
-          if v then
-
-            repeat wait() Attack.Kill2(v, _G.Auto_Cake_Prince)until not _G.Auto_Cake_Prince or not v.Parent or v.Humanoid.Health <= 0
-
-          else
-
-            if bigMirror.Other.Transparency == 0 and (CFrame.new(-1990.67, 4533, -14973.67).Position - root.Position).Magnitude >= 2000 then
-
-              _tp(CFrame.new(-2151.82, 149.32, -12404.91))
-
+            if not ok then
+                warn("[Farm Katakuri] Lỗi:", err)
             end
-
-          end
-
-        else
-
-          local CakePrince = {"Cookie Crafter","Cake Guard","Baking Staff","Head Baker"}
-
-          local v = GetConnectionEnemies(CakePrince)
-
-          if v then
-
-            if _G.AcceptQuestC and not questUI.Visible then
-
-              local questPos = CFrame.new(-1927.92, 37.8, -12842.54)
-
-              _tp(questPos)
-
-              while (questPos.Position - root.Position).Magnitude > 50 do
-
-                wait(0.2)
-
-              end
-
-              local randomQuest = math.random(1, 4)
-
-              local questData = {
-
-                [1] = {"StartQuest", "CakeQuest2", 2},
-
-                [2] = {"StartQuest", "CakeQuest2", 1},
-
-                [3] = {"StartQuest", "CakeQuest1", 1},
-
-                [4] = {"StartQuest", "CakeQuest1", 2}
-
-              }                    
-
-              local success, response = pcall(function()
-
-                return game.ReplicatedStorage.Remotes.CommF_:InvokeServer(unpack(questData[randomQuest]))
-
-              end)
-
-            end
-
-            repeat wait() Attack.Kill(v, _G.Auto_Cake_Prince) until not _G.Auto_Cake_Prince or v.Humanoid.Health <= 0 or bigMirror.Other.Transparency == 0 or (_G.AcceptQuestC and not questUI.Visible)                
-
-          else
-
-            _tp(CFrame.new(-2077, 252, -12373))
-
-          end
-
         end
-
-      end)
-
     end
-
-  end
-
 end)
 
 local Q = Tabs.Main:AddToggle("Q", {Title = "Auto Bones", Description = "", Default = false})
