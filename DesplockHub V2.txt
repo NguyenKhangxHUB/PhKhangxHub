@@ -3563,7 +3563,7 @@ if _G.FastAttack then
 		return v1766;
 	end)();
 end
-local v52 = v3:Window("Ades : BF", "by Nờ Ka");
+local v52 = v3:Window("DesplockHub : BF", "by Plock");
 local v53 = v52:T("Tab Status", "rbxassetid://10734984606");
 local v54 = v52:T("Tab General", "rbxassetid://10723407389");
 local v55 = v52:T("Setting Other", "rbxassetid://10734950309");
@@ -10980,7 +10980,7 @@ local v122 = require(game.ReplicatedStorage.Util.CameraShaker);
 v122:Stop();
 local v123 = game:GetService("Players");
 game:GetService("StarterGui"):SetCore("SendNotification", {
-	Title = "Ades Hub",
+	Title = "DesplockHub",
 	Text = "Loading Done!",
 	Icon = "rbxassetid://131723242350068",
 	Duration = 10
