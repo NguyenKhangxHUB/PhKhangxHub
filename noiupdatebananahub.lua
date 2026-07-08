@@ -131,14 +131,6 @@ local Sec = 0.1
 local ClickState = 0
 local Num_self = 25
 
--- Team mặc định
-getgenv().Team = getgenv().Team or "Pirates"
-
-repeat 
-    local start = plr.PlayerGui:WaitForChild("Main"):WaitForChild("Loading") 
-    wait() 
-until start and game:IsLoaded()
-
 local fruitsOnSale = {}
 local function addCommas(number)
     local formatted = tostring(number)
@@ -4368,18 +4360,45 @@ spawn(function()
                 
                 if not root then return end
                 
-                local bone = GetConnectionEnemies(BonesTable)
-                if bone then
+                -- Gom quái: tìm tối đa 7 con gần nhất
+                local nearbyMobs = {}
+                for _, v in pairs(workspace.Enemies:GetChildren()) do
+                    if v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") and v.Humanoid.Health > 0 then
+                        for _, name in ipairs(BonesTable) do
+                            if v.Name == name then
+                                local dist = (root.Position - v.HumanoidRootPart.Position).Magnitude
+                                table.insert(nearbyMobs, {mob = v, dist = dist})
+                                break
+                            end
+                        end
+                    end
+                end
+                
+                -- Sắp xếp theo khoảng cách
+                table.sort(nearbyMobs, function(a, b) return a.dist < b.dist end)
+                
+                -- Lấy tối đa 7 con gần nhất
+                local targetMobs = {}
+                for i = 1, math.min(7, #nearbyMobs) do
+                    table.insert(targetMobs, nearbyMobs[i].mob)
+                end
+                
+                -- Nếu có quái trong danh sách
+                if #targetMobs > 0 then
+                    -- Nhận quest nếu cần
                     if _G.AcceptQuestC and questUI and not questUI.Visible then
                         local questPos = CFrame.new(-9516.99316, 172.017181, 6078.46533, 0, 0, -1, 0, 1, 0, 1, 0, 0)
-                        _tp(questPos)
                         
-                        local attempts = 0
-                        while attempts < 50 and (questPos.Position - root.Position).Magnitude > 50 do
-                            task.wait(0.2)
-                            attempts = attempts + 1
-                        end
+                        -- Tween đến quest với tốc độ chậm
+                        local tweenInfo = TweenInfo.new(
+                            (root.Position - questPos.Position).Magnitude / 200, 
+                            Enum.EasingStyle.Linear
+                        )
+                        local tween = game:GetService("TweenService"):Create(root, tweenInfo, {CFrame = questPos})
+                        tween:Play()
+                        tween.Completed:Wait()
                         
+                        -- Nhận quest
                         local randomQuest = math.random(1, 4)
                         local questData = {
                             [1] = {"StartQuest", "HauntedQuest2", 2},
@@ -4387,20 +4406,78 @@ spawn(function()
                             [3] = {"StartQuest", "HauntedQuest1", 1},
                             [4] = {"StartQuest", "HauntedQuest1", 2}
                         }                    
-                        
                         pcall(function()
                             game.ReplicatedStorage.Remotes.CommF_:InvokeServer(unpack(questData[randomQuest]))
                         end)
+                        task.wait(0.5)
                     end
                     
-                    repeat 
-                        task.wait() 
-                        Attack.Kill(bone, _G.StartFarm) 
-                    until not _G.StartFarm or not bone or not bone.Parent or 
-                          (bone.Humanoid and bone.Humanoid.Health <= 0) or 
-                          (_G.AcceptQuestC and questUI and not questUI.Visible)
+                    -- Gom quái: kéo về 1 điểm
+                    local centerPos = Vector3.new(0, 0, 0)
+                    for _, mob in ipairs(targetMobs) do
+                        if mob and mob:FindFirstChild("HumanoidRootPart") then
+                            centerPos = centerPos + mob.HumanoidRootPart.Position
+                        end
+                    end
+                    centerPos = centerPos / #targetMobs
+                    
+                    -- Tween đến vị trí trung tâm
+                    local tweenInfo = TweenInfo.new(
+                        (root.Position - centerPos).Magnitude / 200, 
+                        Enum.EasingStyle.Linear
+                    )
+                    local tween = game:GetService("TweenService"):Create(root, tweenInfo, {CFrame = CFrame.new(centerPos.X, centerPos.Y + 30, centerPos.Z)})
+                    tween:Play()
+                    tween.Completed:Wait()
+                    
+                    -- Bring mob về 1 chỗ (kéo quái lại gần)
+                    if _B then
+                        for _, mob in ipairs(targetMobs) do
+                            if mob and mob:FindFirstChild("HumanoidRootPart") and mob:FindFirstChild("Humanoid") then
+                                pcall(function()
+                                    mob.HumanoidRootPart.CFrame = CFrame.new(centerPos.X, centerPos.Y, centerPos.Z)
+                                    mob.HumanoidRootPart.CanCollide = true
+                                    mob.Humanoid.WalkSpeed = 0
+                                    mob.Humanoid.JumpPower = 0
+                                    if mob.Humanoid:FindFirstChild("Animator") then 
+                                        mob.Humanoid.Animator:Destroy()
+                                    end
+                                end)
+                            end
+                        end
+                    end
+                    
+                    -- Tấn công từng con
+                    for _, mob in ipairs(targetMobs) do
+                        if mob and mob.Parent and mob:FindFirstChild("Humanoid") and mob.Humanoid.Health > 0 then
+                            -- Tween đến vị trí tấn công
+                            local attackPos = mob.HumanoidRootPart.CFrame * CFrame.new(0, 30, 8)
+                            local tweenInfo2 = TweenInfo.new(
+                                (root.Position - attackPos.Position).Magnitude / 250, 
+                                Enum.EasingStyle.Linear
+                            )
+                            local tween2 = game:GetService("TweenService"):Create(root, tweenInfo2, {CFrame = attackPos})
+                            tween2:Play()
+                            tween2.Completed:Wait()
+                            
+                            -- Tấn công
+                            repeat 
+                                task.wait(0.1)
+                                Attack.Kill(mob, _G.StartFarm) 
+                            until not _G.StartFarm or not mob.Parent or 
+                                  not mob:FindFirstChild("Humanoid") or mob.Humanoid.Health <= 0
+                        end
+                    end
                 else
-                    _tp(CFrame.new(-9495.6806640625, 453.58624267578125, 5977.3486328125))
+                    -- Không có quái, tween đến vị trí spawn
+                    local spawnPos = CFrame.new(-9495.6806640625, 453.58624267578125, 5977.3486328125)
+                    local tweenInfo = TweenInfo.new(
+                        (root.Position - spawnPos.Position).Magnitude / 200, 
+                        Enum.EasingStyle.Linear
+                    )
+                    local tween = game:GetService("TweenService"):Create(root, tweenInfo, {CFrame = spawnPos})
+                    tween:Play()
+                    tween.Completed:Wait()
                 end
             end)
         end
@@ -4439,41 +4516,119 @@ spawn(function()
                 local mirrorOther = bigMirror and bigMirror:FindFirstChild("Other")
 
                 if not mirrorOther then
-                    _tp(CFrame.new(-2077, 252, -12373))
+                    local pos = CFrame.new(-2077, 252, -12373)
+                    local tweenInfo = TweenInfo.new(
+                        (root.Position - pos.Position).Magnitude / 200, 
+                        Enum.EasingStyle.Linear
+                    )
+                    local tween = game:GetService("TweenService"):Create(root, tweenInfo, {CFrame = pos})
+                    tween:Play()
+                    tween.Completed:Wait()
                     return
                 end
 
                 if mirrorOther.Transparency == 0 or enemies:FindFirstChild("Cake Prince") then
                     local v = GetConnectionEnemies("Cake Prince")
                     if v then
+                        -- Gom quái xung quanh Cake Prince (nếu có)
+                        local mobList = {"Cookie Crafter", "Cake Guard", "Baking Staff", "Head Baker"}
+                        local nearbyMobs = {}
+                        
+                        for _, mob in pairs(enemies:GetChildren()) do
+                            if mob:FindFirstChild("Humanoid") and mob:FindFirstChild("HumanoidRootPart") and mob.Humanoid.Health > 0 then
+                                for _, name in ipairs(mobList) do
+                                    if mob.Name == name then
+                                        local dist = (v.HumanoidRootPart.Position - mob.HumanoidRootPart.Position).Magnitude
+                                        if dist <= 300 then
+                                            table.insert(nearbyMobs, mob)
+                                        end
+                                        break
+                                    end
+                                end
+                            end
+                        end
+                        
+                        -- Bring mob về gần boss
+                        if _B and #nearbyMobs > 0 then
+                            for _, mob in ipairs(nearbyMobs) do
+                                if mob and mob:FindFirstChild("HumanoidRootPart") and mob:FindFirstChild("Humanoid") then
+                                    pcall(function()
+                                        mob.HumanoidRootPart.CFrame = v.HumanoidRootPart.CFrame * CFrame.new(math.random(-10, 10), 0, math.random(-10, 10))
+                                        mob.Humanoid.WalkSpeed = 0
+                                        mob.Humanoid.JumpPower = 0
+                                        if mob.Humanoid:FindFirstChild("Animator") then 
+                                            mob.Humanoid.Animator:Destroy()
+                                        end
+                                    end)
+                                end
+                            end
+                        end
+                        
+                        -- Tween đến vị trí tấn công boss
+                        local attackPos = v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 8)
+                        local tweenInfo = TweenInfo.new(
+                            (root.Position - attackPos.Position).Magnitude / 250, 
+                            Enum.EasingStyle.Linear
+                        )
+                        local tween = game:GetService("TweenService"):Create(root, tweenInfo, {CFrame = attackPos})
+                        tween:Play()
+                        tween.Completed:Wait()
+                        
                         repeat
-                            wait()
+                            wait(0.1)
                             Attack.Kill2(v, _G.StartFarm)
                         until not _G.StartFarm
                             or not v.Parent
                             or not v:FindFirstChild("Humanoid")
                             or v.Humanoid.Health <= 0
                     else
-                        if mirrorOther.Transparency == 0
-                           and (CFrame.new(-1990.67, 4533, -14973.67).Position - root.Position).Magnitude >= 2000 then
-                            _tp(CFrame.new(-2151.82, 149.32, -12404.91))
+                        if mirrorOther.Transparency == 0 then
+                            local pos = CFrame.new(-2151.82, 149.32, -12404.91)
+                            local tweenInfo = TweenInfo.new(
+                                (root.Position - pos.Position).Magnitude / 200, 
+                                Enum.EasingStyle.Linear
+                            )
+                            local tween = game:GetService("TweenService"):Create(root, tweenInfo, {CFrame = pos})
+                            tween:Play()
+                            tween.Completed:Wait()
                         end
                     end
                 else
                     local mobNames = {"Cookie Crafter", "Cake Guard", "Baking Staff", "Head Baker"}
-                    local v = GetConnectionEnemies(mobNames)
-
-                    if v then
+                    
+                    -- Gom tối đa 7 con gần nhất
+                    local nearbyMobs = {}
+                    for _, v in pairs(enemies:GetChildren()) do
+                        if v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") and v.Humanoid.Health > 0 then
+                            for _, name in ipairs(mobNames) do
+                                if v.Name == name then
+                                    local dist = (root.Position - v.HumanoidRootPart.Position).Magnitude
+                                    table.insert(nearbyMobs, {mob = v, dist = dist})
+                                    break
+                                end
+                            end
+                        end
+                    end
+                    
+                    table.sort(nearbyMobs, function(a, b) return a.dist < b.dist end)
+                    
+                    local targetMobs = {}
+                    for i = 1, math.min(7, #nearbyMobs) do
+                        table.insert(targetMobs, nearbyMobs[i].mob)
+                    end
+                    
+                    if #targetMobs > 0 then
+                        -- Nhận quest nếu cần
                         if _G.AcceptQuestC and questUI and not questUI.Visible then
                             local questPos = CFrame.new(-1927.92, 37.8, -12842.54)
-                            _tp(questPos)
-
-                            local attempts = 0
-                            while attempts < 50 and (questPos.Position - root.Position).Magnitude > 50 do
-                                wait(0.2)
-                                attempts += 1
-                            end
-
+                            local tweenInfo = TweenInfo.new(
+                                (root.Position - questPos.Position).Magnitude / 200, 
+                                Enum.EasingStyle.Linear
+                            )
+                            local tween = game:GetService("TweenService"):Create(root, tweenInfo, {CFrame = questPos})
+                            tween:Play()
+                            tween.Completed:Wait()
+                            
                             local questData = {
                                 {"StartQuest", "CakeQuest2", 2},
                                 {"StartQuest", "CakeQuest2", 1},
@@ -4483,20 +4638,75 @@ spawn(function()
                             pcall(function()
                                 game.ReplicatedStorage.Remotes.CommF_:InvokeServer(unpack(questData[math.random(1, 4)]))
                             end)
+                            task.wait(0.5)
                         end
-
-                        repeat
-                            wait()
-                            Attack.Kill(v, _G.StartFarm)
-                        until not _G.StartFarm
-                            or not v
-                            or not v.Parent
-                            or (v:FindFirstChild("Humanoid") and v.Humanoid.Health <= 0)
-                            or mirrorOther.Transparency == 0
-                            or enemies:FindFirstChild("Cake Prince")
-                            or (_G.AcceptQuestC and questUI and not questUI.Visible)
+                        
+                        -- Tính vị trí trung tâm để gom quái
+                        local centerPos = Vector3.new(0, 0, 0)
+                        for _, mob in ipairs(targetMobs) do
+                            if mob and mob:FindFirstChild("HumanoidRootPart") then
+                                centerPos = centerPos + mob.HumanoidRootPart.Position
+                            end
+                        end
+                        centerPos = centerPos / #targetMobs
+                        
+                        -- Tween đến vị trí trung tâm
+                        local tweenInfo = TweenInfo.new(
+                            (root.Position - centerPos).Magnitude / 200, 
+                            Enum.EasingStyle.Linear
+                        )
+                        local tween = game:GetService("TweenService"):Create(root, tweenInfo, {CFrame = CFrame.new(centerPos.X, centerPos.Y + 30, centerPos.Z)})
+                        tween:Play()
+                        tween.Completed:Wait()
+                        
+                        -- Bring mob về 1 chỗ
+                        if _B then
+                            for _, mob in ipairs(targetMobs) do
+                                if mob and mob:FindFirstChild("HumanoidRootPart") and mob:FindFirstChild("Humanoid") then
+                                    pcall(function()
+                                        mob.HumanoidRootPart.CFrame = CFrame.new(centerPos.X + math.random(-8, 8), centerPos.Y, centerPos.Z + math.random(-8, 8))
+                                        mob.Humanoid.WalkSpeed = 0
+                                        mob.Humanoid.JumpPower = 0
+                                        if mob.Humanoid:FindFirstChild("Animator") then 
+                                            mob.Humanoid.Animator:Destroy()
+                                        end
+                                    end)
+                                end
+                            end
+                        end
+                        
+                        -- Tấn công từng con
+                        for _, mob in ipairs(targetMobs) do
+                            if mob and mob.Parent and mob:FindFirstChild("Humanoid") and mob.Humanoid.Health > 0 then
+                                local attackPos = mob.HumanoidRootPart.CFrame * CFrame.new(0, 30, 8)
+                                local tweenInfo2 = TweenInfo.new(
+                                    (root.Position - attackPos.Position).Magnitude / 250, 
+                                    Enum.EasingStyle.Linear
+                                )
+                                local tween2 = game:GetService("TweenService"):Create(root, tweenInfo2, {CFrame = attackPos})
+                                tween2:Play()
+                                tween2.Completed:Wait()
+                                
+                                repeat
+                                    wait(0.1)
+                                    Attack.Kill(mob, _G.StartFarm)
+                                until not _G.StartFarm
+                                    or not mob
+                                    or not mob.Parent
+                                    or (mob:FindFirstChild("Humanoid") and mob.Humanoid.Health <= 0)
+                                    or mirrorOther.Transparency == 0
+                                    or enemies:FindFirstChild("Cake Prince")
+                            end
+                        end
                     else
-                        _tp(CFrame.new(-2077, 252, -12373))
+                        local pos = CFrame.new(-2077, 252, -12373)
+                        local tweenInfo = TweenInfo.new(
+                            (root.Position - pos.Position).Magnitude / 200, 
+                            Enum.EasingStyle.Linear
+                        )
+                        local tween = game:GetService("TweenService"):Create(root, tweenInfo, {CFrame = pos})
+                        tween:Play()
+                        tween.Completed:Wait()
                     end
                 end
             end)
@@ -4514,89 +4724,230 @@ spawn(function()
         if _G.StartFarm and _G.MethodSelect == "Farm Tyrant of the Skies" then
             pcall(function()
                 local player = game.Players.LocalPlayer
-                if not (player and player.Character) then return end
-                local hrp = player.Character:FindFirstChild("HumanoidRootPart")
-                if not hrp then return end
+                local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+                if not root then return end
 
                 local enemiesFolder = workspace:FindFirstChild("Enemies")
+                if not enemiesFolder then return end
+                
                 local bossPos = Vector3.new(-16268.287, 152.616, 1390.773)
                 
-                if (hrp.Position - bossPos).Magnitude > 5 then
-                    if _tp then 
-                        pcall(_tp, CFrame.new(bossPos))
-                    else
-                        pcall(function() 
-                            player.Character.HumanoidRootPart.CFrame = CFrame.new(bossPos) 
-                        end)
+                -- Kiểm tra boss Tyrant of the Skies
+                local boss = enemiesFolder:FindFirstChild("Tyrant of the Skies")
+                if boss and boss:FindFirstChild("Humanoid") and boss.Humanoid.Health > 0 then
+                    -- Tìm quái xung quanh boss để gom
+                    local mobList = {"Serpent Hunter", "Skull Slayer", "Isle Champion", "Sun-kissed Warrior"}
+                    local nearbyMobs = {}
+                    
+                    for _, mob in pairs(enemiesFolder:GetChildren()) do
+                        if mob:FindFirstChild("Humanoid") and mob:FindFirstChild("HumanoidRootPart") and mob.Humanoid.Health > 0 then
+                            for _, name in ipairs(mobList) do
+                                if mob.Name == name then
+                                    local dist = (boss.HumanoidRootPart.Position - mob.HumanoidRootPart.Position).Magnitude
+                                    if dist <= 500 then
+                                        table.insert(nearbyMobs, mob)
+                                    end
+                                    break
+                                end
+                            end
+                        end
                     end
                     
-                    local attempts = 0
-                    repeat 
-                        wait() 
-                        attempts = attempts + 1
-                    until not _G.StartFarm or 
-                          (player.Character and player.Character:FindFirstChild("HumanoidRootPart") and 
-                          (player.Character.HumanoidRootPart.Position - bossPos).Magnitude <= 5) or
-                          attempts > 100
-                end
-
-                local boss = enemiesFolder and enemiesFolder:FindFirstChild("Tyrant of the Skies")
-                if boss and boss:FindFirstChild("Humanoid") and boss.Humanoid.Health > 0 then
+                    -- Gom quái về gần boss (tối đa 7 con)
+                    if _B and #nearbyMobs > 0 then
+                        local maxMobs = math.min(7, #nearbyMobs)
+                        for i = 1, maxMobs do
+                            local mob = nearbyMobs[i]
+                            if mob and mob:FindFirstChild("HumanoidRootPart") and mob:FindFirstChild("Humanoid") then
+                                local angle = (i - 1) * (2 * math.pi / maxMobs)
+                                local radius = 5
+                                local offsetX = math.cos(angle) * radius
+                                local offsetZ = math.sin(angle) * radius
+                                
+                                pcall(function()
+                                    mob.HumanoidRootPart.CFrame = boss.HumanoidRootPart.CFrame * CFrame.new(offsetX, 0, offsetZ)
+                                    mob.HumanoidRootPart.CanCollide = true
+                                    mob.Humanoid.WalkSpeed = 0
+                                    mob.Humanoid.JumpPower = 0
+                                    if mob.Humanoid:FindFirstChild("Animator") then 
+                                        mob.Humanoid.Animator:Destroy()
+                                    end
+                                end)
+                            end
+                        end
+                    end
+                    
+                    -- Tween đến vị trí tấn công boss
+                    local attackPos = boss.HumanoidRootPart.CFrame * CFrame.new(0, 30, 8)
+                    local distance = (root.Position - attackPos.Position).Magnitude
+                    if distance > 5 then
+                        local tweenInfo = TweenInfo.new(distance / 250, Enum.EasingStyle.Linear)
+                        local tween = game:GetService("TweenService"):Create(root, tweenInfo, {CFrame = attackPos})
+                        tween:Play()
+                        tween.Completed:Wait()
+                    end
+                    
+                    -- Tấn công boss
                     repeat
                         if not _G.StartFarm then break end
-                        if AutoHaki then pcall(AutoHaki) end
-                        if SelectWeapon and EquipTool then pcall(EquipTool, SelectWeapon) end
+                        if not player.Character then break end
+                        
+                        -- Tự động bật Haki
+                        if not player.Character:FindFirstChild("HasBuso") then
+                            pcall(function()
+                                game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("Buso")
+                            end)
+                        end
+                        
+                        -- Trang bị vũ khí
+                        if _G.SelectWeapon then
+                            pcall(function()
+                                local tool = player.Backpack:FindFirstChild(_G.SelectWeapon)
+                                if tool and player.Character:FindFirstChild("Humanoid") then
+                                    player.Character.Humanoid:EquipTool(tool)
+                                end
+                            end)
+                        end
+                        
+                        -- Tấn công
                         if Attack and Attack.Kill then
                             pcall(function() Attack.Kill(boss, _G.StartFarm) end)
                         end
-                        wait()
+                        
+                        task.wait(0.1)
                     until not _G.StartFarm or not boss.Parent or not boss:FindFirstChild("Humanoid") or boss.Humanoid.Health <= 0
                     return
                 end
 
-                local mobList = {"Serpent Hunter","Skull Slayer","Isle Champion","Sun-kissed Warrior"}
-                if enemiesFolder then
-                    for _, mobName in ipairs(mobList) do
-                        if not _G.StartFarm then break end
-                        for _, mob in ipairs(enemiesFolder:GetChildren()) do
-                            if not _G.StartFarm then break end
-                            if mob and mob.Name == mobName and mob:FindFirstChild("HumanoidRootPart") and 
-                               mob:FindFirstChild("Humanoid") and mob.Humanoid.Health > 0 then
-                               
-                                hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-                                if not hrp then break end
+                -- Nếu không có boss, farm mob thường
+                local mobList = {"Serpent Hunter", "Skull Slayer", "Isle Champion", "Sun-kissed Warrior"}
+                
+                -- Gom tối đa 7 con gần nhất
+                local nearbyMobs = {}
+                for _, v in pairs(enemiesFolder:GetChildren()) do
+                    if v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") and v.Humanoid.Health > 0 then
+                        for _, name in ipairs(mobList) do
+                            if v.Name == name then
+                                local dist = (root.Position - v.HumanoidRootPart.Position).Magnitude
+                                table.insert(nearbyMobs, {mob = v, dist = dist})
+                                break
+                            end
+                        end
+                    end
+                end
+                
+                -- Sắp xếp theo khoảng cách
+                table.sort(nearbyMobs, function(a, b) return a.dist < b.dist end)
+                
+                -- Lấy tối đa 7 con gần nhất
+                local targetMobs = {}
+                for i = 1, math.min(7, #nearbyMobs) do
+                    table.insert(targetMobs, nearbyMobs[i].mob)
+                end
+                
+                if #targetMobs > 0 then
+                    -- Tính vị trí trung tâm để gom quái
+                    local centerPos = Vector3.new(0, 0, 0)
+                    local validMobs = 0
+                    for _, mob in ipairs(targetMobs) do
+                        if mob and mob:FindFirstChild("HumanoidRootPart") then
+                            centerPos = centerPos + mob.HumanoidRootPart.Position
+                            validMobs = validMobs + 1
+                        end
+                    end
+                    
+                    if validMobs > 0 then
+                        centerPos = centerPos / validMobs
+                        
+                        -- Tween đến vị trí trung tâm (cao hơn để tấn công)
+                        local attackPos = CFrame.new(centerPos.X, centerPos.Y + 30, centerPos.Z)
+                        local distance = (root.Position - attackPos.Position).Magnitude
+                        if distance > 5 then
+                            local tweenInfo = TweenInfo.new(distance / 250, Enum.EasingStyle.Linear)
+                            local tween = game:GetService("TweenService"):Create(root, tweenInfo, {CFrame = attackPos})
+                            tween:Play()
+                            tween.Completed:Wait()
+                        end
+                        
+                        -- Bring mob về 1 chỗ (xếp thành vòng tròn)
+                        if _B then
+                            local maxMobs = math.min(7, #targetMobs)
+                            for i = 1, maxMobs do
+                                local mob = targetMobs[i]
+                                if mob and mob:FindFirstChild("HumanoidRootPart") and mob:FindFirstChild("Humanoid") then
+                                    local angle = (i - 1) * (2 * math.pi / maxMobs)
+                                    local radius = 4
+                                    local offsetX = math.cos(angle) * radius
+                                    local offsetZ = math.sin(angle) * radius
+                                    
+                                    pcall(function()
+                                        mob.HumanoidRootPart.CFrame = CFrame.new(centerPos.X + offsetX, centerPos.Y, centerPos.Z + offsetZ)
+                                        mob.HumanoidRootPart.CanCollide = true
+                                        mob.Humanoid.WalkSpeed = 0
+                                        mob.Humanoid.JumpPower = 0
+                                        if mob.Humanoid:FindFirstChild("Animator") then 
+                                            mob.Humanoid.Animator:Destroy()
+                                        end
+                                    end)
+                                end
+                            end
+                        end
+                        
+                        -- Tấn công từng con
+                        for _, mob in ipairs(targetMobs) do
+                            if mob and mob.Parent and mob:FindFirstChild("Humanoid") and mob.Humanoid.Health > 0 then
+                                -- Tween đến vị trí tấn công từng con
+                                local attackPos2 = mob.HumanoidRootPart.CFrame * CFrame.new(0, 30, 8)
+                                local dist2 = (root.Position - attackPos2.Position).Magnitude
+                                if dist2 > 5 then
+                                    local tweenInfo2 = TweenInfo.new(dist2 / 250, Enum.EasingStyle.Linear)
+                                    local tween2 = game:GetService("TweenService"):Create(root, tweenInfo2, {CFrame = attackPos2})
+                                    tween2:Play()
+                                    tween2.Completed:Wait()
+                                end
                                 
-                                if (hrp.Position - mob.HumanoidRootPart.Position).Magnitude > 5000 then
-                                    if _tp then 
-                                        pcall(_tp, mob.HumanoidRootPart.CFrame * CFrame.new(0,30,0))
-                                    else
-                                        pcall(function() 
-                                            player.Character.HumanoidRootPart.CFrame = mob.HumanoidRootPart.CFrame * CFrame.new(0,30,0) 
+                                -- Tấn công
+                                repeat
+                                    if not _G.StartFarm then break end
+                                    if not player.Character then break end
+                                    
+                                    -- Tự động bật Haki
+                                    if not player.Character:FindFirstChild("HasBuso") then
+                                        pcall(function()
+                                            game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("Buso")
                                         end)
                                     end
                                     
-                                    local t0 = tick()
-                                    repeat 
-                                        wait() 
-                                        hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart") 
-                                    until not _G.StartFarm or not hrp or 
-                                          (hrp.Position - mob.HumanoidRootPart.Position).Magnitude <= 6 or 
-                                          tick() - t0 > 8
-                                end
-                                
-                                repeat
-                                    if not _G.StartFarm then break end
-                                    if AutoHaki then pcall(AutoHaki) end
-                                    if SelectWeapon and EquipTool then pcall(EquipTool, SelectWeapon) end
+                                    -- Trang bị vũ khí
+                                    if _G.SelectWeapon then
+                                        pcall(function()
+                                            local tool = player.Backpack:FindFirstChild(_G.SelectWeapon)
+                                            if tool and player.Character:FindFirstChild("Humanoid") then
+                                                player.Character.Humanoid:EquipTool(tool)
+                                            end
+                                        end)
+                                    end
+                                    
+                                    -- Tấn công
                                     if Attack and Attack.Kill then
                                         pcall(function() Attack.Kill(mob, _G.StartFarm) end)
                                     end
-                                    wait()
+                                    
+                                    task.wait(0.1)
                                 until not _G.StartFarm or not mob.Parent or 
-                                      not mob:FindFirstChild("Humanoid") or 
-                                      mob.Humanoid.Health <= 0
+                                      not mob:FindFirstChild("Humanoid") or mob.Humanoid.Health <= 0
                             end
                         end
+                    end
+                else
+                    -- Không có quái, tween đến vị trí boss
+                    local pos = CFrame.new(bossPos)
+                    local distance = (root.Position - pos.Position).Magnitude
+                    if distance > 5 then
+                        local tweenInfo = TweenInfo.new(distance / 250, Enum.EasingStyle.Linear)
+                        local tween = game:GetService("TweenService"):Create(root, tweenInfo, {CFrame = pos})
+                        tween:Play()
+                        tween.Completed:Wait()
                     end
                 end
             end)
@@ -4630,7 +4981,7 @@ MeterialFarm = AutoModeFarm:AddLeftGroupbox("Mastery Farm")
 
 MeterialFarm:AddDropdown("SelectMethodFarm", {
     Title = "Select Method Farm Mastery",
-    Values = {"Blox Fruit", "Gun"},
+    Values = {"Cake", "Bone"},
     Default = nil,
     Callback = function(Value)
         _G.MasteryTypeSelect = Value
@@ -7506,23 +7857,76 @@ SettingsSea:AddDropdown("SelectZone", {
     end
 })
 
-SettingsSea:AddDropdown("SelectSeaEvent", {
-    Title = "Select Sea Events",
-    Values = {"Shark", "Piranha", "Terror Shark", "Fish Crew Member", "Haunted Crew Member", "Sea Beast", "Leviathan", "Pirate Grand Brigade", "Fish Boat"},
-    Default = nil,
-    Callback = function(Value)
-        _G.SelectSeaEvent = Value
-        -- Auto set event flags khi chọn
-        _G.Shark = (Value == "Shark")
-        _G.Piranha = (Value == "Piranha")
-        _G.TerrorShark = (Value == "Terror Shark")
-        _G.MobCrew = (Value == "Fish Crew Member")
-        _G.HCM = (Value == "Haunted Crew Member")
-        _G.SeaBeast1 = (Value == "Sea Beast")
-        _G.Leviathan1 = (Value == "Leviathan")
-        _G.PGB = (Value == "Pirate Grand Brigade")
-        _G.FishBoat = (Value == "Fish Boat")
-    end
+SettingsSea:AddToggle("Shark", {
+	Title = "Shark",
+	Default = "Shark",
+	Callback = function(Value)
+	_G.Shark = (Value == "Shark")
+	end
+})
+
+SettingsSea:AddToggle("Piranha", {
+	Title = "Piranha",
+	Default = "Piranha",
+	Callback = function(Value)
+	_G.Piranha = (Value == "Piranha")
+	end
+})
+
+SettingsSea:AddToggle("Terror Shark", {
+	Title = "Terror shark",
+	Default = "Terror Shark",
+	Callback = function(Value)
+	_G.TerrorShark = (Value == "Terror Shark")
+	end
+})
+
+SettingsSea:AddToggle("Fish Crew Member", {
+	Title = "Fish Crew Member",
+	Default = "Fish Crew Member",
+	Callback = function(Value)
+	_G.MobCrew = (Value == "Fish Crew Member")
+	end
+})
+
+SettingsSea:AddToggle("Haunted Crew Member", {
+	Title = "Haunted Crew Member",
+	Default = "Haunted Crew Member",
+	Callback = function(Value)
+	_G.HCM = (Value == "Haunted Crew Member")
+	end
+})
+
+SettingsSea:AddToggle("Sea Beast", {
+	Title = "Sea Beast",
+	Default = "Sea Beast",
+	Callback = function(Value)
+	_G.SeaBeast1 = (Value == "Sea Beast")
+	end
+})
+
+SettingsSea:AddToggle("Leviathan", {
+	Title = "Leviathan",
+	Default = "Leviathan",
+	Callback = function(Value)
+	_G.Leviathan1 = (Value == "Leviathan")
+	end
+})
+
+SettingsSea:AddToggle("Pirate Grand Brigade", {
+	Title = "Pirate Grand Brigade",
+	Default = "Pirate Grand Brigade",
+	Callback = function(Value)
+	_G.FishBoat = (Value == "Fish Boat")
+	end
+})
+
+SettingsSea:AddToggle("Fish Boat", {
+	Title = "Fish Boat",
+	Default = "Fish Boat",
+	Callback = function(Value)
+	_G.FishBoat = (Value == "Fish Boat")
+	end
 })
 
 SettingsSea:AddDropdown("SelectBoat", {
@@ -8463,7 +8867,7 @@ spawn(function()
 end)
 
 TrialRace:AddToggle("MigareToggle", {
-    Title = "Teleport To Migare Island",
+    Title = "Teleport To Mirage Island",
     Default = false,
     Callback = function(Value)
         _G.MigareIsland = Value -- Sửa tên biến
@@ -8589,20 +8993,59 @@ spawn(function()
     end
 end)
 
+-- ==================== RACE DOOR TELEPORT ====================
+
+-- Vị trí cửa của từng tộc
+local RaceDoorPositions = {
+    ["Human"] = CFrame.new(29221.822, 14890.975, -205.991),
+    ["Skypiea"] = CFrame.new(28960.158, 14919.624, 235.039),
+    ["Fishman"] = CFrame.new(28231.175, 14890.975, -211.641),
+    ["Cyborg"] = CFrame.new(28502.681, 14895.975, -423.727),
+    ["Ghoul"] = CFrame.new(28674.244, 14890.676, 445.431),
+    ["Mink"] = CFrame.new(29012.341, 14890.975, -380.149)
+}
+
+-- Hàm lấy tộc hiện tại
+local function GetCurrentRace()
+    local race = plr.Data.Race.Value
+    return race or "Unknown"
+end
+
+-- Label hiển thị tộc hiện tại
+TrialRace:AddLabel("Current Race: " .. GetCurrentRace())
+
+-- Dropdown chọn tộc
+TrialRace:AddDropdown("SelectRaceDoor", {
+    Title = "Select Race",
+    Values = {"Human", "Skypiea", "Fishman", "Cyborg", "Ghoul", "Mink"},
+    Default = nil,
+    Callback = function(Value)
+        _G.SelectedRace = Value
+    end
+})
+
+-- Nút teleport đến cửa tộc đã chọn
 TrialRace:AddButton({
-    Title = "Teleport To Trial Door",
+    Title = "Teleport To Race Door",
     Callback = function()
-        local positions = {
-            Human = CFrame.new(29221.822, 14890.975, -205.991),
-            Skypiea = CFrame.new(28960.158, 14919.624, 235.039),
-            Fishman = CFrame.new(28231.175, 14890.975, -211.641),
-            Cyborg = CFrame.new(28502.681, 14895.975, -423.727),
-            Ghoul = CFrame.new(28674.244, 14890.676, 445.431),
-            Mink = CFrame.new(29012.341, 14890.975, -380.149)
-        }
-        local race = plr.Data.Race.Value
-        if positions[race] then
-            _tp(positions[race])
+        if not _G.SelectedRace then
+            Library:Notify({
+                Title = "Banana Cat Hub",
+                Description = "Please select a race first!",
+                Duration = 2
+            })
+            return
+        end
+        
+        local doorCFrame = RaceDoorPositions[_G.SelectedRace]
+        if doorCFrame then
+            shouldTween = true
+            _tp(doorCFrame * CFrame.new(0, 5, 3))
+            Library:Notify({
+                Title = "Banana Cat Hub",
+                Description = "Teleporting to " .. _G.SelectedRace .. " Door",
+                Duration = 2
+            })
         end
     end
 })
@@ -8615,57 +9058,322 @@ TrialRace:AddToggle("TrialRaceToggle", {
     end
 })
 
--- Hàm teleport (cần định nghĩa hoặc sửa)
-local function BTP(cframe)
-    _tp(cframe) -- Hoặc logic teleport riêng
+-- Hàm teleport an toàn
+local function SafeTeleport(cframe)
+    local char = plr.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        char.HumanoidRootPart.CFrame = cframe
+    end
 end
 
+-- Hàm kiểm tra race hiện tại
+local function GetCurrentRace()
+    local race = plr.Data.Race.Value
+    return race or "Unknown"
+end
+
+-- Hàm kiểm tra xem đã hoàn thành trial chưa
+local function IsTrialCompleted(race)
+    local raceV4 = plr.Data:FindFirstChild("RaceV4")
+    if raceV4 then
+        return raceV4.Value
+    end
+    return false
+end
+
+-- Hàm lấy vị trí trial của từng tộc
+local function GetTrialPositions(race)
+    local positions = {
+        ["Human"] = {
+            CFrame.new(29221.822, 14890.975, -205.991),
+            CFrame.new(29200, 14890, -200)
+        },
+        ["Skypiea"] = {
+            CFrame.new(28960.158, 14919.624, 235.039),
+            CFrame.new(28950, 14920, 230)
+        },
+        ["Fishman"] = {
+            CFrame.new(28231.175, 14890.975, -211.641),
+            CFrame.new(28220, 14890, -220)
+        },
+        ["Cyborg"] = {
+            CFrame.new(28502.681, 14895.975, -423.727),
+            CFrame.new(28500, 14895, -430)
+        },
+        ["Ghoul"] = {
+            CFrame.new(28674.244, 14890.676, 445.431),
+            CFrame.new(28670, 14890, 440)
+        },
+        ["Mink"] = {
+            CFrame.new(29012.341, 14890.975, -380.149),
+            CFrame.new(29000, 14890, -380)
+        }
+    }
+    return positions[race]
+end
+
+-- Hàm thực hiện trial cho từng tộc
+local function ProcessHumanTrial()
+    -- Human: Đánh quái trong khu vực
+    local enemies = workspace.Enemies:GetChildren()
+    local foundTarget = false
+    
+    for _, enemy in ipairs(enemies) do
+        if enemy:FindFirstChild("Humanoid") and enemy:FindFirstChild("HumanoidRootPart") then
+            if enemy.Humanoid.Health > 0 and (enemy.HumanoidRootPart.Position - plr.Character.HumanoidRootPart.Position).Magnitude <= 500 then
+                foundTarget = true
+                repeat
+                    task.wait(0.1)
+                    Attack.Kill(enemy, _G.Complete_Trials)
+                until not _G.Complete_Trials or not enemy.Parent or enemy.Humanoid.Health <= 0
+                break
+            end
+        end
+    end
+    
+    if not foundTarget then
+        -- Di chuyển đến vị trí quái
+        local pos = GetTrialPositions("Human")
+        if pos then
+            SafeTeleport(pos[2])
+        end
+    end
+end
+
+local function ProcessSkypieaTrial()
+    -- Skypiea: Nhấn các nút theo thứ tự
+    local skyTrial = workspace.Map:FindFirstChild("SkyTrial")
+    if skyTrial then
+        local buttons = {}
+        for _, child in ipairs(skyTrial:GetDescendants()) do
+            if child:IsA("BasePart") and child.Name:find("Button") then
+                table.insert(buttons, child)
+            end
+        end
+        
+        table.sort(buttons, function(a, b) 
+            return tonumber(a.Name:match("%d+")) < tonumber(b.Name:match("%d+"))
+        end)
+        
+        for _, button in ipairs(buttons) do
+            if button and button.Parent then
+                SafeTeleport(button.CFrame * CFrame.new(0, 5, 0))
+                task.wait(0.5)
+                -- Click button
+                local clickDetector = button:FindFirstChildOfClass("ClickDetector")
+                if clickDetector then
+                    fireclickdetector(clickDetector)
+                end
+                task.wait(1)
+            end
+        end
+    else
+        -- Tìm Snow Cylinder
+        local snowPart = nil
+        for _, obj in pairs(workspace:GetDescendants()) do
+            if obj.Name == "snowisland_Cylinder.081" and obj:IsA("BasePart") then
+                snowPart = obj
+                break
+            end
+        end
+        if snowPart then
+            SafeTeleport(snowPart.CFrame * CFrame.new(0, 10, 0))
+        end
+    end
+end
+
+local function ProcessFishmanTrial()
+    -- Fishman: Đánh Sea Beast
+    local seaBeast = workspace.SeaBeasts:FindFirstChild("SeaBeast1")
+    if seaBeast and seaBeast:FindFirstChild("Humanoid") then
+        repeat
+            task.wait(0.1)
+            -- Teleport lên trên Sea Beast
+            local waterY = workspace.Map["WaterBase-Plane"].Position.Y
+            local targetY = waterY + 250
+            SafeTeleport(CFrame.new(
+                seaBeast.HumanoidRootPart.Position.X,
+                targetY,
+                seaBeast.HumanoidRootPart.Position.Z
+            ))
+            Attack.KillSea(seaBeast, _G.Complete_Trials)
+        until not _G.Complete_Trials or not seaBeast.Parent or seaBeast.Humanoid.Health <= 0
+    else
+        -- Nếu không có Sea Beast, di chuyển ra biển
+        SafeTeleport(CFrame.new(28231.175, 14890.975, -211.641))
+    end
+end
+
+local function ProcessCyborgTrial()
+    -- Cyborg: Đi qua các cổng
+    local cyborgPosition = GetTrialPositions("Cyborg")
+    if cyborgPosition then
+        SafeTeleport(cyborgPosition[2])
+        task.wait(1)
+        -- Tìm và nhấn các nút
+        for _, obj in pairs(workspace:GetDescendants()) do
+            if obj:IsA("BasePart") and obj.Name:find("Button") or obj.Name:find("Gate") then
+                local clickDetector = obj:FindFirstChildOfClass("ClickDetector")
+                if clickDetector then
+                    fireclickdetector(clickDetector)
+                end
+            end
+        end
+    end
+end
+
+local function ProcessGhoulTrial()
+    -- Ghoul: Đánh quái hoặc làm nhiệm vụ
+    local enemies = workspace.Enemies:GetChildren()
+    local foundTarget = false
+    
+    for _, enemy in ipairs(enemies) do
+        if enemy:FindFirstChild("Humanoid") and enemy:FindFirstChild("HumanoidRootPart") then
+            if enemy.Humanoid.Health > 0 and (enemy.HumanoidRootPart.Position - plr.Character.HumanoidRootPart.Position).Magnitude <= 500 then
+                foundTarget = true
+                repeat
+                    task.wait(0.1)
+                    Attack.Kill(enemy, _G.Complete_Trials)
+                until not _G.Complete_Trials or not enemy.Parent or enemy.Humanoid.Health <= 0
+                break
+            end
+        end
+    end
+    
+    if not foundTarget then
+        local pos = GetTrialPositions("Ghoul")
+        if pos then
+            SafeTeleport(pos[2])
+        end
+    end
+end
+
+local function ProcessMinkTrial()
+    -- Mink: Chạy đua
+    local startPoint = nil
+    local endPoint = nil
+    
+    for _, obj in pairs(workspace:GetDescendants()) do
+        if obj:IsA("BasePart") then
+            if obj.Name == "StartPoint" then
+                startPoint = obj
+            elseif obj.Name == "EndPoint" then
+                endPoint = obj
+            end
+        end
+    end
+    
+    if startPoint then
+        SafeTeleport(startPoint.CFrame * CFrame.new(0, 10, 0))
+        task.wait(0.5)
+        
+        -- Tăng tốc độ chạy
+        if plr.Character and plr.Character:FindFirstChild("Humanoid") then
+            plr.Character.Humanoid.WalkSpeed = 200
+        end
+        
+        -- Chạy đến đích
+        if endPoint then
+            local distance = (endPoint.Position - startPoint.Position).Magnitude
+            local timeToRun = distance / 200
+            task.wait(timeToRun)
+            
+            SafeTeleport(endPoint.CFrame * CFrame.new(0, 10, 0))
+            
+            -- Reset speed
+            if plr.Character and plr.Character:FindFirstChild("Humanoid") then
+                plr.Character.Humanoid.WalkSpeed = 16
+            end
+        end
+    end
+end
+
+-- Hàm xử lý trial chính
+local function ProcessTrialByRace(race)
+    local trialFunctions = {
+        ["Human"] = ProcessHumanTrial,
+        ["Skypiea"] = ProcessSkypieaTrial,
+        ["Fishman"] = ProcessFishmanTrial,
+        ["Cyborg"] = ProcessCyborgTrial,
+        ["Ghoul"] = ProcessGhoulTrial,
+        ["Mink"] = ProcessMinkTrial
+    }
+    
+    local trialFunc = trialFunctions[race]
+    if trialFunc then
+        trialFunc()
+    else
+        -- Nếu không xác định được tộc, thử tất cả
+        for _, func in pairs(trialFunctions) do
+            func()
+        end
+    end
+end
+
+-- Main loop cho Complete Trials
 spawn(function()
-    while wait(0.5) do
+    while task.wait(0.5) do
         if _G.Complete_Trials then
             pcall(function()
-                local race = plr.Data.Race.Value
-                if race == "Human" or race == "Ghoul" then
-                    for _, enemy in pairs(workspace.Enemies:GetChildren()) do
-                        if Attack.Alive(enemy) then
-                            repeat 
-                                wait() 
-                                Attack.Kill(enemy, _G.Complete_Trials) 
-                            until not _G.Complete_Trials or not enemy.Parent or enemy.Humanoid.Health <= 0
-                        end
-                    end
-                elseif race == "Skypiea" then
-                    local skyTrial = workspace.Map.SkyTrial.Model
-                    if skyTrial then
-                        for _, obj in pairs(skyTrial:GetDescendants()) do
-                            if obj.Name == "snowisland_Cylinder.081" then
-                                BTP(obj.CFrame)
-                                break
-                            end
-                        end
-                    end
-                elseif race == "Fishman" then
-                    local seaBeast = workspace.SeaBeasts:FindFirstChild("SeaBeast1")
-                    if seaBeast then
-                        repeat 
-                            wait() 
-                            Attack.KillSea(seaBeast, _G.Complete_Trials) 
-                        until not _G.Complete_Trials or not seaBeast.Parent or seaBeast.Humanoid.Health <= 0
-                    end
-                elseif race == "Cyborg" then
-                    _tp(CFrame.new(28654, 14898.7832, -30))
-                elseif race == "Mink" then
-                    for _, obj in pairs(workspace:GetDescendants()) do
-                        if obj.Name == "StartPoint" then
-                            _tp(obj.CFrame * CFrame.new(0, 10, 0))
-                            break
-                        end
+                local currentRace = GetCurrentRace()
+                
+                -- Kiểm tra xem đã hoàn thành trial chưa
+                if IsTrialCompleted(currentRace) then
+                    -- Đã hoàn thành, có thể dừng hoặc tiếp tục?
+                    -- _G.Complete_Trials = false -- Có thể tự tắt nếu muốn
+                    return
+                end
+                
+                -- Kiểm tra nhân vật
+                if not plr.Character or not plr.Character:FindFirstChild("HumanoidRootPart") then
+                    task.wait(1)
+                    return
+                end
+                
+                -- Auto Haki nếu cần
+                if not plr.Character:FindFirstChild("HasBuso") then
+                    pcall(function()
+                        game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("Buso")
+                    end)
+                end
+                
+                -- Lấy vị trí trial của tộc hiện tại
+                local trialPos = GetTrialPositions(currentRace)
+                
+                -- Di chuyển đến vị trí trial nếu cần
+                if trialPos then
+                    local distance = (plr.Character.HumanoidRootPart.Position - trialPos[1].Position).Magnitude
+                    if distance > 50 then
+                        SafeTeleport(trialPos[1])
+                        task.wait(0.5)
                     end
                 end
+                
+                -- Thực hiện trial
+                ProcessTrialByRace(currentRace)
+                
+                -- Kiểm tra lại sau khi thực hiện
+                task.wait(1)
             end)
         end
     end
 end)
+
+-- Thêm hàm debug để kiểm tra tộc hiện tại
+TrialRace:AddButton({
+    Title = "Check Current Race",
+    Callback = function()
+        local race = GetCurrentRace()
+        local completed = IsTrialCompleted(race)
+        print("Current Race: " .. race)
+        print("Trial Completed: " .. tostring(completed))
+        if completed then
+            print("✅ You have completed V4 trial!")
+        else
+            print("❌ You haven't completed V4 trial yet.")
+        end
+    end
+})
 
 TrialRace:AddToggle("KillPlayerToggle", {
     Title = "Auto Kill Player After Trial V4",
@@ -8675,19 +9383,83 @@ TrialRace:AddToggle("KillPlayerToggle", {
     end
 })
 
+-- Hàm kiểm tra người chơi có đang ở khu vực trial V4 không
+local function IsInTrialArea(player)
+    if not player or not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then
+        return false
+    end
+    
+    local rootPos = player.Character.HumanoidRootPart.Position
+    -- Khu vực trial V4 nằm ở tọa độ khoảng (28900, 14900, 0)
+    local trialCenter = Vector3.new(28900, 14900, 0)
+    local distance = (rootPos - trialCenter).Magnitude
+    
+    return distance <= 6000 -- Phạm vi khu vực trial
+end
+
+-- Main loop cho Auto Kill Player
 spawn(function()
-    while wait(0.2) do
+    while task.wait(0.2) do
         if _G.Defeating and World3 then
             pcall(function()
+                -- Lấy danh sách tất cả người chơi trong khu vực trial
+                local targets = {}
+                
                 for _, v in ipairs(workspace.Characters:GetChildren()) do
+                    -- Bỏ qua bản thân
                     if v.Name ~= plr.Name and v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") then
-                        if v.Humanoid.Health > 0 and Root and (Root.Position - v.HumanoidRootPart.Position).Magnitude <= 230 then
-                            repeat 
-                                wait() 
-                                Attack.Kill(v, _G.Defeating) 
-                            until not _G.Defeating or not v.Parent or v.Humanoid.Health <= 0
+                        local player = game:GetService("Players"):FindFirstChild(v.Name)
+                        if player and IsInTrialArea(player) then
+                            local humanoid = v:FindFirstChild("Humanoid")
+                            local rootPart = v:FindFirstChild("HumanoidRootPart")
+                            
+                            if humanoid and humanoid.Health > 0 and rootPart then
+                                table.insert(targets, {
+                                    character = v,
+                                    humanoid = humanoid,
+                                    rootPart = rootPart,
+                                    distance = (Root.Position - rootPart.Position).Magnitude
+                                })
+                            end
                         end
                     end
+                end
+                
+                -- Sắp xếp theo khoảng cách (gần nhất trước)
+                table.sort(targets, function(a, b) return a.distance < b.distance end)
+                
+                -- Đánh từng target trong danh sách
+                for _, targetInfo in ipairs(targets) do
+                    if not _G.Defeating then break end
+                    
+                    local targetChar = targetInfo.character
+                    local targetHumanoid = targetInfo.humanoid
+                    local targetRoot = targetInfo.rootPart
+                    
+                    -- Kiểm tra target còn tồn tại và còn sống
+                    if targetChar.Parent and targetHumanoid and targetHumanoid.Health > 0 then
+                        local distance = (Root.Position - targetRoot.Position).Magnitude
+                        
+                        if distance <= 230 then
+                            -- Trong phạm vi tấn công
+                            repeat
+                                task.wait(0.1)
+                                Attack.Kill(targetChar, _G.Defeating)
+                            until not _G.Defeating 
+                                or not targetChar.Parent 
+                                or not targetHumanoid
+                                or targetHumanoid.Health <= 0
+                        else
+                            -- Di chuyển đến gần target
+                            _tp(targetRoot.CFrame * CFrame.new(0, 30, 5))
+                            task.wait(0.1)
+                        end
+                    end
+                end
+                
+                -- Nếu không có target nào, teleport đến khu vực trung tâm trial
+                if #targets == 0 then
+                    _tp(CFrame.new(28900, 14950, 0))
                 end
             end)
         end
@@ -9357,6 +10129,451 @@ spawn(function()
       end
     end)
   end
+end)
+
+GetItems:AddToggle("AutoYamaQuestCDK", {
+    Title = "Auto Yama Quest CDK",
+    Default = false,
+    Callback = function(Value)
+        _G.AutoYamaQuestCDK = Value
+    end
+})
+
+-- Main loop cho Auto Yama Quest
+spawn(function()
+    while task.wait(0.5) do
+        if _G.AutoYamaQuestCDK then
+            pcall(function()
+                -- Kiểm tra xem đã có Yama chưa
+                if GetBP("Yama") then
+                    Library:Notify({
+                        Title = "Banana Cat Hub",
+                        Description = "You already have Yama!",
+                        Duration = 3
+                    })
+                    _G.AutoYamaQuestCDK = false
+                    return
+                end
+
+                -- Kiểm tra và mở cửa nếu chưa mở
+                if tostring(replicated.Remotes.CommF_:InvokeServer("CDKQuest", "OpenDoor")) ~= "opened" then                  
+                    replicated.Remotes.CommF_:InvokeServer("CDKQuest", "OpenDoor")
+                    replicated.Remotes.CommF_:InvokeServer("CDKQuest", "OpenDoor", true)
+                    task.wait(1)
+                end
+
+                -- Kiểm tra tiến độ Yama
+                local progress = replicated.Remotes.CommF_:InvokeServer("CDKQuest","Progress")
+                
+                if progress and progress["Finished"] == nil then
+                    -- Bắt đầu trial Evil (Yama)
+                    replicated.Remotes.CommF_:InvokeServer("CDKQuest","StartTrial","Evil")
+                    task.wait(1)
+                elseif progress and progress["Finished"] == false then
+                    local evilProgress = tonumber(progress["Evil"]) or 0
+                    
+                    -- Thử thách 1: Pain and Suffering (giá trị -3)
+                    if evilProgress == -3 then
+                        -- Để kẻ địch đánh mình
+                        local enemies = workspace.Enemies:GetChildren()
+                        if #enemies > 0 then
+                            for _, enemy in pairs(enemies) do
+                                if enemy:FindFirstChild("Humanoid") and enemy:FindFirstChild("HumanoidRootPart") then
+                                    if enemy.Humanoid.Health > 0 then
+                                        -- Teleport đến gần enemy để bị đánh
+                                        _tp(enemy.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3))
+                                        task.wait(0.5)
+                                        
+                                        -- Đeo Yama (nếu có trong backpack)
+                                        if plr.Backpack:FindFirstChild("Yama") then
+                                            EquipWeapon("Yama")
+                                        end
+                                        break
+                                    end
+                                end
+                            end
+                        else
+                            -- Tìm enemy trong replicated
+                            local found = false
+                            for _, v in pairs(replicated:GetChildren()) do
+                                if v:IsA("Model") and v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") then
+                                    if v.Humanoid.Health > 0 then
+                                        _tp(v.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3))
+                                        found = true
+                                        break
+                                    end
+                                end
+                            end
+                            if not found then
+                                -- Teleport đến khu vực có quái
+                                _tp(CFrame.new(-9495.6806640625, 453.58624267578125, 5977.3486328125))
+                            end
+                        end
+                    end
+                    
+                    -- Thử thách 2: Haze of Misery (giá trị -4)
+                    if evilProgress == -4 then
+                        -- Farm các mob có HazeESP
+                        local hasHazeMob = false
+                        for _, v in pairs(workspace.Enemies:GetChildren()) do
+                            if v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") then
+                                if v:FindFirstChild("HazeESP") and v.Humanoid.Health > 0 then
+                                    hasHazeMob = true
+                                    repeat
+                                        task.wait(0.1)
+                                        Attack.Kill(v, _G.AutoYamaQuestCDK)
+                                    until not _G.AutoYamaQuestCDK or not v.Parent or v.Humanoid.Health <= 0
+                                    break
+                                end
+                            end
+                        end
+                        
+                        -- Nếu không có HazeESP, teleport đến các vị trí spawn
+                        if not hasHazeMob then
+                            for _, pos in pairs(PosMsList) do
+                                _tp(pos)
+                                task.wait(0.5)
+                            end
+                        end
+                    end
+                    
+                    -- Thử thách 3: Fear the Reaper (giá trị -5)
+                    if evilProgress == -5 then
+                        -- Kiểm tra xem đã vào HellDimension chưa
+                        if workspace.Map:FindFirstChild("HellDimension") then
+                            local rootPos = plr.Character.HumanoidRootPart.Position
+                            local hellSpawn = workspace.Map.HellDimension.Spawn.Position
+                            
+                            if (rootPos - hellSpawn).Magnitude <= 1000 then
+                                -- Trong HellDimension, đánh quái và thắp đuốc
+                                for _, v in pairs(workspace.Enemies:GetChildren()) do
+                                    if v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") then
+                                        if v.Humanoid.Health > 0 and (v.HumanoidRootPart.Position - hellSpawn).Magnitude <= 300 then
+                                            repeat
+                                                task.wait(0.1)
+                                                Attack.Kill(v, _G.AutoYamaQuestCDK)
+                                            until not _G.AutoYamaQuestCDK or not v.Parent or v.Humanoid.Health <= 0
+                                        end
+                                    end
+                                end
+                                
+                                -- Thắp đuốc
+                                for i = 1, 3 do
+                                    local torch = workspace.Map.HellDimension["Torch"..i]
+                                    if torch and torch:FindFirstChild("Particles") then
+                                        _tp(torch.Particles.CFrame)
+                                        task.wait(0.5)
+                                        -- Kích hoạt proximity prompt
+                                        for _, prompt in pairs(torch:GetDescendants()) do
+                                            if prompt:IsA("ProximityPrompt") then
+                                                fireproximityprompt(prompt)
+                                            end
+                                        end
+                                        task.wait(1)
+                                    end
+                                end
+                            else
+                                -- Teleport vào HellDimension
+                                local v = GetConnectionEnemies("Soul Reaper")
+                                if v then
+                                    repeat
+                                        task.wait(0.1)
+                                        Attack.Kill(v, _G.AutoYamaQuestCDK)
+                                    until not _G.AutoYamaQuestCDK or not v.Parent or v.Humanoid.Health <= 0
+                                elseif plr.Backpack:FindFirstChild("Hallow Essence") or plr.Character:FindFirstChild("Hallow Essence") then
+                                    -- Teleport đến Soul Reaper
+                                    _tp(CFrame.new(-8932.322265625, 146.83154296875, 6062.55078125))
+                                    EquipWeapon("Hallow Essence")
+                                else
+                                    -- Farm bones để mua Hallow Essence
+                                    local bonesCount = replicated.Remotes.CommF_:InvokeServer("Bones","Check")
+                                    if bonesCount < 50 then
+                                        -- Farm mobs để lấy bone
+                                        local boneMobs = {"Reborn Skeleton", "Living Zombie", "Demonic Soul", "Posessed Mummy"}
+                                        local foundMob = false
+                                        for _, mobName in pairs(boneMobs) do
+                                            for _, v in pairs(workspace.Enemies:GetChildren()) do
+                                                if v.Name == mobName and v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 then
+                                                    foundMob = true
+                                                    repeat
+                                                        task.wait(0.1)
+                                                        Attack.Kill(v, _G.AutoYamaQuestCDK)
+                                                    until not _G.AutoYamaQuestCDK or not v.Parent or v.Humanoid.Health <= 0
+                                                    break
+                                                end
+                                            end
+                                            if foundMob then break end
+                                        end
+                                        if not foundMob then
+                                            _tp(CFrame.new(-9515.2255859375, 164.0062255859375, 5785.38330078125))
+                                        end
+                                    else
+                                        -- Mua Hallow Essence
+                                        replicated.Remotes.CommF_:InvokeServer("Bones", "Buy", 1, 1)
+                                        task.wait(1)
+                                    end
+                                end
+                            end
+                        else
+                            -- Chưa vào HellDimension, cần triệu hồi Soul Reaper
+                            local v = GetConnectionEnemies("Soul Reaper")
+                            if v then
+                                repeat
+                                    task.wait(0.1)
+                                    Attack.Kill(v, _G.AutoYamaQuestCDK)
+                                until not _G.AutoYamaQuestCDK or not v.Parent or v.Humanoid.Health <= 0
+                            elseif plr.Backpack:FindFirstChild("Hallow Essence") or plr.Character:FindFirstChild("Hallow Essence") then
+                                -- Teleport đến Soul Reaper
+                                _tp(CFrame.new(-8932.322265625, 146.83154296875, 6062.55078125))
+                                EquipWeapon("Hallow Essence")
+                            else
+                                -- Farm bones để mua Hallow Essence
+                                local bonesCount = replicated.Remotes.CommF_:InvokeServer("Bones","Check")
+                                if bonesCount < 50 then
+                                    -- Farm mobs để lấy bone
+                                    local boneMobs = {"Reborn Skeleton", "Living Zombie", "Demonic Soul", "Posessed Mummy"}
+                                    local foundMob = false
+                                    for _, mobName in pairs(boneMobs) do
+                                        for _, v in pairs(workspace.Enemies:GetChildren()) do
+                                            if v.Name == mobName and v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 then
+                                                foundMob = true
+                                                repeat
+                                                    task.wait(0.1)
+                                                    Attack.Kill(v, _G.AutoYamaQuestCDK)
+                                                until not _G.AutoYamaQuestCDK or not v.Parent or v.Humanoid.Health <= 0
+                                                break
+                                            end
+                                        end
+                                        if foundMob then break end
+                                    end
+                                    if not foundMob then
+                                        _tp(CFrame.new(-9515.2255859375, 164.0062255859375, 5785.38330078125))
+                                    end
+                                else
+                                    -- Mua Hallow Essence
+                                    replicated.Remotes.CommF_:InvokeServer("Bones", "Buy", 1, 1)
+                                    task.wait(1)
+                                end
+                            end
+                        end
+                    end
+                end
+                
+                -- Kiểm tra nếu đã hoàn thành
+                local newProgress = replicated.Remotes.CommF_:InvokeServer("CDKQuest","Progress")
+                if newProgress and newProgress["Finished"] == true then
+                    Library:Notify({
+                        Title = "Banana Cat Hub",
+                        Description = "Yama quest completed! You can now get Yama.",
+                        Duration = 5
+                    })
+                    _G.AutoYamaQuestCDK = false
+                end
+            end)
+        end
+    end
+end)
+
+GetItems:AddToggle("AutoTushitaQuestCDK", {
+    Title = "Auto Tushita Quest CDK",
+    Default = false,
+    Callback = function(Value)
+        _G.AutoTushitaQuestCDK = Value
+    end
+})
+
+-- Main loop cho Auto Tushita Quest
+spawn(function()
+    while task.wait(0.5) do
+        if _G.AutoTushitaQuestCDK then
+            pcall(function()
+                -- Kiểm tra xem đã có Tushita chưa
+                if GetBP("Tushita") then
+                    Library:Notify({
+                        Title = "Banana Cat Hub",
+                        Description = "You already have Tushita!",
+                        Duration = 3
+                    })
+                    _G.AutoTushitaQuestCDK = false
+                    return
+                end
+
+                -- Kiểm tra và mở cửa nếu chưa mở
+                if tostring(replicated.Remotes.CommF_:InvokeServer("CDKQuest", "OpenDoor")) ~= "opened" then                  
+                    replicated.Remotes.CommF_:InvokeServer("CDKQuest", "OpenDoor")
+                    replicated.Remotes.CommF_:InvokeServer("CDKQuest", "OpenDoor", true)
+                    task.wait(1)
+                end
+
+                -- Kiểm tra tiến độ Tushita
+                local progress = replicated.Remotes.CommF_:InvokeServer("CDKQuest","Progress")
+                
+                if progress and progress["Finished"] == nil then
+                    -- Bắt đầu trial Good (Tushita)
+                    replicated.Remotes.CommF_:InvokeServer("CDKQuest","StartTrial","Good")
+                    task.wait(1)
+                elseif progress and progress["Finished"] == false then
+                    local goodProgress = tonumber(progress["Good"]) or 0
+                    
+                    -- Thử thách 1: Docks Legend (giá trị -3)
+                    if goodProgress == -3 then
+                        -- Đến 3 bến tàu và tương tác với Luxury Boat Dealer
+                        local dockPositions = {
+                            CFrame.new(-4602.5107421875, 16.446542739868164, -2880.998046875),
+                            CFrame.new(4001.185302734375, 10.089399337768555, -2654.86328125),
+                            CFrame.new(-9530.763671875, 7.245208740234375, -8375.5087890625)
+                        }
+                        
+                        for _, pos in ipairs(dockPositions) do
+                            _tp(pos)
+                            task.wait(0.5)
+                            
+                            -- Tìm Luxury Boat Dealer và tương tác
+                            local dealerFound = false
+                            for _, npc in pairs(workspace.NPCs:GetChildren()) do
+                                if npc.Name == "Luxury Boat Dealer" and npc:FindFirstChild("HumanoidRootPart") then
+                                    if (npc.HumanoidRootPart.Position - pos.Position).Magnitude <= 50 then
+                                        dealerFound = true
+                                        -- Gọi remote để tương tác
+                                        replicated.Remotes.CommF_:InvokeServer("CDKQuest","BoatQuest",npc,"Check")
+                                        task.wait(0.5)
+                                        replicated.Remotes.CommF_:InvokeServer("CDKQuest","BoatQuest",npc)
+                                        task.wait(1)
+                                        break
+                                    end
+                                end
+                            end
+                            
+                            if not dealerFound then
+                                -- Nếu không tìm thấy dealer, teleport đến vị trí gần nhất
+                                _tp(pos)
+                                task.wait(0.5)
+                            end
+                        end
+                    end
+                    
+                    -- Thử thách 2: Sense of Duty (giá trị -4)
+                    if goodProgress == -4 then
+                        -- Bật Auto Pirate Raid
+                        _G.AutoRaidCastle = true
+                        
+                        -- Kiểm tra nếu đã hoàn thành raid
+                        local newProgress = replicated.Remotes.CommF_:InvokeServer("CDKQuest","Progress")
+                        if newProgress and tonumber(newProgress["Good"]) == 2 then
+                            _G.AutoRaidCastle = false
+                        end
+                    end
+                    
+                    -- Thử thách 3: Soulless (giá trị -5)
+                    if goodProgress == -5 then
+                        -- Đánh Cake Queen để vào Heavenly Dimension
+                        local cakeQueen = workspace.Enemies:FindFirstChild("Cake Queen")
+                        if cakeQueen and cakeQueen:FindFirstChild("Humanoid") and cakeQueen.Humanoid.Health > 0 then
+                            -- Đánh Cake Queen
+                            repeat
+                                task.wait(0.1)
+                                Attack.Kill(cakeQueen, _G.AutoTushitaQuestCDK)
+                            until not _G.AutoTushitaQuestCDK or not cakeQueen.Parent or cakeQueen.Humanoid.Health <= 0
+                        else
+                            -- Teleport đến vị trí Cake Queen
+                            local cakePos = CFrame.new(-678.648804, 381.353943, -11114.2012)
+                            _tp(cakePos)
+                            task.wait(0.5)
+                            
+                            -- Nếu Cake Queen chưa spawn, đợi
+                            if not workspace.Enemies:FindFirstChild("Cake Queen") and not replicated:FindFirstChild("Cake Queen") then
+                                task.wait(2)
+                            end
+                        end
+                        
+                        -- Kiểm tra xem đã vào Heavenly Dimension chưa
+                        if workspace.Map:FindFirstChild("HeavenlyDimension") then
+                            local rootPos = plr.Character.HumanoidRootPart.Position
+                            local heavenSpawn = workspace.Map.HeavenlyDimension.Spawn.Position
+                            
+                            if (rootPos - heavenSpawn).Magnitude <= 1000 then
+                                -- Trong Heavenly Dimension, thắp đuốc và đánh quái
+                                -- Thắp đuốc 1
+                                local torch1Pos = CFrame.new(-22529.6171875, 5275.77392578125, 3873.5712890625)
+                                _tp(torch1Pos)
+                                task.wait(0.5)
+                                for _, prompt in pairs(workspace.Map.HeavenlyDimension:GetDescendants()) do
+                                    if prompt:IsA("ProximityPrompt") then
+                                        fireproximityprompt(prompt)
+                                    end
+                                end
+                                task.wait(1)
+                                
+                                -- Thắp đuốc 2
+                                local torch2Pos = CFrame.new(-22637.291015625, 5281.365234375, 3749.28857421875)
+                                _tp(torch2Pos)
+                                task.wait(0.5)
+                                for _, prompt in pairs(workspace.Map.HeavenlyDimension:GetDescendants()) do
+                                    if prompt:IsA("ProximityPrompt") then
+                                        fireproximityprompt(prompt)
+                                    end
+                                end
+                                task.wait(1)
+                                
+                                -- Thắp đuốc 3
+                                local torch3Pos = CFrame.new(-22791.14453125, 5277.16552734375, 3764.570068359375)
+                                _tp(torch3Pos)
+                                task.wait(0.5)
+                                for _, prompt in pairs(workspace.Map.HeavenlyDimension:GetDescendants()) do
+                                    if prompt:IsA("ProximityPrompt") then
+                                        fireproximityprompt(prompt)
+                                    end
+                                end
+                                task.wait(1)
+                                
+                                -- Đánh quái trong Heavenly Dimension
+                                for _, v in pairs(workspace.Enemies:GetChildren()) do
+                                    if v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") then
+                                        if v.Humanoid.Health > 0 and (v.HumanoidRootPart.Position - heavenSpawn).Magnitude <= 500 then
+                                            repeat
+                                                task.wait(0.1)
+                                                Attack.Kill(v, _G.AutoTushitaQuestCDK)
+                                            until not _G.AutoTushitaQuestCDK or not v.Parent or v.Humanoid.Health <= 0
+                                        end
+                                    end
+                                end
+                            else
+                                -- Teleport vào Heavenly Dimension
+                                if workspace.Map.HeavenlyDimension.Exit and workspace.Map.HeavenlyDimension.Exit:FindFirstChild("CFrame") then
+                                    _tp(workspace.Map.HeavenlyDimension.Exit.CFrame)
+                                else
+                                    _tp(heavenSpawn)
+                                end
+                            end
+                        else
+                            -- Chưa vào Heavenly Dimension, cần đánh Cake Queen để mở cổng
+                            local cakeQueenCheck = workspace.Enemies:FindFirstChild("Cake Queen") or replicated:FindFirstChild("Cake Queen")
+                            if cakeQueenCheck then
+                                -- Nếu Cake Queen đã có, teleport đến và đánh
+                                if cakeQueenCheck:FindFirstChild("HumanoidRootPart") then
+                                    _tp(cakeQueenCheck.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0))
+                                end
+                            else
+                                -- Teleport đến vị trí Cake Queen
+                                _tp(CFrame.new(-678.648804, 381.353943, -11114.2012))
+                            end
+                        end
+                    end
+                end
+                
+                -- Kiểm tra nếu đã hoàn thành
+                local newProgress = replicated.Remotes.CommF_:InvokeServer("CDKQuest","Progress")
+                if newProgress and newProgress["Finished"] == true then
+                    Library:Notify({
+                        Title = "Banana Cat Hub",
+                        Description = "Tushita quest completed! You can now get Tushita.",
+                        Duration = 5
+                    })
+                    _G.AutoTushitaQuestCDK = false
+                end
+            end)
+        end
+    end
 end)
 
 GetItems:AddToggle("Auto_Yama", {
