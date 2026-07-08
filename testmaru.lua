@@ -2807,7 +2807,7 @@ spawn(function()
 
 end)
 
-local Q = Tabs.Main:AddToggle("Q", {Title = "Farm KataKuri", Description = "", Default = false})
+local Q = Tabs.Main:AddToggle("Q", {Title = "Auto Cake Prince", Description = "", Default = false})
 
 Q:OnChanged(function(Value)
   _G.Auto_Cake_Prince = Value
@@ -2893,7 +2893,7 @@ spawn(function()
   end
 end)
 
-local Q = Tabs.Main:AddToggle("Q", {Title = "Farm Bones", Description = "", Default = false})
+local Q = Tabs.Main:AddToggle("Q", {Title = "Auto Bones", Description = "", Default = false})
 
 Q:OnChanged(function(Value)
 
