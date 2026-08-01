@@ -1,0 +1,199 @@
+FPSBooster()
+
+    end
+
+})
+
+function FPSBooster()
+
+-- ===== SERVICES =====
+
+local g = game
+
+local w = g:GetService("Workspace")
+
+local l = g:GetService("Lighting")
+
+local t = w.Terrain
+
+
+
+-- ===== DISABLE GRAPHICS SETTINGS =====
+
+sethiddenproperty(l, "Technology", 2)
+
+sethiddenproperty(t, "Decoration", false)
+
+
+
+t.WaterWaveSize = 0
+
+t.WaterWaveSpeed = 0
+
+t.WaterReflectance = 0
+
+t.WaterTransparency = 1
+
+
+
+l.GlobalShadows = false
+
+l.FogEnd = 9e9
+
+l.FogStart = 0
+
+l.Brightness = 1.5
+
+l.Ambient = Color3.new(1, 1, 1)
+
+l.OutdoorAmbient = Color3.new(1, 1, 1)
+
+l.ColorShift_Bottom = Color3.new(1, 1, 1)
+
+l.ColorShift_Top = Color3.new(1, 1, 1)
+
+l.ClockTime = 12
+
+l.GeographicLatitude = 0
+
+l.ExposureCompensation = 0.5
+
+
+
+-- ===== GRAPHICS QUALITY =====
+
+settings().Rendering.QualityLevel = "Level01"
+
+
+
+-- ===== REMOVE EFFECTS FUNCTION =====
+
+local function removeEffects(obj)
+
+    if not obj or not obj.Parent then return end
+
+    
+
+    local class = obj.ClassName
+
+    
+
+    if class == "Decal" or class == "Texture" then
+
+        obj:Destroy()
+
+        
+
+    elseif class == "Part" or class == "Union" or class == "CornerWedgePart" or class == "TrussPart" or class == "MeshPart" then
+
+        obj.Material = Enum.Material.SmoothPlastic
+
+        obj.Reflectance = 0
+
+        obj.Transparency = 0
+
+        if class == "MeshPart" then
+
+            obj.TextureID = ""
+
+        end
+
+        
+
+    elseif class == "ParticleEmitter" or class == "Trail" or class == "Fire" or class == "Smoke" or class == "Sparkles" then
+
+        obj.Enabled = false
+
+        obj:Destroy()
+
+        
+
+    elseif class == "SpotLight" or class == "PointLight" or class == "SurfaceLight" then
+
+        obj.Enabled = false
+
+        obj:Destroy()
+
+        
+
+    elseif class == "Beam" then
+
+        obj.Enabled = false
+
+        obj:Destroy()
+
+        
+
+    elseif class == "Explosion" then
+
+        obj.BlastPressure = 0
+
+        obj.BlastRadius = 0
+
+        obj.Visible = false
+
+        obj:Destroy()
+
+        
+
+    elseif class == "Sound" then
+
+        obj:Stop()
+
+        obj:Destroy()
+
+    end
+
+end
+
+
+
+-- ===== REMOVE POST FX =====
+
+local atmosphere = l:FindFirstChild("Atmosphere")
+
+if atmosphere then
+
+    atmosphere:Destroy()
+
+end
+
+
+
+for _, e in ipairs(l:GetChildren()) do
+
+    if e:IsA("PostEffect") or e:IsA("BloomEffect") or e:IsA("BlurEffect") or 
+
+       e:IsA("ColorCorrectionEffect") or e:IsA("DepthOfFieldEffect") or 
+
+       e:IsA("SunRaysEffect") then
+
+        e.Enabled = false
+
+        e:Destroy()
+
+    end
+
+end
+
+
+
+-- ===== SCAN WORKSPACE =====
+
+for _, v in ipairs(w:GetDescendants()) do
+
+    removeEffects(v)
+
+end
+
+
+
+-- ===== MEMORY CLEANUP =====
+
+wait(1)
+
+collectgarbage()
+
+collectgarbage()
+
+end
