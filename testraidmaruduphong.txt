@@ -1,14 +1,3 @@
-local REQUIRED_KEY = "Maru_A7kP2mX9qL4vN8cR5tY"
-local Key = getgenv().Key
-
-if Key == REQUIRED_KEY then
-    -- Có key đúng → chạy
-else
-    -- Không có/sai key → không chạy chức năng này
-end
-
-local REQUIRED_KEY = "Maru_A7kP2mX9qL4vN8cR5tY"
-
 task.spawn(function()
 
     local HttpService = game:GetService("HttpService")
@@ -1409,7 +1398,7 @@ spawn(function()
 
           Test.FillTransparency = 0.5
 
-          Test.OutlineTransparency = 1
+          Test.OutlineTransparency = 0
 
           Test.Parent = plr.Character
 
