@@ -1,145 +1,14 @@
-task.wait("1.5")
-task.spawn(function()
+local REQUIRED_KEY = "Maru_A7kP2mX9qL4vN8cR5tY"
+local Key = getgenv().Key
 
-local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
-
-local player = Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
-
-if playerGui:FindFirstChild("LoadingScreen") then
-    playerGui:FindFirstChild("LoadingScreen"):Destroy()
+if Key == REQUIRED_KEY then
+    -- Có key đúng → chạy
+else
+    -- Không có/sai key → không chạy chức năng này
 end
 
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "LoadingScreen"
-screenGui.IgnoreGuiInset = true
-screenGui.DisplayOrder = 999
-screenGui.ResetOnSpawn = false
-screenGui.Parent = game:GetService("CoreGui")
+local REQUIRED_KEY = "Maru_A7kP2mX9qL4vN8cR5tY"
 
-local background = Instance.new("Frame")
-background.Name = "Background"
-background.Size = UDim2.new(1, 0, 1, 0)
-background.BackgroundColor3 = Color3.new(0, 0, 0)
-background.BackgroundTransparency = 0.5
-background.BorderSizePixel = 0
-background.ZIndex = 1
-background.Parent = screenGui
-
-local circle = Instance.new("Frame")
-circle.Name = "Circle"
-circle.AnchorPoint = Vector2.new(0.5, 0.5)
-circle.Position = UDim2.new(0.5, 0, 0.45, 0)
-circle.Size = UDim2.new(0, 90, 0, 90)
-circle.BackgroundTransparency = 1
-circle.ZIndex = 2
-circle.Parent = background
-
-local circleCorner = Instance.new("UICorner")
-circleCorner.CornerRadius = UDim.new(1, 0)
-circleCorner.Parent = circle
-
-local circleStroke = Instance.new("UIStroke")
-circleStroke.Color = Color3.new(1, 1, 1)
-circleStroke.Thickness = 10
-circleStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-circleStroke.Parent = circle
-
-local loadingText = Instance.new("TextLabel")
-loadingText.Name = "LoadingText"
-loadingText.AnchorPoint = Vector2.new(0.5, 0.5)
-loadingText.Position = UDim2.new(0.5, 0, 0.45, 90)
-loadingText.Size = UDim2.new(0, 300, 0, 40)
-loadingText.BackgroundTransparency = 1
-loadingText.Text = "Loading..."
-loadingText.TextColor3 = Color3.new(1, 1, 1)
-loadingText.Font = Enum.Font.GothamBold
-loadingText.TextSize = 28
-loadingText.ZIndex = 2
-loadingText.Parent = background
-
-game:GetService("StarterGui"):SetCore("SendNotification", {
-    Title = "Maru Hub",
-    Text = "Success!",
-    Icon = "rbxassetid://9681970193",
-    Duration = 15
-})
-
-local blinkTween = TweenService:Create(
-    loadingText,
-    TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true, 0),
-    {TextTransparency = 0.4}
-)
-blinkTween:Play()
-
-local originalSize = circle.Size
-local pulseSize = UDim2.new(0, originalSize.X.Offset * 1.15, 0, originalSize.Y.Offset * 1.15)
-local pulseLoopActive = true
-
-local function playPulse()
-    if not pulseLoopActive then return end
-
-    local growTween = TweenService:Create(
-        circle,
-        TweenInfo.new(0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.Out),
-        {Size = pulseSize}
-    )
-
-    growTween:Play()
-
-    growTween.Completed:Connect(function()
-        if not pulseLoopActive then return end
-
-        TweenService:Create(
-            circle,
-            TweenInfo.new(0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.In),
-            {Size = originalSize}
-        ):Play()
-    end)
-end
-
-local elapsed = 0
-
-while elapsed < 12 do
-    task.wait(1)
-    elapsed += 1
-
-    if elapsed == 5 or elapsed == 10 then
-        playPulse()
-    end
-end
-
-blinkTween:Cancel()
-pulseLoopActive = false
-
-local fadeOutBg = TweenService:Create(
-    background,
-    TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-    {BackgroundTransparency = 1}
-)
-
-local fadeOutCircle = TweenService:Create(
-    circleStroke,
-    TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-    {Transparency = 1}
-)
-
-local fadeOutText = TweenService:Create(
-    loadingText,
-    TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-    {TextTransparency = 1}
-)
-
-fadeOutBg:Play()
-fadeOutCircle:Play()
-fadeOutText:Play()
-
-fadeOutBg.Completed:Wait()
-
-screenGui:Destroy()
-
-end)
 task.spawn(function()
 
     local HttpService = game:GetService("HttpService")
@@ -1534,13 +1403,13 @@ spawn(function()
 
           Test.Enabled = true
 
-          Test.FillColor = Color3.fromRGB(255,255,255)
+          Test.FillColor = Color3.fromRGB(0,255,255)
 
           Test.OutlineColor = Color3.fromRGB(255,255,255)
 
-          Test.FillTransparency = 0.4
+          Test.FillTransparency = 0.5
 
-          Test.OutlineTransparency = 0
+          Test.OutlineTransparency = 1
 
           Test.Parent = plr.Character
 
@@ -2006,7 +1875,7 @@ QuestCheck = function()
         Qdata = 2
         Qname = "DeepForestIsland3"
         NameMon = "Fishman Raider"
-        PosQ = CFrame.new(-10581.6563, 330.872955, -8761.18652, -0.882952213, 0, 0.469463557, 0, 1, 0, -0.469463557, 0, -0.882952213)
+        PosQ = CFrame.new(3142.67822, 108.42981, 7482.37988, 0.34205412, 0, 0.939680243, 0, 1, 0, -0.939680243, 0, 0.34205412)
         PosM = CFrame.new(-10407.5263671875, 331.76263427734375, -8368.5166015625)
     elseif MyLevel >= 1800 and MyLevel <= 1824 then
         Mon = "Fishman Captain"
