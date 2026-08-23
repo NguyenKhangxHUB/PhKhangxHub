@@ -1,0 +1,52 @@
+local MarketplaceService = game:GetService("MarketplaceService")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local HttpService = game:GetService("HttpService")
+local RunService = game:GetService("RunService")
+local CoreGui = game:GetService("CoreGui")
+local Players = game:GetService("Players")
+local Player = Players.LocalPlayer
+local PlayerMouse = Player:GetMouse()
+
+local redzlib = {
+		Themes = {
+		-- === THEME ĐEN ĐẬM CHÍNH ===
+		Darker = {
+["Color Hub 1"] = ColorSequence.new({
+    ColorSequenceKeypoint.new(0.00, Color3.fromRGB(5, 5, 6)), 
+    ColorSequenceKeypoint.new(0.50, Color3.fromRGB(12, 12, 14)), 
+    ColorSequenceKeypoint.new(1.00, Color3.fromRGB(5, 5, 6))
+}),
+["Color Hub 2"] = Color3.fromRGB(8, 8, 10), 
+["Color Stroke"] = Color3.fromRGB(35, 35, 40),
+["Color Theme"] = Color3.fromRGB(50, 50, 60), 
+["Color Text"] = Color3.fromRGB(245, 245, 250), 
+["Color Dark Text"] = Color3.fromRGB(150, 150, 160) 
+		},
+		-- === THEME ĐEN ĐẬM NHẸ ===
+		Dark = {
+			["Color Hub 1"] = ColorSequence.new({
+				ColorSequenceKeypoint.new(0.00, Color3.fromRGB(8, 8, 10)),
+				ColorSequenceKeypoint.new(0.50, Color3.fromRGB(15, 15, 18)),
+				ColorSequenceKeypoint.new(1.00, Color3.fromRGB(8, 8, 10))
+			}),
+			["Color Hub 2"] = Color3.fromRGB(10, 10, 12),
+			["Color Stroke"] = Color3.fromRGB(40, 40, 45),
+			["Color Theme"] = Color3.fromRGB(60, 60, 70),
+			["Color Text"] = Color3.fromRGB(250, 250, 255),
+			["Color Dark Text"] = Color3.fromRGB(160, 160, 170)
+		},
+		-- === THEME ĐEN ĐẬM ĐỊNH ===
+		Purple = {
+			["Color Hub 1"] = ColorSequence.new({
+				ColorSequenceKeypoint.new(0.00, Color3.fromRGB(3, 3, 4)),
+				ColorSequenceKeypoint.new(0.50, Color3.fromRGB(10, 10, 12)),
+				ColorSequenceKeypoint.new(1.00, Color3.fromRGB(3, 3, 4))
+			}),
+			["Color Hub 2"] = Color3.fromRGB(6, 6, 8),
+			["Color Stroke"] = Color3.fromRGB(30, 30, 35),
+			["Color Theme"] = Color3.fromRGB(45, 45, 55),
+			["Color Text"] = Color3.fromRGB(240, 240, 245),
+			["Color Dark Text"] = Color3.fromRGB(140, 140, 150)
+		}
+	},
